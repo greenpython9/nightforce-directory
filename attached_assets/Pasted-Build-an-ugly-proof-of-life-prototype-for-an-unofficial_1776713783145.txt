@@ -1,0 +1,346 @@
+Build an ugly proof-of-life prototype for an unofficial Midnight Nightforce ambassador directory.
+
+Important: this is NOT the final website. This is only to prove the core product flow before we build the polished UI.
+
+Main goal
+Prove this exact flow works end to end:
+
+1. User connects a wallet
+2. Unverified user submits a verification request
+3. Admin reviews the request and approves or rejects it
+4. Approved user can open My Profile
+5. User fills only 4 profile fields:
+   - Display Name
+   - Country
+   - Role / Focus
+   - Short Bio
+6. User chooses visibility:
+   - Public profile
+   - Anonymous public profile
+   - Hidden from public pages
+7. User chooses field-level disclosure:
+   - Show display name
+   - Show country
+   - Show role / focus
+   - Show short bio
+8. Public profile page and directory must show ONLY disclosed public data
+9. Hidden fields must not appear in search or filters
+
+Tech requirements
+- Use React + TypeScript + Tailwind
+- Use React Router
+- Keep styling minimal, dark, simple, and clean
+- No fancy animations
+- No final homepage
+- No map yet
+- No About / FAQ / Contact / Terms / Privacy yet
+- No CMS
+- No external database for this phase
+- Use local state + localStorage persistence for now
+- Structure the app cleanly so real Midnight integration can be added later
+
+Very important for this phase
+DO NOT build real Midnight blockchain integration yet.
+Instead, create a clean wallet adapter abstraction and use a mock wallet connection for now.
+
+Create:
+- a wallet service interface
+- a mock wallet implementation
+- a clear place where real Midnight DApp Connector integration can be added later
+
+Use hardcoded mock wallets for testing:
+- admin wallet: admin-wallet-001
+- member wallet A: member-wallet-001
+- member wallet B: member-wallet-002
+
+App routes to build
+- /
+- /directory
+- /request-verification
+- /admin/review
+- /my-profile
+- /profile/:publicId
+
+What each route should do
+
+1) /
+Very simple landing page only.
+Show:
+- site title: Nightforce Directory
+- short subtitle: Unofficial directory for existing Nightforce ambassadors
+- buttons:
+  - Connect Wallet
+  - Request Verification
+  - Browse Directory
+
+After wallet connect:
+- show connected wallet ID
+- show verification status badge:
+  - Not Verified
+  - Pending Review
+  - Approved
+
+No map. No final design. Keep it plain.
+
+2) /request-verification
+Show a verification request form.
+
+Rules:
+- wallet must be connected before submit
+- if not connected, disable submit and show message
+- if status is Not Verified, show form
+- if status is Pending Review, replace form with a pending status card
+- if status is Approved, replace form with an approved status card and button to go to My Profile
+
+Fields:
+- Discord Handle
+- Region / Country
+- Optional Note
+
+Submit should create a pending verification request in localStorage.
+
+Very important copy near top:
+- This is not an application to become a Nightforce ambassador.
+- This is for existing ambassadors who want access to the directory.
+
+3) /admin/review
+Admin-only page.
+
+Access rules:
+- only connected wallet admin-wallet-001 can access
+- if any other wallet opens this page, show “You do not have permission to access this page.”
+
+Admin page layout:
+- tabs:
+  - Pending
+  - Approved
+  - Rejected
+- search box:
+  - search by Discord handle or wallet ID
+- request list
+- request details panel
+- admin notes box
+- Approve button
+- Reject button
+
+Each request must show:
+- request status
+- wallet ID
+- Discord handle
+- region / country
+- optional note
+- created date
+
+Approve behavior:
+- mark request approved
+- mark that wallet as verified
+- unlock My Profile for that wallet
+
+Reject behavior:
+- mark request rejected
+- do not unlock My Profile
+
+4) /my-profile
+This is the most important page.
+
+Access rules:
+- wallet must be connected
+- wallet must be approved
+- if not approved, show a blocked state with status message
+
+Sections on page:
+- wallet/status card
+- profile details form
+- master visibility controls
+- field-level disclosure toggles
+- visibility summary
+- live public preview
+- action buttons
+
+Profile fields:
+- Display Name
+- Country
+- Role / Focus
+- Short Bio
+
+Master visibility controls:
+- Public profile
+- Anonymous public profile
+- Hidden from public pages
+
+Field-level disclosure toggles:
+- Show display name
+- Show country
+- Show role / focus
+- Show short bio
+
+Rules:
+- if Hidden from public pages is selected, the profile must not appear anywhere public
+- if Anonymous public profile is selected, the public preview should replace the name with “Anonymous”
+- if Show country is off, the public profile must not expose country and directory country filter/search must not match it
+- public preview must update live
+- Save Draft button should save locally
+- Publish Changes button should save the current public profile state
+
+Visibility summary section should clearly show:
+- Homepage card: Visible or Hidden
+- Directory: Visible or Hidden
+- Map presence: Visible or Hidden
+
+For now, homepage card and map presence can be logic-only labels since we are not building the homepage map yet.
+
+5) /profile/:publicId
+Public profile page.
+
+Must display only public disclosed data.
+
+Rules:
+- do not show hidden fields
+- if profile is anonymous, show “Anonymous” instead of real name
+- if profile is hidden, this page should show a not available / hidden message
+
+6) /directory
+Build a basic searchable/filterable directory page.
+
+Show:
+- title
+- search input
+- country filter
+- role / focus filter
+- visibility filter
+- results grid of cards
+
+Search/filter rules:
+- search and filters must use ONLY public disclosed data
+- if a user privately entered a country but did not disclose country publicly, searching/filtering that country must NOT show them
+- hidden profiles must not appear at all
+- anonymous profiles can appear, but only with public disclosed fields
+
+Directory card fields:
+- verified badge
+- display name or Anonymous
+- country if public
+- role / focus if public
+- short bio if public
+- link to View Profile
+
+Data model requirements
+Create a clean data model with separate concepts for:
+- verification requests
+- private profile data
+- visibility settings
+- derived public profile data
+
+Important:
+Public pages must read from derived public data, not from the full private profile.
+
+Recommended structure
+Create something like:
+- src/types/
+- src/lib/
+- src/services/
+- src/hooks/
+- src/pages/
+- src/components/
+- src/store/
+
+Please include:
+- a mock wallet context/provider
+- localStorage persistence helpers
+- seed demo data
+- reusable status badge component
+- reusable profile card component
+
+Seed demo content
+Please seed at least 3 demo public profiles so the directory is not empty:
+- one fully public profile
+- one anonymous public profile
+- one hidden profile that should not appear publicly
+
+Also seed at least:
+- one pending verification request
+- one approved verification request
+- one rejected verification request
+
+UI styling rules
+- dark background
+- white / off-white text
+- mono or mono-feel font stack
+- thin borders
+- rounded cards
+- minimal spacing, but still readable
+- clean and functional, not pretty yet
+
+Do NOT add:
+- map
+- final homepage sections
+- blog
+- contact form
+- about page
+- FAQ
+- terms
+- privacy
+- real crypto transactions
+- real auth provider
+- Discord OAuth
+- backend database
+
+Need-to-pass test checklist
+Build the app so I can manually test these:
+
+1. Connect as member-wallet-001
+2. Submit verification request
+3. Switch to admin-wallet-001
+4. Approve that request in /admin/review
+5. Switch back to member-wallet-001
+6. Open /my-profile
+7. Fill:
+   - Display Name = Cobra
+   - Country = Malaysia
+   - Role = Community Builder
+   - Bio = Helping onboard new members
+8. Set:
+   - Anonymous public profile
+   - Show country = ON
+   - Show role = ON
+   - Show bio = ON
+   - Show display name = OFF
+9. Publish changes
+10. Confirm in /directory:
+   - profile appears
+   - name shows as Anonymous
+   - country shows as Malaysia
+11. Search Malaysia:
+   - profile appears
+12. Go back to /my-profile and turn Show country OFF
+13. Confirm in /directory:
+   - searching Malaysia no longer shows that profile
+14. Set profile to Hidden from public pages
+15. Confirm:
+   - profile disappears from directory
+   - public profile page is unavailable / hidden
+
+Output requirements
+When finished, give me:
+1. the file tree
+2. the exact routes created
+3. how to run the app
+4. which files I should edit later for:
+   - real Midnight wallet integration
+   - real verification backend
+   - homepage map
+
+Performance guardrails for this prototype
+
+- Keep dependencies minimal
+- Do not add heavy UI libraries unless absolutely necessary
+- Do not add a map library yet
+- Do not add animation libraries yet
+- Do not add large icon packs; use only a few icons if needed
+- Keep the app lightweight and fast
+- Prefer simple React + Tailwind components
+- Use local state and localStorage only for this phase
+- Avoid loading unnecessary code on every route
+- Keep route components small and modular
+- Do not overengineer state management
+- Build for clarity, speed, and low bundle weight
