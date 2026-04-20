@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useWallet } from "../hooks/useWallet";
-import { loadStore, updateStore } from "../lib/storage";
+import { generateOpaquePublicId, loadStore, updateStore } from "../lib/storage";
 import { derivePublicProfile } from "../lib/publicProfile";
 import { ProfileCard } from "../components/ProfileCard";
 import type { ProfileData, VisibilitySettings, ProfileVisibility } from "../types";
@@ -92,18 +92,27 @@ export function MyProfile() {
     );
   }
 
-  const save = (publish = false) => {
+  const publishChanges = () => {
     if (!walletId) return;
-    const profileData: ProfileData = { walletId, displayName, country, role, bio };
-    const vis: VisibilitySettings = {
-      walletId,
-      profileVisibility,
-      showDisplayName,
-      showCountry,
-      showRole,
-      showBio,
-    };
+
     updateStore((store) => {
+      const existingProfile = store.profiles.find((p) => p.walletId === walletId);
+      const profileData: ProfileData = {
+        walletId,
+        publicId: existingProfile?.publicId ?? generateOpaquePublicId(),
+        displayName,
+        country,
+        role,
+        bio,
+      };
+      const vis: VisibilitySettings = {
+        walletId,
+        profileVisibility,
+        showDisplayName,
+        showCountry,
+        showRole,
+        showBio,
+      };
       const newProfiles = store.profiles.filter((p) => p.walletId !== walletId);
       const newVis = store.visibilitySettings.filter((v) => v.walletId !== walletId);
       const newApproved = store.approvedWallets.includes(walletId)
@@ -116,7 +125,8 @@ export function MyProfile() {
         approvedWallets: newApproved,
       };
     });
-    setSaveMsg(publish ? "Changes published." : "Draft saved.");
+
+    setSaveMsg("Changes published.");
     setTimeout(() => setSaveMsg(""), 2500);
   };
 
@@ -124,7 +134,7 @@ export function MyProfile() {
   const store = loadStore();
   const tempStore = {
     ...store,
-    profiles: [...store.profiles.filter((p) => p.walletId !== walletId), { walletId, displayName, country, role, bio }],
+    profiles: [...store.profiles.filter((p) => p.walletId !== walletId), { walletId, publicId: store.profiles.find((p) => p.walletId === walletId)?.publicId ?? "preview-public-id", displayName, country, role, bio }],
     visibilitySettings: [
       ...store.visibilitySettings.filter((v) => v.walletId !== walletId),
       { walletId, profileVisibility, showDisplayName, showCountry, showRole, showBio },
@@ -305,13 +315,7 @@ export function MyProfile() {
           {/* Action buttons */}
           <div className="flex items-center gap-3">
             <button
-              onClick={() => save(false)}
-              className="font-mono text-sm text-zinc-300 border border-zinc-700 px-4 py-2 rounded-lg hover:border-zinc-500 hover:text-white transition-colors"
-            >
-              Save Draft
-            </button>
-            <button
-              onClick={() => save(true)}
+              onClick={publishChanges}
               className="font-mono text-sm bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-600 px-4 py-2 rounded-lg transition-colors"
             >
               Publish Changes

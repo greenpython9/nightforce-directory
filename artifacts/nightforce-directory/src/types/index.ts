@@ -30,6 +30,7 @@ export interface VerificationRequest {
 
 export interface ProfileData {
   walletId: string;
+  publicId: string;
   displayName: string;
   country: string;
   role: string;

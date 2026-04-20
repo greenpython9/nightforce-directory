@@ -2,11 +2,53 @@ import type { AppStore, VerificationRequest, ProfileData, VisibilitySettings } f
 
 const STORAGE_KEY = "nightforce_store";
 
+export function generateOpaquePublicId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `pub_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
+  }
+
+  return `pub_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function ensureOpaquePublicIds(store: AppStore): AppStore {
+  const walletToExistingPublicId = new Map<string, string>();
+
+  for (const profile of store.profiles) {
+    if (profile.publicId && profile.publicId.trim()) {
+      walletToExistingPublicId.set(profile.walletId, profile.publicId);
+    }
+  }
+
+  let mutated = false;
+
+  const profiles = store.profiles.map((profile) => {
+    if (profile.publicId && profile.publicId.trim()) {
+      return profile;
+    }
+
+    mutated = true;
+    const publicId = walletToExistingPublicId.get(profile.walletId) ?? generateOpaquePublicId();
+    walletToExistingPublicId.set(profile.walletId, publicId);
+
+    return {
+      ...profile,
+      publicId,
+    };
+  });
+
+  return mutated ? { ...store, profiles } : store;
+}
+
 export function loadStore(): AppStore {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      return JSON.parse(raw) as AppStore;
+      const parsed = JSON.parse(raw) as AppStore;
+      const normalized = ensureOpaquePublicIds(parsed);
+      if (normalized !== parsed) {
+        saveStore(normalized);
+      }
+      return normalized;
     }
   } catch {
   }
@@ -19,7 +61,7 @@ export function saveStore(store: AppStore): void {
 
 export function updateStore(updater: (store: AppStore) => AppStore): AppStore {
   const current = loadStore();
-  const next = updater(current);
+  const next = ensureOpaquePublicIds(updater(current));
   saveStore(next);
   return next;
 }
@@ -79,6 +121,7 @@ function getDefaultStore(): AppStore {
   const profiles: ProfileData[] = [
     {
       walletId: "member-wallet-003",
+      publicId: "pub_seed_shadowlynx",
       displayName: "ShadowLynx",
       country: "Japan",
       role: "Node Operator",
@@ -86,6 +129,7 @@ function getDefaultStore(): AppStore {
     },
     {
       walletId: "member-wallet-004",
+      publicId: "pub_seed_neonraven",
       displayName: "NeonRaven",
       country: "Germany",
       role: "Developer Advocate",
@@ -93,6 +137,7 @@ function getDefaultStore(): AppStore {
     },
     {
       walletId: "member-wallet-005",
+      publicId: "pub_seed_cipherx",
       displayName: "Cipher_X",
       country: "Brazil",
       role: "Community Lead",

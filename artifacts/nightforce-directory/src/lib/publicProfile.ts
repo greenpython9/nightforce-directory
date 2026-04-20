@@ -1,16 +1,13 @@
 import type { PublicProfile, AppStore } from "../types";
 
-export function derivePublicProfile(
-  walletId: string,
-  store: AppStore
-): PublicProfile | null {
-  const profileData = store.profiles.find((p) => p.walletId === walletId);
+function toPublicProfile(profileData: AppStore["profiles"][number], store: AppStore): PublicProfile | null {
+  const walletId = profileData.walletId;
   const vis = store.visibilitySettings.find((v) => v.walletId === walletId);
   const isVerified = store.approvedWallets.includes(walletId);
 
-  if (!profileData || !vis) return null;
+  if (!vis || !isVerified) return null;
 
-  const publicId = walletId;
+  const publicId = profileData.publicId;
 
   if (vis.profileVisibility === "hidden") {
     return {
@@ -39,8 +36,24 @@ export function derivePublicProfile(
   };
 }
 
+export function derivePublicProfile(walletId: string, store: AppStore): PublicProfile | null {
+  const profileData = store.profiles.find((p) => p.walletId === walletId);
+
+  if (!profileData) return null;
+
+  return toPublicProfile(profileData, store);
+}
+
+export function findPublicProfileByPublicId(publicId: string, store: AppStore): PublicProfile | null {
+  const profileData = store.profiles.find((p) => p.publicId === publicId);
+
+  if (!profileData) return null;
+
+  return toPublicProfile(profileData, store);
+}
+
 export function getAllPublicProfiles(store: AppStore): PublicProfile[] {
-  return store.approvedWallets
-    .map((walletId) => derivePublicProfile(walletId, store))
+  return store.profiles
+    .map((profile) => toPublicProfile(profile, store))
     .filter((p): p is PublicProfile => p !== null && p.visibility !== "hidden");
 }

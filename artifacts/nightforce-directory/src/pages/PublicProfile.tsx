@@ -1,12 +1,12 @@
 import { useParams } from "wouter";
 import { loadStore } from "../lib/storage";
-import { derivePublicProfile } from "../lib/publicProfile";
+import { findPublicProfileByPublicId } from "../lib/publicProfile";
 import { Link } from "wouter";
 
 export function PublicProfile() {
   const { publicId } = useParams<{ publicId: string }>();
   const store = loadStore();
-  const profile = publicId ? derivePublicProfile(publicId, store) : null;
+  const profile = publicId ? findPublicProfileByPublicId(publicId, store) : null;
 
   if (!profile || profile.visibility === "hidden") {
     return (
