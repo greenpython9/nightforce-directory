@@ -1,0 +1,8 @@
+{
+  "version": 3,
+  "file": "index.js",
+  "sourceRoot": "../../../../",
+  "sources": ["contracts/profile-proof.compact"],
+  "names": [],
+  "mappings": ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;EAiBA;;;;;;;;;;MAKA,AAAA,UAMC;;;;;cALC,gBAA0B;cAC1B,iBAA4B;;;;;;;;;;;;;;;;;;;;;;;;;yCAD5B,gBAA0B,+BAC1B,iBAA4B;;;;;;;;;4CAD5B,gBAA0B;4CAC1B,iBAA4B;;;OAI7B;;;;GARA;EAHD;;;;;;;;;;;;;;;;;;;;;;;;;;;IAHA;;;;;;;;;yEAAqC;IACrC;;;;;;;;;yEAAuC;IAGrC;;;;;;;;;yEAAU;IACV;;;;;;;;;yEAAW;;;;;;;GACZ;EAED,AAAA,aAMC,4BALC,gBAA0B,EAC1B,iBAA4B;;IAE5B;;;;;;;2HAAsB,gBAAc;;yEAA1B;IACV;;;;;;;2HAAuB,iBAAe;;yEAA3B;;GACZ;;;;;;;;;;;;;;;;IAdD;qCAAA;;;;;;;;;;;0GAAqC;KAAA;IACrC;qCAAA;;;;;;;;;;;0GAAuC;KAAA;;;;;;;;;;"
+}

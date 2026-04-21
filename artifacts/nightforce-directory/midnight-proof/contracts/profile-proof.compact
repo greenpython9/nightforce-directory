@@ -1,0 +1,29 @@
+pragma language_version 0.22;
+
+import CompactStandardLibrary;
+
+export enum Visibility {
+  HIDDEN,
+  PUBLIC
+}
+
+export enum CountryCode {
+  UNKNOWN,
+  MY
+}
+
+export ledger visibility: Visibility;
+export ledger countryCode: CountryCode;
+
+constructor() {
+  visibility = Visibility.HIDDEN;
+  countryCode = CountryCode.UNKNOWN;
+}
+
+export circuit setProfile(
+  nextVisibility: Visibility,
+  nextCountryCode: CountryCode
+): [] {
+  visibility = disclose(nextVisibility);
+  countryCode = disclose(nextCountryCode);
+}
