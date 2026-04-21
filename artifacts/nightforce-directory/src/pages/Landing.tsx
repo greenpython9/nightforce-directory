@@ -22,16 +22,13 @@ export function Landing() {
     verificationStatus,
     connectionMode,
     midnightSnapshot,
-    availableMidnightWallets,
     walletError,
     isWalletLoading,
     connect,
-    connectMidnight,
     disconnect,
   } = useWallet();
 
   const [showMockPicker, setShowMockPicker] = useState(false);
-  const [showMidnightPicker, setShowMidnightPicker] = useState(false);
   const [profileProofState, setProfileProofState] = useState<ProfileProofState | null>(null);
   const [isProfileProofLoading, setIsProfileProofLoading] = useState(false);
   const [profileProofError, setProfileProofError] = useState<string | null>(null);
@@ -70,7 +67,7 @@ export function Landing() {
   return () => {
     cancelled = true;
   };
-}, [connectionMode, midnightSnapshot]);
+}, []);
 
 const connectedLabel = useMemo(() => {
   if (connectionMode === "midnight" && midnightSnapshot) {
@@ -186,7 +183,6 @@ const connectedLabel = useMemo(() => {
               <button
                 onClick={() => {
                   setShowMockPicker((prev) => !prev);
-                  setShowMidnightPicker(false);
                 }}
                 disabled={isWalletLoading}
                 className="w-full font-mono text-sm bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 px-4 py-3 rounded-lg transition-colors disabled:opacity-50"
@@ -218,59 +214,26 @@ const connectedLabel = useMemo(() => {
               )}
             </div>
 
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setShowMidnightPicker((prev) => !prev);
-                  setShowMockPicker(false);
-                }}
-                disabled={isWalletLoading}
-                className="w-full font-mono text-sm bg-zinc-900 hover:bg-zinc-800 text-cyan-300 border border-cyan-900 px-4 py-3 rounded-lg transition-colors disabled:opacity-50"
-              >
-                {isWalletLoading ? "Working..." : "Connect Midnight Wallet (Local)"}
-              </button>
-
-              {showMidnightPicker && (
-                <div className="absolute left-0 right-0 top-full mt-1 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl z-50">
-                  <div className="px-3 py-2 border-b border-zinc-800">
-                    <span className="text-xs font-mono text-zinc-500">
-                      Select injected Midnight wallet
-                    </span>
-                  </div>
-
-                  {availableMidnightWallets.length > 0 ? (
-                    availableMidnightWallets.map((wallet) => (
-                      <button
-                        key={wallet.providerId}
-                        onClick={async () => {
-                          await connectMidnight(wallet.providerId);
-                          setShowMidnightPicker(false);
-                        }}
-                        className="w-full text-left px-3 py-2.5 text-sm font-mono text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors"
-                      >
-                        <div>{wallet.providerName}</div>
-                        <div className="text-[11px] text-zinc-500 mt-1">
-                          provider: {wallet.providerId} · api {wallet.apiVersion}
-                        </div>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="px-3 py-3 text-xs font-mono text-zinc-500">
-                      No Midnight wallet detected.
-                    </div>
-                  )}
-                </div>
-              )}
+            <div className="border border-cyan-950 bg-cyan-950/20 rounded-lg p-4">
+              <div className="text-xs font-mono text-cyan-300 mb-1">
+                Midnight local browser wallet write is not available yet
+              </div>
+              <div className="text-[11px] font-mono text-zinc-400 leading-relaxed">
+                Injected Midnight browser wallets currently reject the local
+                <span className="text-zinc-300"> undeployed </span>
+                network in this app flow. The live read-only Profile Proof State panel below
+                is still connected to the local contract.
+              </div>
             </div>
 
             <p className="text-[11px] font-mono text-zinc-600 px-1">
-              Mock wallet keeps the existing local proof-of-life flow. Midnight wallet is now
-for local undeployed connection testing in Batch C Step 1.
+              Mock wallet keeps the existing proof-of-life UI flow. Local Midnight contract
+              state is shown below through the API bridge while app-side write remains blocked.
             </p>
           </div>
         )}
 
-<div className="border border-cyan-950 bg-cyan-950/20 rounded-lg px-4 py-3">
+<div className="border border-cyan-950 bg-cyan-950/20 rounded-lg px-4 py-3 mb-6">
   <div className="text-xs font-mono text-cyan-300 mb-2">
     Profile Proof State
   </div>
