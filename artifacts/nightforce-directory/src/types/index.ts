@@ -11,6 +11,11 @@ export type ProfileVisibility =
   | "anonymous"
   | "hidden";
 
+export type ContactMode =
+  | "NO_CONTACT"
+  | "PRIVATE_CONTACT_AVAILABLE"
+  | "PUBLIC_CONTACT_ALLOWED";
+
 export interface WalletState {
   walletId: string | null;
   status: WalletStatus;
@@ -51,9 +56,15 @@ export interface PublicProfile {
   walletId: string;
   visibility: ProfileVisibility;
   displayName: string | null;
+  region: string | null;
   country: string | null;
   role: string | null;
   bio: string | null;
+  avatarUrl?: string | null;
+  websiteUrl?: string | null;
+  publicEmail?: string | null;
+  contactMode?: ContactMode;
+  socials?: string[];
   isVerified: boolean;
 }
 

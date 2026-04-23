@@ -1,53 +1,173 @@
-import { useState } from "react";
-import { loadStore } from "../lib/storage";
-import { getAllPublicProfiles } from "../lib/publicProfile";
+import { useEffect, useMemo, useState } from "react";
 import { ProfileCard } from "../components/ProfileCard";
+import type { PublicProfile } from "../types";
+
+const API_BASE_URL = "http://127.0.0.1:8787";
+
+type DirectoryProfileRecord = {
+  publicId: string;
+  slug: string | null;
+  displayName: string | null;
+  region: string | null;
+  country: string | null;
+  role: string | null;
+  bio: string | null;
+  avatarUrl: string | null;
+  websiteUrl: string | null;
+  publicEmail: string | null;
+  contactMode: "NO_CONTACT" | "PRIVATE_CONTACT_AVAILABLE" | "PUBLIC_CONTACT_ALLOWED";
+  socials: string[];
+  requestedVisibility: "public" | "hidden";
+  publishState: "draft" | "published" | "inactive";
+};
+
+type DirectoryResponse = {
+  profiles: DirectoryProfileRecord[];
+};
+
+function toPublicProfile(profile: DirectoryProfileRecord): PublicProfile {
+  return {
+    publicId: profile.publicId,
+    walletId: "",
+    visibility: profile.displayName ? "public" : "anonymous",
+    displayName: profile.displayName,
+    region: profile.region,
+    country: profile.country,
+    role: profile.role,
+    bio: profile.bio,
+    avatarUrl: profile.avatarUrl,
+    websiteUrl: profile.websiteUrl,
+    publicEmail: profile.publicEmail,
+    contactMode: profile.contactMode,
+    socials: profile.socials,
+    isVerified: true,
+  };
+}
 
 export function Directory() {
   const [search, setSearch] = useState("");
   const [countryFilter, setCountryFilter] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
+  const [allProfiles, setAllProfiles] = useState<PublicProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const store = loadStore();
-  const allProfiles = getAllPublicProfiles(store);
+  useEffect(() => {
+    let cancelled = false;
 
-  // Build filter options from public data only
-  const countries = Array.from(
-    new Set(allProfiles.map((p) => p.country).filter((c): c is string => !!c))
-  ).sort();
-  const roles = Array.from(
-    new Set(allProfiles.map((p) => p.role).filter((r): r is string => !!r))
-  ).sort();
+    async function loadDirectory() {
+      setLoading(true);
+      setError("");
 
-  const filtered = allProfiles.filter((p) => {
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      const nameMatch = p.displayName?.toLowerCase().includes(q) ?? false;
-      const countryMatch = p.country?.toLowerCase().includes(q) ?? false;
-      const roleMatch = p.role?.toLowerCase().includes(q) ?? false;
-      const bioMatch = p.bio?.toLowerCase().includes(q) ?? false;
-      if (!nameMatch && !countryMatch && !roleMatch && !bioMatch) return false;
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/nightforce/directory`);
+
+        let payload: unknown = null;
+
+        try {
+          payload = await response.json();
+        } catch {
+          payload = null;
+        }
+
+        if (!response.ok) {
+          const message =
+            typeof payload === "object" &&
+            payload !== null &&
+            "error" in payload &&
+            typeof payload.error === "string"
+              ? payload.error
+              : "Failed to load directory.";
+
+          throw new Error(message);
+        }
+
+        const data = payload as DirectoryResponse;
+        const mapped = data.profiles.map(toPublicProfile);
+
+        if (!cancelled) {
+          setAllProfiles(mapped);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err instanceof Error ? err.message : "Failed to load directory.",
+          );
+          setAllProfiles([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
     }
-    if (countryFilter && p.country !== countryFilter) return false;
-    if (roleFilter && p.role !== roleFilter) return false;
-    return true;
-  });
+
+    void loadDirectory();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const countries = useMemo(
+    () =>
+      Array.from(
+        new Set(allProfiles.map((p) => p.country).filter((c): c is string => !!c)),
+      ).sort(),
+    [allProfiles],
+  );
+
+  const roles = useMemo(
+    () =>
+      Array.from(
+        new Set(allProfiles.map((p) => p.role).filter((r): r is string => !!r)),
+      ).sort(),
+    [allProfiles],
+  );
+
+  const filtered = useMemo(
+    () =>
+      allProfiles.filter((p) => {
+        if (search.trim()) {
+          const q = search.toLowerCase();
+          const nameMatch = p.displayName?.toLowerCase().includes(q) ?? false;
+          const regionMatch = p.region?.toLowerCase().includes(q) ?? false;
+          const countryMatch = p.country?.toLowerCase().includes(q) ?? false;
+          const roleMatch = p.role?.toLowerCase().includes(q) ?? false;
+
+          if (!nameMatch && !regionMatch && !countryMatch && !roleMatch) {
+            return false;
+          }
+        }
+
+        if (countryFilter && p.country !== countryFilter) return false;
+        if (roleFilter && p.role !== roleFilter) return false;
+
+        return true;
+      }),
+    [allProfiles, search, countryFilter, roleFilter],
+  );
 
   return (
     <div className="max-w-5xl mx-auto py-8 px-4">
-      <h1 className="text-xl font-mono font-bold text-white mb-2">Ambassador Directory</h1>
+      <h1 className="text-xl font-mono font-bold text-white mb-2">
+        Ambassador Directory
+      </h1>
       <p className="text-xs font-mono text-zinc-500 mb-6">
         Showing only publicly disclosed information. {allProfiles.length} verified ambassador
         {allProfiles.length !== 1 ? "s" : ""} listed.
       </p>
 
-      {/* Filters */}
+      {error && (
+        <div className="mb-4 text-xs font-mono text-red-400">{error}</div>
+      )}
+
       <div className="flex flex-wrap gap-3 mb-6">
         <input
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name, country, role, or bio..."
+          placeholder="Search by name, region, country, or role..."
           className="flex-1 min-w-48 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500"
         />
         <select
@@ -76,7 +196,11 @@ export function Directory() {
         </select>
         {(search || countryFilter || roleFilter) && (
           <button
-            onClick={() => { setSearch(""); setCountryFilter(""); setRoleFilter(""); }}
+            onClick={() => {
+              setSearch("");
+              setCountryFilter("");
+              setRoleFilter("");
+            }}
             className="text-xs font-mono text-zinc-500 hover:text-zinc-300 border border-zinc-800 px-3 py-2 rounded-lg transition-colors"
           >
             Clear
@@ -84,7 +208,13 @@ export function Directory() {
         )}
       </div>
 
-      {filtered.length === 0 ? (
+      {loading ? (
+        <div className="text-center py-16">
+          <div className="text-sm font-mono text-zinc-600">
+            Loading directory...
+          </div>
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="text-center py-16">
           <div className="text-sm font-mono text-zinc-600">
             {allProfiles.length === 0

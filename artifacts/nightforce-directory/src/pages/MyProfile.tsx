@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useWallet } from "../hooks/useWallet";
 import { getConnectedMidnightApi } from "../services/walletService";
 import { ProfileCard } from "../components/ProfileCard";
-import type { ProfileVisibility, PublicProfile } from "../types";
+import type { ContactMode, ProfileVisibility, PublicProfile } from "../types";
 
 const API_BASE_URL = "http://127.0.0.1:8787";
 const AVATAR_MAX_BYTES = 500 * 1024;
@@ -549,6 +549,22 @@ function resolveSocialVisibility(
   return fallback;
 }
 
+function derivePreviewContactMode(input: {
+  hasEmailValue: boolean;
+  showEmail: boolean;
+  hasSavedEncryptedEmail: boolean;
+}): ContactMode {
+  if (input.showEmail && input.hasEmailValue) {
+    return "PUBLIC_CONTACT_ALLOWED";
+  }
+
+  if (input.hasEmailValue || input.hasSavedEncryptedEmail) {
+    return "PRIVATE_CONTACT_AVAILABLE";
+  }
+
+  return "NO_CONTACT";
+}
+
 type ProfileEditorFingerprintInput = {
   publicId: string;
   displayName: string;
@@ -644,6 +660,7 @@ export function MyProfile() {
   const [loading, setLoading] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [removingEmail, setRemovingEmail] = useState(false);
   const [lastPublishedFingerprint, setLastPublishedFingerprint] = useState<string | null>(null);
   const [savedEncryptedHiddenPayload, setSavedEncryptedHiddenPayload] =
     useState<EncryptedHiddenPayload | null>(null);
@@ -922,6 +939,7 @@ export function MyProfile() {
     !loading &&
     !avatarUploading &&
     !publishing &&
+    !removingEmail &&
     !!verificationRequestId &&
     !!walletBindingId &&
     missingRequiredFields.length === 0 &&
@@ -983,6 +1001,147 @@ export function MyProfile() {
       );
     } finally {
       setAvatarUploading(false);
+    }
+  };
+
+  const removeSavedEmail = async () => {
+    if (removingEmail) {
+      return;
+    }
+
+    if (!verificationRequestId || !walletBindingId) {
+      setError("No wallet binding was found for this wallet.");
+      return;
+    }
+
+    if (!hasSavedShieldedEmail) {
+      setError("No saved private email was found for this profile.");
+      return;
+    }
+
+    setError("");
+    setSaveMsg("Removing saved private email...");
+    setRemovingEmail(true);
+
+    const requestedVisibility = profileVisibility === "hidden" ? "hidden" : "public";
+
+    const fieldVisibility = {
+      avatarUrl: showAvatarUrl && hasAvatarUrlValue ? "public" as const : "hidden" as const,
+      displayName:
+        profileVisibility === "anonymous" || !showDisplayName || !hasDisplayNameValue
+          ? "hidden"
+          : "public",
+      region: showRegion && hasRegionValue ? "public" as const : "hidden" as const,
+      country: showCountry && hasCountryValue ? "public" : "hidden",
+      role: showRole && hasRoleValue ? "public" : "hidden",
+      bio: showBio && hasBioValue ? "public" : "hidden",
+      websiteUrl: showWebsiteUrl && hasWebsiteUrlValue ? "public" as const : "hidden" as const,
+      email: "hidden" as const,
+      x: showX && hasXValue ? "public" as const : "hidden" as const,
+      youtube: showYouTube && hasYouTubeValue ? "public" as const : "hidden" as const,
+      discord: showDiscord && hasDiscordValue ? "public" as const : "hidden" as const,
+      telegram: showTelegram && hasTelegramValue ? "public" as const : "hidden" as const,
+      realName: "hidden" as const,
+      contact: "hidden" as const,
+    };
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/nightforce/profiles/${verificationRequestId}`,
+        {
+          method: "PUT",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            walletBindingId,
+            publicId: publicId.trim() || undefined,
+            slug: publicId.trim() || null,
+            displayName: displayName.trim() || null,
+            region: region || null,
+            country: country || null,
+            role: role.trim() || null,
+            bio: bio.trim() || null,
+            avatarUrl: avatarUrl.trim() || null,
+            websiteUrl: websiteUrl.trim() || null,
+            publicEmail: null,
+            socials: buildSocialsArray({
+              xUsername,
+              youtubeHandle,
+              discordUsername,
+              telegramUsername,
+            }),
+            fieldVisibility,
+            encryptedHiddenPayload: null,
+            requestedVisibility,
+            publishState: "published",
+          }),
+        },
+      );
+
+      let payload: unknown = null;
+
+      try {
+        payload = await response.json();
+      } catch {
+        payload = null;
+      }
+
+      if (!response.ok) {
+        const message =
+          typeof payload === "object" &&
+          payload !== null &&
+          "error" in payload &&
+          typeof payload.error === "string"
+            ? payload.error
+            : "Failed to remove saved private email.";
+
+        throw new Error(message);
+      }
+
+      setEmail("");
+      setShowEmail(false);
+      setSavedEncryptedHiddenPayload(null);
+      setHasSavedShieldedEmail(false);
+      setLastPublishedFingerprint(
+        buildEditorFingerprint({
+          publicId,
+          displayName,
+          region,
+          country,
+          role,
+          bio,
+          avatarUrl,
+          websiteUrl,
+          email: "",
+          xUsername,
+          youtubeHandle,
+          discordUsername,
+          telegramUsername,
+          profileVisibility,
+          showAvatarUrl,
+          showDisplayName,
+          showRegion,
+          showCountry,
+          showRole,
+          showBio,
+          showWebsiteUrl,
+          showEmail: false,
+          showX,
+          showYouTube,
+          showDiscord,
+          showTelegram,
+        }),
+      );
+      setSaveMsg("Saved private email removed.");
+      setTimeout(() => setSaveMsg(""), 2500);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to remove saved private email.",
+      );
+      setSaveMsg("");
+    } finally {
+      setRemovingEmail(false);
     }
   };
 
@@ -1202,6 +1361,11 @@ export function MyProfile() {
         avatarUrl: showAvatarUrl && hasAvatarUrlValue ? avatarUrl || null : null,
         websiteUrl: showWebsiteUrl && hasWebsiteUrlValue ? websiteUrl || null : null,
         publicEmail: showEmail && hasEmailValue ? email || null : null,
+        contactMode: derivePreviewContactMode({
+          hasEmailValue,
+          showEmail,
+          hasSavedEncryptedEmail: hasSavedShieldedEmail,
+        }),
         socials: buildSocialsArray({
           xUsername: showX && hasXValue ? xUsername : "",
           youtubeHandle: showYouTube && hasYouTubeValue ? youtubeHandle : "",
@@ -1498,15 +1662,34 @@ export function MyProfile() {
                     }`}
                   />
                   {hasSavedShieldedEmail && !hasEmailValue && (
-                    <p className="mt-2 text-[11px] font-mono text-zinc-500 leading-relaxed">
-                      An encrypted email is already saved privately. Leave this field blank to keep
-                      it unchanged, or enter a new email here to replace it.
-                    </p>
+                    <div className="mt-2">
+                      <p className="text-[11px] font-mono text-zinc-500 leading-relaxed">
+                        An encrypted email is already saved privately. Leave this field blank to keep
+                        your current private email unchanged, or enter a new email here to replace it.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const confirmed = window.confirm(
+                            "Remove the saved private email from this profile completely?",
+                          );
+
+                          if (confirmed) {
+                            void removeSavedEmail();
+                          }
+                        }}
+                        disabled={removingEmail || publishing || loading}
+                        className="mt-2 inline-flex items-center rounded border border-red-900 px-3 py-1.5 text-[11px] font-mono text-red-300 hover:text-red-200 hover:border-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {removingEmail ? "Removing private email..." : "Remove saved private email"}
+                      </button>
+                    </div>
                   )}
                   <p className="mt-2 text-[11px] font-mono text-zinc-600 leading-relaxed">
-                    Email is stored in encrypted form by default. To make an email public, enter it
-                    in this field first, then turn on
-                    <span className="text-zinc-400"> Show email publicly</span> below.
+                    Email is stored in encrypted form by default for privacy. This field is meant
+                    for replacing your private email or choosing to make an email public. To show
+                    an email publicly, enter it here first, then turn on
+                    <span className="text-zinc-400"> Show email publicly</span> in Field Disclosure below.
                   </p>
                   {!emailIsValid && (
                     <p className="mt-2 text-[11px] font-mono text-red-400">
@@ -1622,7 +1805,8 @@ export function MyProfile() {
             </div>
 
             <div className="mt-3 text-[11px] font-mono text-zinc-600">
-              Empty fields are automatically hidden until you fill them in.
+              Empty fields are automatically hidden until you fill them in. For email, the public
+              toggle becomes available only when an email is entered in the field above.
             </div>
           </div>
 
