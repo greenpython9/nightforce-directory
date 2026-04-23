@@ -66,7 +66,52 @@ type MidnightConnectedApiLike = {
     balance?: bigint;
     cap?: bigint;
   }>;
+  signData?: (
+    data: string,
+    options: {
+      encoding: "hex" | "base64" | "text";
+      keyType: "unshielded";
+    },
+  ) => Promise<{
+    data: string;
+    signature: string;
+    verifyingKey: string;
+  }>;
+  getProvingProvider?: (keyMaterialProvider: unknown) => Promise<unknown>;
+  balanceUnsealedTransaction?: (
+    tx: string,
+    options?: { payFees?: boolean },
+  ) => Promise<{ tx: string }>;
+  submitTransaction?: (tx: string) => Promise<void>;
 };
+
+
+export type NightforceAppMode = "local-readonly" | "preprod-write";
+
+const APP_MODE =
+  ((import.meta.env.VITE_NIGHTFORCE_APP_MODE as string | undefined) ??
+    "local-readonly") as NightforceAppMode;
+
+function getDefaultNetworkId(mode: NightforceAppMode): string {
+  return mode === "preprod-write" ? "preprod" : "undeployed";
+}
+
+function getDefaultProfileProofStateUrl(mode: NightforceAppMode): string {
+  return mode === "preprod-write"
+    ? "http://127.0.0.1:4000/api/profile-proof/state?target=preprod"
+    : "http://127.0.0.1:4000/api/profile-proof/state?target=local";
+}
+
+export const NIGHTFORCE_APP_MODE: NightforceAppMode = APP_MODE;
+export const MIDNIGHT_NETWORK_ID =
+  (import.meta.env.VITE_MIDNIGHT_NETWORK_ID as string | undefined) ??
+  getDefaultNetworkId(NIGHTFORCE_APP_MODE);
+
+export const PROFILE_PROOF_STATE_URL =
+  (import.meta.env.VITE_PROFILE_PROOF_STATE_URL as string | undefined) ??
+  getDefaultProfileProofStateUrl(NIGHTFORCE_APP_MODE);
+
+export const MIDNIGHT_CONNECT_ENABLED = NIGHTFORCE_APP_MODE === "preprod-write";
 
 
 export interface ProfileProofState {
@@ -81,8 +126,6 @@ export interface ProfileProofState {
     value: number;
   };
 }
-
-const PROFILE_PROOF_STATE_URL = "http://127.0.0.1:4000/api/profile-proof/state";
 
 export async function getProfileProofState(): Promise<ProfileProofState> {
   const response = await fetch(PROFILE_PROOF_STATE_URL);
@@ -105,15 +148,15 @@ export async function getProfileProofState(): Promise<ProfileProofState> {
 // MOCK WALLET IMPLEMENTATION
 // Keep this for the local proof-of-life flow.
 //
-// MIDNIGHT BATCH C - STEP 1
-// App-side local network retarget only.
-// Adds helper functions for:
-//   - detecting injected Midnight wallets
-//   - connecting to local undeployed network
-//   - reading wallet addresses/config/dust balance
+// MIDNIGHT BATCH D1
+// App-side environment split.
+// Supports:
+//   - local-readonly mode
+//   - preprod-write mode
 //
-// We are still NOT replacing the existing mock adapter.
-// Mock flow stays intact while we begin app-side Midnight integration.
+// Mock flow stays intact.
+// Local mode keeps the API-bridge read-only proof.
+// Preprod mode is the future path for real app-side wallet write.
 // ============================================================
 
 export const MOCK_WALLETS = [
@@ -127,7 +170,6 @@ export const MOCK_WALLETS = [
 ];
 
 export const ADMIN_WALLET_ID = "admin-wallet-001";
-export const MIDNIGHT_NETWORK_ID = "undeployed";
 
 const WALLET_STORAGE_KEY = "nightforce_wallet";
 const MIDNIGHT_PROVIDER_STORAGE_KEY = "nightforce_midnight_provider";
@@ -257,6 +299,10 @@ export function getStoredMidnightProviderId(): string | null {
     return null;
   }
   return localStorage.getItem(MIDNIGHT_PROVIDER_STORAGE_KEY);
+}
+
+export function getConnectedMidnightApi(): MidnightConnectedApiLike | null {
+  return connectedMidnightApi;
 }
 
 export async function connectMidnightWallet(
