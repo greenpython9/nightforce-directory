@@ -221,6 +221,14 @@ type ContactMode =
   | "PRIVATE_CONTACT_AVAILABLE"
   | "PUBLIC_CONTACT_ALLOWED";
 
+function isContactMode(value: unknown): value is ContactMode {
+  return (
+    value === "NO_CONTACT" ||
+    value === "PRIVATE_CONTACT_AVAILABLE" ||
+    value === "PUBLIC_CONTACT_ALLOWED"
+  );
+}
+
 function deriveContactMode(profile: typeof profilesTable.$inferSelect): ContactMode {
   if (profile.publicEmail) {
     return "PUBLIC_CONTACT_ALLOWED";
@@ -231,6 +239,17 @@ function deriveContactMode(profile: typeof profilesTable.$inferSelect): ContactM
   }
 
   return "NO_CONTACT";
+}
+
+function getPublicContactMode(profile: typeof profilesTable.$inferSelect): ContactMode {
+  if (
+    profile.contactModeSyncStatus === "synced" &&
+    isContactMode(profile.contactModeSyncedValue)
+  ) {
+    return profile.contactModeSyncedValue;
+  }
+
+  return deriveContactMode(profile);
 }
 
 function getSocialVisibilityKey(
@@ -305,7 +324,7 @@ function toPublicProfile(profile: typeof profilesTable.$inferSelect) {
       profile.fieldVisibility.email === "public"
         ? profile.publicEmail
         : null,
-    contactMode: deriveContactMode(profile),
+    contactMode: getPublicContactMode(profile),
     socials: filterPublicSocials(profile),
     requestedVisibility: profile.requestedVisibility,
     publishState: profile.publishState,

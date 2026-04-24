@@ -409,10 +409,20 @@ router.get("/nightforce/public-profiles/:publicId", (req, res) => {
   });
 });
 
-function deriveContactMode(profile: ProfileRecord):
+type ContactMode =
   | "NO_CONTACT"
   | "PRIVATE_CONTACT_AVAILABLE"
-  | "PUBLIC_CONTACT_ALLOWED" {
+  | "PUBLIC_CONTACT_ALLOWED";
+
+function isContactMode(value: unknown): value is ContactMode {
+  return (
+    value === "NO_CONTACT" ||
+    value === "PRIVATE_CONTACT_AVAILABLE" ||
+    value === "PUBLIC_CONTACT_ALLOWED"
+  );
+}
+
+function deriveContactMode(profile: ProfileRecord): ContactMode {
   if (profile.publicEmail) {
     return "PUBLIC_CONTACT_ALLOWED";
   }
@@ -424,12 +434,23 @@ function deriveContactMode(profile: ProfileRecord):
   return "NO_CONTACT";
 }
 
+function getPublicContactMode(profile: ProfileRecord): ContactMode {
+  if (
+    profile.contactModeSyncStatus === "synced" &&
+    isContactMode(profile.contactModeSyncedValue)
+  ) {
+    return profile.contactModeSyncedValue;
+  }
+
+  return deriveContactMode(profile);
+}
+
 function getPublishedDirectoryProfiles() {
   return Array.from(profilesByVerificationRequestId.values())
     .filter((profile) => profile.publishState === "published")
     .map((profile) => ({
       ...profile,
-      contactMode: deriveContactMode(profile),
+      contactMode: getPublicContactMode(profile),
     }));
 }
 
