@@ -1,0 +1,8 @@
+node_modules/
+dist/
+contracts/managed/
+deployment.json
+deployment.preprod.json
+midnight-level-db/
+nightforce-midnight-contact-mode@*
+docker

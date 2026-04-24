@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import {
   getWalletAdapter,
   ADMIN_WALLET_ID,
+  NIGHTFORCE_APP_MODE,
   getAvailableMidnightWallets,
   connectMidnightWallet,
   getMidnightWalletSnapshot,
@@ -9,8 +10,15 @@ import {
   type MidnightWalletProviderSummary,
   type MidnightWalletSnapshot,
 } from "../services/walletService";
-import { loadStore } from "../lib/storage";
+import { writeProfileProofPublicMy } from "../services/profileProofWrite";
+import {
+  deployContactModePublic,
+  updateContactModePublic,
+  type ContactModeWriteValue,
+} from "../services/contactModeWrite";
 import type { VerificationStatus } from "../types";
+
+const API_BASE_URL = "http://127.0.0.1:8787";
 
 type ConnectionMode = "mock" | "midnight" | null;
 
@@ -27,11 +35,102 @@ interface WalletContextType {
   isWalletLoading: boolean;
   connect: (walletId: string) => Promise<void>;
   connectMidnight: (providerId: string) => Promise<void>;
+  writeProfileProof: () => Promise<{
+    contractAddress: string;
+    networkId: string;
+  }>;
+  deployContactMode: (initialMode: ContactModeWriteValue) => Promise<{
+    contractAddress: string;
+    networkId: string;
+    initialMode: ContactModeWriteValue;
+  }>;
+  updateContactMode: (
+    contractAddress: string,
+    nextMode: ContactModeWriteValue,
+  ) => Promise<{
+    contractAddress: string;
+    networkId: string;
+    nextMode: ContactModeWriteValue;
+  }>;
   disconnect: () => Promise<void>;
   refreshStatus: () => Promise<void>;
 }
 
 const WalletContext = createContext<WalletContextType | null>(null);
+
+type WalletBindingResponse = {
+  binding: {
+    id: string;
+    verificationRequestId: string;
+    midnightWalletAddress: string;
+    boundAt: string;
+    isActive: "true" | "false";
+    updatedAt: string;
+  };
+};
+
+function resolveMidnightWalletAddress(
+  snapshot: MidnightWalletSnapshot | null,
+): string | null {
+  if (!snapshot) return null;
+
+  return (
+    snapshot.unshieldedAddress ??
+    snapshot.dustAddress ??
+    snapshot.shieldedAddress ??
+    null
+  );
+}
+
+async function fetchBackendVerificationStatus(
+  walletAddress: string | null,
+): Promise<VerificationStatus> {
+  if (!walletAddress) {
+    return "not_verified";
+  }
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/nightforce/wallet-bindings/by-wallet/${encodeURIComponent(walletAddress)}`,
+  );
+
+  if (response.status === 404) {
+    return "not_verified";
+  }
+
+  let payload: unknown = null;
+
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    const message =
+      typeof payload === "object" &&
+      payload !== null &&
+      "error" in payload &&
+      typeof payload.error === "string"
+        ? payload.error
+        : "Failed to load wallet binding status.";
+
+    throw new Error(message);
+  }
+
+  const data = payload as WalletBindingResponse;
+
+  if (data.binding.isActive === "true") {
+    return "approved";
+  }
+
+  return "not_verified";
+}
+
+function computeMockStatus(walletId: string | null): VerificationStatus {
+  if (!walletId) return "not_verified";
+  if (walletId === ADMIN_WALLET_ID) return "approved";
+  return "not_verified";
+}
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const adapter = getWalletAdapter();
@@ -49,40 +148,41 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [walletError, setWalletError] = useState<string | null>(null);
   const [isWalletLoading, setIsWalletLoading] = useState(false);
 
-  const computeStatus = useCallback((wId: string | null): VerificationStatus => {
-    if (!wId) return "not_verified";
-
-    const store = loadStore();
-
-    if (store.approvedWallets.includes(wId)) return "approved";
-
-    const req = store.verificationRequests.find((r) => r.walletId === wId);
-    if (!req) return "not_verified";
-    if (req.status === "pending") return "pending";
-    if (req.status === "rejected") return "not_verified";
-
-    return "not_verified";
-  }, []);
-
   const refreshStatus = useCallback(async () => {
     setAvailableMidnightWallets(getAvailableMidnightWallets());
 
     if (connectionMode === "midnight") {
-      const snapshot = await getMidnightWalletSnapshot();
-      setMidnightSnapshot(snapshot);
-      setWalletId(null);
-      setVerificationStatus("not_verified");
+      try {
+        const snapshot = await getMidnightWalletSnapshot();
+        const resolvedWalletId = resolveMidnightWalletAddress(snapshot);
+        const backendStatus = await fetchBackendVerificationStatus(resolvedWalletId);
+
+        setMidnightSnapshot(snapshot);
+        setWalletId(resolvedWalletId);
+        setVerificationStatus(backendStatus);
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to refresh Midnight wallet status.";
+
+        setWalletError(message);
+        setMidnightSnapshot(null);
+        setWalletId(null);
+        setVerificationStatus("not_verified");
+      }
+
       return;
     }
 
     const id = adapter.getConnectedWallet();
     setWalletId(id);
-    setVerificationStatus(computeStatus(id));
+    setVerificationStatus(computeMockStatus(id));
 
     if (!id) {
       setConnectionMode(null);
     }
-  }, [adapter, computeStatus, connectionMode]);
+  }, [adapter, connectionMode]);
 
   useEffect(() => {
     void refreshStatus();
@@ -99,7 +199,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
         setConnectionMode("mock");
         setWalletId(id);
-        setVerificationStatus(computeStatus(id));
+        setVerificationStatus(computeMockStatus(id));
         setMidnightProviderId(null);
         setMidnightSnapshot(null);
       } catch (error) {
@@ -110,7 +210,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         setIsWalletLoading(false);
       }
     },
-    [adapter, computeStatus],
+    [adapter],
   );
 
   const connectMidnight = useCallback(
@@ -122,19 +222,23 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         await adapter.disconnect();
 
         const snapshot = await connectMidnightWallet(providerId);
+        const resolvedWalletId = resolveMidnightWalletAddress(snapshot);
+        const backendStatus = await fetchBackendVerificationStatus(resolvedWalletId);
 
         setConnectionMode("midnight");
-        setWalletId(null);
-        setVerificationStatus("not_verified");
+        setWalletId(resolvedWalletId);
+        setVerificationStatus(backendStatus);
         setMidnightProviderId(providerId);
         setMidnightSnapshot(snapshot);
       } catch (error) {
         const rawMessage =
           error instanceof Error ? error.message : "Failed to connect Midnight wallet.";
 
-        const message = rawMessage.includes("Unknown network: undeployed")
-          ? "Injected Midnight browser wallets do not currently support the local undeployed network in this app flow. The read-only Profile Proof State panel below is still live."
-          : rawMessage;
+        const message =
+          NIGHTFORCE_APP_MODE === "local-readonly" &&
+          rawMessage.includes("Unknown network: undeployed")
+            ? "Injected Midnight browser wallets do not currently support the local undeployed network in this app flow. The read-only Profile Proof State panel below is still live."
+            : rawMessage;
 
         setWalletError(message);
         throw error;
@@ -144,6 +248,101 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     },
     [adapter],
   );
+
+  const writeProfileProof = useCallback(async () => {
+    setIsWalletLoading(true);
+    setWalletError(null);
+
+    try {
+      const result = await writeProfileProofPublicMy();
+      const snapshot = await getMidnightWalletSnapshot();
+      const resolvedWalletId = resolveMidnightWalletAddress(snapshot);
+      const backendStatus = await fetchBackendVerificationStatus(resolvedWalletId);
+
+      setConnectionMode("midnight");
+      setWalletId(resolvedWalletId);
+      setVerificationStatus(backendStatus);
+      setMidnightSnapshot(snapshot);
+
+      return result;
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to submit profile-proof write transaction.";
+
+      setWalletError(message);
+      throw error;
+    } finally {
+      setIsWalletLoading(false);
+    }
+  }, []);
+
+  const deployContactMode = useCallback(
+    async (initialMode: ContactModeWriteValue) => {
+      setIsWalletLoading(true);
+      setWalletError(null);
+
+      try {
+        const result = await deployContactModePublic(initialMode);
+        const snapshot = await getMidnightWalletSnapshot();
+        const resolvedWalletId = resolveMidnightWalletAddress(snapshot);
+        const backendStatus = await fetchBackendVerificationStatus(resolvedWalletId);
+
+        setConnectionMode("midnight");
+        setWalletId(resolvedWalletId);
+        setVerificationStatus(backendStatus);
+        setMidnightSnapshot(snapshot);
+
+        return result;
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to deploy contact-mode contract.";
+
+        setWalletError(message);
+        throw error;
+      } finally {
+        setIsWalletLoading(false);
+      }
+    },
+    [],
+  );
+
+
+  const updateContactMode = useCallback(
+    async (contractAddress: string, nextMode: ContactModeWriteValue) => {
+      setIsWalletLoading(true);
+      setWalletError(null);
+
+      try {
+        const result = await updateContactModePublic(contractAddress, nextMode);
+        const snapshot = await getMidnightWalletSnapshot();
+        const resolvedWalletId = resolveMidnightWalletAddress(snapshot);
+        const backendStatus = await fetchBackendVerificationStatus(resolvedWalletId);
+
+        setConnectionMode("midnight");
+        setWalletId(resolvedWalletId);
+        setVerificationStatus(backendStatus);
+        setMidnightSnapshot(snapshot);
+
+        return result;
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to update contact-mode contract.";
+
+        setWalletError(message);
+        throw error;
+      } finally {
+        setIsWalletLoading(false);
+      }
+    },
+    [],
+  );
+
 
   const disconnect = useCallback(async () => {
     setIsWalletLoading(true);
@@ -188,6 +387,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         isWalletLoading,
         connect,
         connectMidnight,
+        writeProfileProof,
+        deployContactMode,
+        updateContactMode,
         disconnect,
         refreshStatus,
       }}

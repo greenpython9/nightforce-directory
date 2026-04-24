@@ -275,6 +275,10 @@ type ProfileResponse = {
     avatarUrl: string | null;
     websiteUrl: string | null;
     publicEmail: string | null;
+    contactModeContractAddress: string | null;
+    contactModeSyncStatus: "not_created" | "synced" | "failed";
+    contactModeLastSyncedAt: string | null;
+    contactModeSyncError: string | null;
     socials: string[];
     fieldVisibility: FieldVisibility;
     encryptedHiddenPayload: unknown;
@@ -352,6 +356,65 @@ function parseEncryptedHiddenPayload(value: unknown): EncryptedHiddenPayload | n
   }
 
   return null;
+}
+
+function deriveContactModeForSync(args: {
+  publicEmail: string | null;
+  encryptedHiddenPayload: EncryptedHiddenPayload | null;
+}): ContactMode {
+  if (args.publicEmail) {
+    return "PUBLIC_CONTACT_ALLOWED";
+  }
+
+  if (args.encryptedHiddenPayload) {
+    return "PRIVATE_CONTACT_AVAILABLE";
+  }
+
+  return "NO_CONTACT";
+}
+
+async function updateContactModeSyncMetadata(args: {
+  verificationRequestId: string;
+  contactModeContractAddress: string | null;
+  contactModeSyncStatus: "not_created" | "synced" | "failed";
+  contactModeLastSyncedAt: string | null;
+  contactModeSyncError: string | null;
+}): Promise<void> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/nightforce/profiles/${args.verificationRequestId}/contact-mode-sync`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        contactModeContractAddress: args.contactModeContractAddress,
+        contactModeSyncStatus: args.contactModeSyncStatus,
+        contactModeLastSyncedAt: args.contactModeLastSyncedAt,
+        contactModeSyncError: args.contactModeSyncError,
+      }),
+    },
+  );
+
+  let payload: unknown = null;
+
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    const message =
+      typeof payload === "object" &&
+      payload !== null &&
+      "error" in payload &&
+      typeof payload.error === "string"
+        ? payload.error
+        : "Failed to update contact-mode sync metadata.";
+
+    throw new Error(message);
+  }
 }
 
 async function getHiddenEmailSecret(signingScope: string): Promise<string> {
@@ -626,7 +689,13 @@ function buildEditorFingerprint(input: ProfileEditorFingerprintInput): string {
 }
 
 export function MyProfile() {
-  const { walletId, verificationStatus, connectionMode } = useWallet();
+  const {
+    walletId,
+    verificationStatus,
+    connectionMode,
+    deployContactMode,
+    updateContactMode,
+  } = useWallet();
 
   const [verificationRequestId, setVerificationRequestId] = useState<string | null>(null);
   const [walletBindingId, setWalletBindingId] = useState<string | null>(null);
@@ -662,9 +731,12 @@ export function MyProfile() {
   const [publishing, setPublishing] = useState(false);
   const [removingEmail, setRemovingEmail] = useState(false);
   const [lastPublishedFingerprint, setLastPublishedFingerprint] = useState<string | null>(null);
+  const [contactModeContractAddress, setContactModeContractAddress] =
+    useState<string | null>(null);
   const [savedEncryptedHiddenPayload, setSavedEncryptedHiddenPayload] =
     useState<EncryptedHiddenPayload | null>(null);
   const [hasSavedShieldedEmail, setHasSavedShieldedEmail] = useState(false);
+  const [savedContactMode, setSavedContactMode] = useState<ContactMode | null>(null);
   const [saveMsg, setSaveMsg] = useState("");
   const [error, setError] = useState("");
 
@@ -696,8 +768,10 @@ export function MyProfile() {
     setShowDiscord(true);
     setShowTelegram(true);
     setLastPublishedFingerprint(null);
+    setContactModeContractAddress(null);
     setSavedEncryptedHiddenPayload(null);
     setHasSavedShieldedEmail(false);
+    setSavedContactMode(null);
   }, []);
 
   const load = useCallback(async () => {
@@ -783,6 +857,8 @@ export function MyProfile() {
       const profile = data.profile;
       const parsedSocials = parseSocials(profile.socials ?? []);
 
+      setContactModeContractAddress(profile.contactModeContractAddress ?? null);
+
       setPublicId(profile.publicId ?? "");
       setDisplayName(profile.displayName ?? "");
       setRegion(profile.region ?? "");
@@ -799,6 +875,12 @@ export function MyProfile() {
 
       setSavedEncryptedHiddenPayload(nextEncryptedHiddenPayload);
       setHasSavedShieldedEmail(Boolean(nextEncryptedHiddenPayload));
+      setSavedContactMode(
+        deriveContactModeForSync({
+          publicEmail: profile.publicEmail,
+          encryptedHiddenPayload: nextEncryptedHiddenPayload,
+        }),
+      );
       setEmail(nextEmail);
 
       setXUsername(parsedSocials.xUsername);
@@ -1319,11 +1401,125 @@ export function MyProfile() {
       }
 
       const data = payload as ProfileResponse;
+      const nextSavedPublicEmail = showEmail && hasEmailValue ? trimmedEmail : null;
+      const nextSavedEncryptedHiddenPayload = encryptedHiddenPayload ?? null;
+      const existingContactModeAddress =
+        data.profile.contactModeContractAddress ?? contactModeContractAddress ?? null;
+
       setPublicId(data.profile.publicId ?? "");
-      setSavedEncryptedHiddenPayload(encryptedHiddenPayload);
-      setHasSavedShieldedEmail(Boolean(encryptedHiddenPayload));
+      setSavedEncryptedHiddenPayload(nextSavedEncryptedHiddenPayload);
+      setHasSavedShieldedEmail(Boolean(nextSavedEncryptedHiddenPayload));
       setLastPublishedFingerprint(currentEditorFingerprint);
-      setSaveMsg("Changes published.");
+
+      if (existingContactModeAddress) {
+        const nextMode = deriveContactModeForSync({
+          publicEmail: nextSavedPublicEmail,
+          encryptedHiddenPayload: nextSavedEncryptedHiddenPayload,
+        });
+
+        const previousMode =
+          savedContactMode ??
+          deriveContactModeForSync({
+            publicEmail: data.profile.publicEmail,
+            encryptedHiddenPayload: parseEncryptedHiddenPayload(
+              data.profile.encryptedHiddenPayload,
+            ),
+          });
+
+        if (previousMode === nextMode) {
+          setContactModeContractAddress(existingContactModeAddress);
+          setSavedContactMode(nextMode);
+          setSaveMsg("Changes published.");
+          setTimeout(() => setSaveMsg(""), 2500);
+          return;
+        }
+
+        try {
+          const updateResult = await updateContactMode(
+            existingContactModeAddress,
+            nextMode,
+          );
+          const syncedAt = new Date().toISOString();
+
+          await updateContactModeSyncMetadata({
+            verificationRequestId,
+            contactModeContractAddress: updateResult.contractAddress,
+            contactModeSyncStatus: "synced",
+            contactModeLastSyncedAt: syncedAt,
+            contactModeSyncError: null,
+          });
+
+          setContactModeContractAddress(updateResult.contractAddress);
+          setSavedContactMode(nextMode);
+          setSaveMsg("Changes published.");
+        } catch (syncError) {
+          const syncMessage =
+            syncError instanceof Error
+              ? syncError.message
+              : "Failed to update contact-mode contract.";
+
+          try {
+            await updateContactModeSyncMetadata({
+              verificationRequestId,
+              contactModeContractAddress: existingContactModeAddress,
+              contactModeSyncStatus: "failed",
+              contactModeLastSyncedAt:
+                data.profile.contactModeLastSyncedAt ?? null,
+              contactModeSyncError: syncMessage,
+            });
+          } catch {
+            // Keep backend publish success even if sync metadata update also fails.
+          }
+
+          setContactModeContractAddress(existingContactModeAddress);
+          setSaveMsg("Changes published. Contact-mode sync pending.");
+        }
+
+        setTimeout(() => setSaveMsg(""), 2500);
+        return;
+      }
+
+      try {
+        const initialMode = deriveContactModeForSync({
+          publicEmail: nextSavedPublicEmail,
+          encryptedHiddenPayload: nextSavedEncryptedHiddenPayload,
+        });
+
+        const deployResult = await deployContactMode(initialMode);
+
+        await updateContactModeSyncMetadata({
+          verificationRequestId,
+          contactModeContractAddress: deployResult.contractAddress,
+          contactModeSyncStatus: "synced",
+          contactModeLastSyncedAt: new Date().toISOString(),
+          contactModeSyncError: null,
+        });
+
+        setContactModeContractAddress(deployResult.contractAddress);
+        setSavedContactMode(initialMode);
+        setSaveMsg("Changes published.");
+      } catch (syncError) {
+        const syncMessage =
+          syncError instanceof Error
+            ? syncError.message
+            : "Failed to deploy contact-mode contract.";
+
+        try {
+          await updateContactModeSyncMetadata({
+            verificationRequestId,
+            contactModeContractAddress: null,
+            contactModeSyncStatus: "failed",
+            contactModeLastSyncedAt: null,
+            contactModeSyncError: syncMessage,
+          });
+        } catch {
+          // Keep backend publish success even if sync metadata update also fails.
+        }
+
+        setContactModeContractAddress(null);
+        setSaveMsg("Changes published. Contact-mode sync pending.");
+      }
+
       setTimeout(() => setSaveMsg(""), 2500);
     } catch (err) {
       const message =

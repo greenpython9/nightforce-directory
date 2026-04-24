@@ -1,0 +1,22 @@
+pragma language_version 0.22;
+
+import CompactStandardLibrary;
+
+export enum ContactMode {
+  NO_CONTACT,
+  PRIVATE_CONTACT_AVAILABLE,
+  PUBLIC_CONTACT_ALLOWED
+}
+
+export sealed ledger owner: ZswapCoinPublicKey;
+export ledger contactMode: ContactMode;
+
+constructor(initialMode: ContactMode) {
+  owner = ownPublicKey();
+  contactMode = disclose(initialMode);
+}
+
+export circuit setContactMode(nextMode: ContactMode): [] {
+  assert(owner == ownPublicKey(), "You are not the owner");
+  contactMode = disclose(nextMode);
+}
