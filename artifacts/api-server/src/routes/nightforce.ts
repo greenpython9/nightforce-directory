@@ -372,6 +372,13 @@ router.post("/nightforce/profiles/:verificationRequestId/contact-mode-sync", (re
       ? syncedValue
       : null;
 
+  if (syncStatus === "synced" && !validSyncedValue) {
+    res.status(400).json({
+      error: "contactModeSyncedValue is required when contactModeSyncStatus is synced.",
+    });
+    return;
+  }
+
   profile.contactModeContractAddress =
     asString(body.contactModeContractAddress) ?? null;
   profile.contactModeSyncStatus = syncStatus;

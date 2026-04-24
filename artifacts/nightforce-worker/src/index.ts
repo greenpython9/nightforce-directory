@@ -113,13 +113,24 @@ const contactModeSchema = z.enum([
   "PUBLIC_CONTACT_ALLOWED",
 ]);
 
-const updateContactModeSyncInputSchema = z.object({
-  contactModeContractAddress: z.string().trim().min(1).nullable().optional(),
-  contactModeSyncStatus: z.enum(["not_created", "synced", "failed"]),
-  contactModeLastSyncedAt: z.string().trim().min(1).nullable().optional(),
-  contactModeSyncError: z.string().trim().optional().nullable(),
-  contactModeSyncedValue: contactModeSchema.nullable().optional(),
-});
+const updateContactModeSyncInputSchema = z
+  .object({
+    contactModeContractAddress: z.string().trim().min(1).nullable().optional(),
+    contactModeSyncStatus: z.enum(["not_created", "synced", "failed"]),
+    contactModeLastSyncedAt: z.string().trim().min(1).nullable().optional(),
+    contactModeSyncError: z.string().trim().optional().nullable(),
+    contactModeSyncedValue: contactModeSchema.nullable().optional(),
+  })
+  .superRefine((input, ctx) => {
+    if (input.contactModeSyncStatus === "synced" && !input.contactModeSyncedValue) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["contactModeSyncedValue"],
+        message:
+          "contactModeSyncedValue is required when contactModeSyncStatus is synced.",
+      });
+    }
+  });
 
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",

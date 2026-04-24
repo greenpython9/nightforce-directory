@@ -279,6 +279,7 @@ type ProfileResponse = {
     contactModeSyncStatus: "not_created" | "synced" | "failed";
     contactModeLastSyncedAt: string | null;
     contactModeSyncError: string | null;
+    contactModeSyncedValue: ContactMode | null;
     socials: string[];
     fieldVisibility: FieldVisibility;
     encryptedHiddenPayload: unknown;
