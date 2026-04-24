@@ -1,34 +1,106 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useWallet } from "../hooks/useWallet";
-import { loadStore, updateStore } from "../lib/storage";
 import { StatusBadge } from "../components/StatusBadge";
-import type { VerificationRequest, VerificationStatus } from "../types";
 import { ADMIN_WALLET_ID } from "../services/walletService";
 
+const API_BASE_URL = "http://127.0.0.1:8787";
+
 type Tab = "pending" | "approved" | "rejected";
+
+type VerificationRequestRecord = {
+  id: string;
+  discordHandle: string;
+  region: string;
+  note: string;
+  status: "pending" | "approved" | "rejected";
+  adminNotes: string;
+  createdAt: string;
+  reviewedAt: string | null;
+  updatedAt: string;
+};
+
+type VerificationRequestListResponse = {
+  requests: VerificationRequestRecord[];
+};
+
+type VerificationRequestResponse = {
+  request: VerificationRequestRecord;
+};
 
 export function AdminReview() {
   const { walletId } = useWallet();
   const [tab, setTab] = useState<Tab>("pending");
   const [search, setSearch] = useState("");
-  const [requests, setRequests] = useState<VerificationRequest[]>([]);
-  const [selected, setSelected] = useState<VerificationRequest | null>(null);
+  const [requests, setRequests] = useState<VerificationRequestRecord[]>([]);
+  const [selected, setSelected] = useState<VerificationRequestRecord | null>(null);
   const [adminNotes, setAdminNotes] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [acting, setActing] = useState(false);
+  const [error, setError] = useState("");
 
-  const reload = () => {
-    const store = loadStore();
-    setRequests(store.verificationRequests);
+  const reload = async (selectedId?: string | null) => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/nightforce/verification-requests`,
+      );
+
+      let payload: unknown = null;
+
+      try {
+        payload = await response.json();
+      } catch {
+        payload = null;
+      }
+
+      if (!response.ok) {
+        const message =
+          typeof payload === "object" &&
+          payload !== null &&
+          "error" in payload &&
+          typeof payload.error === "string"
+            ? payload.error
+            : "Failed to load verification requests.";
+
+        throw new Error(message);
+      }
+
+      const data = payload as VerificationRequestListResponse;
+      setRequests(data.requests);
+
+      if (selectedId) {
+        const nextSelected =
+          data.requests.find((req) => req.id === selectedId) ?? null;
+        setSelected(nextSelected);
+        setAdminNotes(nextSelected?.adminNotes ?? "");
+      } else {
+        setSelected(null);
+        setAdminNotes("");
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to load verification requests.",
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    reload();
+    void reload();
   }, []);
 
   if (walletId !== ADMIN_WALLET_ID) {
     return (
       <div className="max-w-xl mx-auto py-16 px-4">
         <div className="border border-red-800 rounded-lg p-6 bg-zinc-900">
-          <div className="text-red-400 font-mono text-sm font-semibold mb-2">Access Denied</div>
+          <div className="text-red-400 font-mono text-sm font-semibold mb-2">
+            Access Denied
+          </div>
           <p className="text-zinc-400 font-mono text-sm">
             You do not have permission to access this page.
           </p>
@@ -40,48 +112,73 @@ export function AdminReview() {
   const filtered = requests.filter((r) => {
     if (r.status !== tab) return false;
     if (!search.trim()) return true;
+
     const q = search.toLowerCase();
     return (
-      r.discordHandle.toLowerCase().includes(q) || r.walletId.toLowerCase().includes(q)
+      r.discordHandle.toLowerCase().includes(q) ||
+      r.region.toLowerCase().includes(q) ||
+      r.id.toLowerCase().includes(q)
     );
   });
 
-  const handleSelect = (req: VerificationRequest) => {
+  const handleSelect = (req: VerificationRequestRecord) => {
     setSelected(req);
     setAdminNotes(req.adminNotes);
   };
 
-  const handleApprove = () => {
+  const handleReview = async (action: "approve" | "reject") => {
     if (!selected) return;
-    updateStore((store) => ({
-      ...store,
-      verificationRequests: store.verificationRequests.map((r) =>
-        r.id === selected.id
-          ? { ...r, status: "approved" as VerificationStatus, adminNotes, reviewedAt: new Date().toISOString() }
-          : r
-      ),
-      approvedWallets: store.approvedWallets.includes(selected.walletId)
-        ? store.approvedWallets
-        : [...store.approvedWallets, selected.walletId],
-    }));
-    reload();
-    setSelected(null);
-    setTab("approved");
-  };
 
-  const handleReject = () => {
-    if (!selected) return;
-    updateStore((store) => ({
-      ...store,
-      verificationRequests: store.verificationRequests.map((r) =>
-        r.id === selected.id
-          ? { ...r, status: "rejected" as VerificationStatus, adminNotes, reviewedAt: new Date().toISOString() }
-          : r
-      ),
-    }));
-    reload();
-    setSelected(null);
-    setTab("rejected");
+    setActing(true);
+    setError("");
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/nightforce/verification-requests/${selected.id}/${action}`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            adminNotes,
+          }),
+        },
+      );
+
+      let payload: unknown = null;
+
+      try {
+        payload = await response.json();
+      } catch {
+        payload = null;
+      }
+
+      if (!response.ok) {
+        const message =
+          typeof payload === "object" &&
+          payload !== null &&
+          "error" in payload &&
+          typeof payload.error === "string"
+            ? payload.error
+            : `Failed to ${action} verification request.`;
+
+        throw new Error(message);
+      }
+
+      const data = payload as VerificationRequestResponse;
+      const nextTab: Tab = data.request.status;
+      setTab(nextTab);
+      await reload(null);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : `Failed to ${action} verification request.`,
+      );
+    } finally {
+      setActing(false);
+    }
   };
 
   const tabs: { key: Tab; label: string }[] = [
@@ -102,16 +199,21 @@ export function AdminReview() {
 
   return (
     <div className="max-w-5xl mx-auto py-8 px-4">
-      <h1 className="text-xl font-mono font-bold text-white mb-6">Admin Review</h1>
+      <h1 className="text-xl font-mono font-bold text-white mb-6">
+        Admin Review
+      </h1>
 
-      {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-zinc-800">
         {tabs.map((t) => {
           const count = requests.filter((r) => r.status === t.key).length;
           return (
             <button
               key={t.key}
-              onClick={() => { setTab(t.key); setSelected(null); }}
+              onClick={() => {
+                setTab(t.key);
+                setSelected(null);
+                setAdminNotes("");
+              }}
               className={`px-4 py-2 text-xs font-mono border-b-2 transition-colors ${
                 tab === t.key
                   ? "border-white text-white"
@@ -124,18 +226,25 @@ export function AdminReview() {
         })}
       </div>
 
+      {error && (
+        <div className="mb-4 text-xs font-mono text-red-400">{error}</div>
+      )}
+
       <div className="flex gap-6">
-        {/* List panel */}
         <div className="flex-1 min-w-0">
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by Discord handle or wallet ID..."
+            placeholder="Search by Discord handle, region, or request ID..."
             className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 mb-4"
           />
 
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div className="text-xs font-mono text-zinc-500 py-8 text-center">
+              Loading requests...
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="text-xs font-mono text-zinc-600 py-8 text-center">
               No {tab} requests
             </div>
@@ -152,10 +261,14 @@ export function AdminReview() {
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2 mb-1">
-                    <span className="text-sm font-mono text-white">{req.discordHandle}</span>
+                    <span className="text-sm font-mono text-white">
+                      {req.discordHandle}
+                    </span>
                     <StatusBadge status={req.status} />
                   </div>
-                  <div className="text-xs font-mono text-zinc-500">{req.walletId}</div>
+                  <div className="text-xs font-mono text-zinc-500">
+                    {req.region}
+                  </div>
                   <div className="text-xs font-mono text-zinc-600 mt-1">
                     {formatDate(req.createdAt)}
                   </div>
@@ -165,7 +278,6 @@ export function AdminReview() {
           )}
         </div>
 
-        {/* Detail panel */}
         {selected ? (
           <div className="w-80 flex-shrink-0">
             <div className="border border-zinc-800 rounded-lg p-4 bg-zinc-900 flex flex-col gap-4">
@@ -178,8 +290,8 @@ export function AdminReview() {
 
               <div className="flex flex-col gap-2 text-xs font-mono">
                 <div>
-                  <span className="text-zinc-600">Wallet: </span>
-                  <span className="text-zinc-300">{selected.walletId}</span>
+                  <span className="text-zinc-600">Request ID: </span>
+                  <span className="text-zinc-300 break-all">{selected.id}</span>
                 </div>
                 <div>
                   <span className="text-zinc-600">Region: </span>
@@ -187,12 +299,16 @@ export function AdminReview() {
                 </div>
                 <div>
                   <span className="text-zinc-600">Submitted: </span>
-                  <span className="text-zinc-300">{formatDate(selected.createdAt)}</span>
+                  <span className="text-zinc-300">
+                    {formatDate(selected.createdAt)}
+                  </span>
                 </div>
                 {selected.reviewedAt && (
                   <div>
                     <span className="text-zinc-600">Reviewed: </span>
-                    <span className="text-zinc-300">{formatDate(selected.reviewedAt)}</span>
+                    <span className="text-zinc-300">
+                      {formatDate(selected.reviewedAt)}
+                    </span>
                   </div>
                 )}
                 {selected.note && (
@@ -218,16 +334,18 @@ export function AdminReview() {
               {selected.status === "pending" && (
                 <div className="flex gap-2">
                   <button
-                    onClick={handleApprove}
-                    className="flex-1 font-mono text-xs bg-emerald-950 hover:bg-emerald-900 text-emerald-400 border border-emerald-800 px-3 py-2 rounded-lg transition-colors"
+                    onClick={() => void handleReview("approve")}
+                    disabled={acting}
+                    className="flex-1 font-mono text-xs bg-emerald-950 hover:bg-emerald-900 text-emerald-400 border border-emerald-800 px-3 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Approve
+                    {acting ? "Working..." : "Approve"}
                   </button>
                   <button
-                    onClick={handleReject}
-                    className="flex-1 font-mono text-xs bg-red-950 hover:bg-red-900 text-red-400 border border-red-800 px-3 py-2 rounded-lg transition-colors"
+                    onClick={() => void handleReview("reject")}
+                    disabled={acting}
+                    className="flex-1 font-mono text-xs bg-red-950 hover:bg-red-900 text-red-400 border border-red-800 px-3 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Reject
+                    {acting ? "Working..." : "Reject"}
                   </button>
                 </div>
               )}
@@ -235,7 +353,9 @@ export function AdminReview() {
           </div>
         ) : (
           <div className="w-80 flex-shrink-0 border border-zinc-800 rounded-lg p-4 bg-zinc-900 flex items-center justify-center">
-            <span className="text-xs font-mono text-zinc-600">Select a request to review</span>
+            <span className="text-xs font-mono text-zinc-600">
+              Select a request to review
+            </span>
           </div>
         )}
       </div>
