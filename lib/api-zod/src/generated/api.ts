@@ -14,3 +14,357 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * Create a new Nightforce ambassador verification request without requiring a wallet first.
+ * @summary Create verification request
+ */
+export const CreateVerificationRequestBody = zod.object({
+  discordHandle: zod.string(),
+  region: zod.string(),
+  note: zod.string().optional(),
+});
+
+export const CreateVerificationRequestResponse = zod.object({
+  request: zod.object({
+    id: zod.string().uuid(),
+    discordHandle: zod.string(),
+    region: zod.string(),
+    note: zod.string(),
+    status: zod.enum(["pending", "approved", "rejected"]),
+    adminNotes: zod.string(),
+    createdAt: zod.coerce.date(),
+    reviewedAt: zod.coerce.date().nullable(),
+    updatedAt: zod.coerce.date(),
+  }),
+});
+
+/**
+ * List all verification requests for admin review.
+ * @summary List verification requests
+ */
+export const ListVerificationRequestsResponse = zod.object({
+  requests: zod.array(
+    zod.object({
+      id: zod.string().uuid(),
+      discordHandle: zod.string(),
+      region: zod.string(),
+      note: zod.string(),
+      status: zod.enum(["pending", "approved", "rejected"]),
+      adminNotes: zod.string(),
+      createdAt: zod.coerce.date(),
+      reviewedAt: zod.coerce.date().nullable(),
+      updatedAt: zod.coerce.date(),
+    }),
+  ),
+});
+
+/**
+ * Get a single verification request by id.
+ * @summary Get verification request
+ */
+export const GetVerificationRequestParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const GetVerificationRequestResponse = zod.object({
+  request: zod.object({
+    id: zod.string().uuid(),
+    discordHandle: zod.string(),
+    region: zod.string(),
+    note: zod.string(),
+    status: zod.enum(["pending", "approved", "rejected"]),
+    adminNotes: zod.string(),
+    createdAt: zod.coerce.date(),
+    reviewedAt: zod.coerce.date().nullable(),
+    updatedAt: zod.coerce.date(),
+  }),
+});
+
+/**
+ * Mark a verification request as approved.
+ * @summary Approve verification request
+ */
+export const ApproveVerificationRequestParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const ApproveVerificationRequestBody = zod.object({
+  adminNotes: zod.string().optional(),
+});
+
+export const ApproveVerificationRequestResponse = zod.object({
+  request: zod.object({
+    id: zod.string().uuid(),
+    discordHandle: zod.string(),
+    region: zod.string(),
+    note: zod.string(),
+    status: zod.enum(["pending", "approved", "rejected"]),
+    adminNotes: zod.string(),
+    createdAt: zod.coerce.date(),
+    reviewedAt: zod.coerce.date().nullable(),
+    updatedAt: zod.coerce.date(),
+  }),
+});
+
+/**
+ * Mark a verification request as rejected.
+ * @summary Reject verification request
+ */
+export const RejectVerificationRequestParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const RejectVerificationRequestBody = zod.object({
+  adminNotes: zod.string().optional(),
+});
+
+export const RejectVerificationRequestResponse = zod.object({
+  request: zod.object({
+    id: zod.string().uuid(),
+    discordHandle: zod.string(),
+    region: zod.string(),
+    note: zod.string(),
+    status: zod.enum(["pending", "approved", "rejected"]),
+    adminNotes: zod.string(),
+    createdAt: zod.coerce.date(),
+    reviewedAt: zod.coerce.date().nullable(),
+    updatedAt: zod.coerce.date(),
+  }),
+});
+
+/**
+ * Bind an approved verification request to a Midnight wallet address.
+ * @summary Create wallet binding
+ */
+export const CreateWalletBindingBody = zod.object({
+  verificationRequestId: zod.string().uuid(),
+  midnightWalletAddress: zod.string(),
+});
+
+export const CreateWalletBindingResponse = zod.object({
+  binding: zod.object({
+    id: zod.string().uuid(),
+    verificationRequestId: zod.string().uuid(),
+    midnightWalletAddress: zod.string(),
+    boundAt: zod.coerce.date(),
+    isActive: zod.boolean(),
+    updatedAt: zod.coerce.date(),
+  }),
+});
+
+/**
+ * Look up an existing wallet binding using Midnight wallet address.
+ * @summary Get wallet binding by wallet address
+ */
+export const GetWalletBindingByWalletAddressParams = zod.object({
+  walletAddress: zod.coerce.string(),
+});
+
+export const GetWalletBindingByWalletAddressResponse = zod.object({
+  binding: zod.object({
+    id: zod.string().uuid(),
+    verificationRequestId: zod.string().uuid(),
+    midnightWalletAddress: zod.string(),
+    boundAt: zod.coerce.date(),
+    isActive: zod.boolean(),
+    updatedAt: zod.coerce.date(),
+  }),
+});
+
+/**
+ * Create or update a Nightforce profile for an approved verification request and wallet binding.
+ * @summary Create or update profile
+ */
+export const UpsertProfileParams = zod.object({
+  verificationRequestId: zod.coerce.string().uuid(),
+});
+
+export const UpsertProfileBody = zod.object({
+  walletBindingId: zod.string().uuid(),
+  publicId: zod.string().optional(),
+  slug: zod.string().nullish(),
+  displayName: zod.string().nullish(),
+  country: zod.string().nullish(),
+  role: zod.string().nullish(),
+  bio: zod.string().nullish(),
+  avatarUrl: zod.string().nullish(),
+  websiteUrl: zod.string().nullish(),
+  socials: zod.array(zod.string()).optional(),
+  fieldVisibility: zod.object({
+    displayName: zod.enum(["public", "hidden"]),
+    country: zod.enum(["public", "hidden"]),
+    role: zod.enum(["public", "hidden"]),
+    bio: zod.enum(["public", "hidden"]),
+    avatarUrl: zod.enum(["public", "hidden"]),
+    websiteUrl: zod.enum(["public", "hidden"]),
+    socials: zod.enum(["public", "hidden"]),
+    realName: zod.enum(["hidden"]),
+    contact: zod.enum(["hidden"]),
+  }),
+  encryptedHiddenPayload: zod
+    .union([
+      zod.object({
+        version: zod.number(),
+        algorithm: zod.enum(["AES-GCM"]),
+        kdf: zod.enum(["PBKDF2"]),
+        hash: zod.enum(["SHA-256"]),
+        iterations: zod.number(),
+        saltBase64: zod.string(),
+        ivBase64: zod.string(),
+        ciphertextBase64: zod.string(),
+      }),
+      zod.null(),
+    ])
+    .optional(),
+  requestedVisibility: zod.enum(["public", "hidden"]),
+  publishState: zod.enum(["draft", "published", "inactive"]).optional(),
+});
+
+export const UpsertProfileResponse = zod.object({
+  profile: zod.object({
+    id: zod.string().uuid(),
+    verificationRequestId: zod.string().uuid(),
+    walletBindingId: zod.string().uuid(),
+    publicId: zod.string(),
+    slug: zod.string().nullable(),
+    displayName: zod.string().nullable(),
+    country: zod.string().nullable(),
+    role: zod.string().nullable(),
+    bio: zod.string().nullable(),
+    avatarUrl: zod.string().nullable(),
+    websiteUrl: zod.string().nullable(),
+    socials: zod.array(zod.string()),
+    fieldVisibility: zod.object({
+      displayName: zod.enum(["public", "hidden"]),
+      country: zod.enum(["public", "hidden"]),
+      role: zod.enum(["public", "hidden"]),
+      bio: zod.enum(["public", "hidden"]),
+      avatarUrl: zod.enum(["public", "hidden"]),
+      websiteUrl: zod.enum(["public", "hidden"]),
+      socials: zod.enum(["public", "hidden"]),
+      realName: zod.enum(["hidden"]),
+      contact: zod.enum(["hidden"]),
+    }),
+    encryptedHiddenPayload: zod.union([
+      zod.object({
+        version: zod.number(),
+        algorithm: zod.enum(["AES-GCM"]),
+        kdf: zod.enum(["PBKDF2"]),
+        hash: zod.enum(["SHA-256"]),
+        iterations: zod.number(),
+        saltBase64: zod.string(),
+        ivBase64: zod.string(),
+        ciphertextBase64: zod.string(),
+      }),
+      zod.null(),
+    ]),
+    publishState: zod.enum(["draft", "published", "inactive"]),
+    requestedVisibility: zod.enum(["public", "hidden"]),
+    createdAt: zod.coerce.date(),
+    updatedAt: zod.coerce.date(),
+    publishedAt: zod.coerce.date().nullable(),
+    inactiveAt: zod.coerce.date().nullable(),
+  }),
+});
+
+/**
+ * Get the profile associated with a verification request id.
+ * @summary Get profile by verification request id
+ */
+export const GetProfileByVerificationRequestIdParams = zod.object({
+  verificationRequestId: zod.coerce.string().uuid(),
+});
+
+export const GetProfileByVerificationRequestIdResponse = zod.object({
+  profile: zod.object({
+    id: zod.string().uuid(),
+    verificationRequestId: zod.string().uuid(),
+    walletBindingId: zod.string().uuid(),
+    publicId: zod.string(),
+    slug: zod.string().nullable(),
+    displayName: zod.string().nullable(),
+    country: zod.string().nullable(),
+    role: zod.string().nullable(),
+    bio: zod.string().nullable(),
+    avatarUrl: zod.string().nullable(),
+    websiteUrl: zod.string().nullable(),
+    socials: zod.array(zod.string()),
+    fieldVisibility: zod.object({
+      displayName: zod.enum(["public", "hidden"]),
+      country: zod.enum(["public", "hidden"]),
+      role: zod.enum(["public", "hidden"]),
+      bio: zod.enum(["public", "hidden"]),
+      avatarUrl: zod.enum(["public", "hidden"]),
+      websiteUrl: zod.enum(["public", "hidden"]),
+      socials: zod.enum(["public", "hidden"]),
+      realName: zod.enum(["hidden"]),
+      contact: zod.enum(["hidden"]),
+    }),
+    encryptedHiddenPayload: zod.union([
+      zod.object({
+        version: zod.number(),
+        algorithm: zod.enum(["AES-GCM"]),
+        kdf: zod.enum(["PBKDF2"]),
+        hash: zod.enum(["SHA-256"]),
+        iterations: zod.number(),
+        saltBase64: zod.string(),
+        ivBase64: zod.string(),
+        ciphertextBase64: zod.string(),
+      }),
+      zod.null(),
+    ]),
+    publishState: zod.enum(["draft", "published", "inactive"]),
+    requestedVisibility: zod.enum(["public", "hidden"]),
+    createdAt: zod.coerce.date(),
+    updatedAt: zod.coerce.date(),
+    publishedAt: zod.coerce.date().nullable(),
+    inactiveAt: zod.coerce.date().nullable(),
+  }),
+});
+
+/**
+ * List profiles that the directory can render.
+ * @summary List directory profiles
+ */
+export const ListDirectoryProfilesResponse = zod.object({
+  profiles: zod.array(
+    zod.object({
+      publicId: zod.string(),
+      slug: zod.string().nullable(),
+      displayName: zod.string().nullable(),
+      country: zod.string().nullable(),
+      role: zod.string().nullable(),
+      bio: zod.string().nullable(),
+      avatarUrl: zod.string().nullable(),
+      websiteUrl: zod.string().nullable(),
+      socials: zod.array(zod.string()),
+      requestedVisibility: zod.enum(["public", "hidden"]),
+      publishState: zod.enum(["draft", "published", "inactive"]),
+    }),
+  ),
+});
+
+/**
+ * Get a public-facing profile by its public id.
+ * @summary Get public profile by public id
+ */
+export const GetPublicProfileByPublicIdParams = zod.object({
+  publicId: zod.coerce.string(),
+});
+
+export const GetPublicProfileByPublicIdResponse = zod.object({
+  profile: zod.object({
+    publicId: zod.string(),
+    slug: zod.string().nullable(),
+    displayName: zod.string().nullable(),
+    country: zod.string().nullable(),
+    role: zod.string().nullable(),
+    bio: zod.string().nullable(),
+    avatarUrl: zod.string().nullable(),
+    websiteUrl: zod.string().nullable(),
+    socials: zod.array(zod.string()),
+    requestedVisibility: zod.enum(["public", "hidden"]),
+    publishState: zod.enum(["draft", "published", "inactive"]),
+  }),
+});

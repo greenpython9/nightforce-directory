@@ -5,18 +5,33 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 
-import type { HealthStatus } from "./api.schemas";
+import type {
+  CreateVerificationRequestInput,
+  CreateWalletBindingInput,
+  DirectoryProfileListResponse,
+  HealthStatus,
+  ProfileResponse,
+  PublicProfileResponse,
+  ReviewVerificationRequestInput,
+  UpsertProfileInput,
+  VerificationRequestListResponse,
+  VerificationRequestResponse,
+  WalletBindingResponse,
+} from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
-import type { ErrorType } from "../custom-fetch";
+import type { ErrorType, BodyType } from "../custom-fetch";
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -92,6 +107,1017 @@ export function useHealthCheck<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getHealthCheckQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Create a new Nightforce ambassador verification request without requiring a wallet first.
+ * @summary Create verification request
+ */
+export const getCreateVerificationRequestUrl = () => {
+  return `/api/nightforce/verification-requests`;
+};
+
+export const createVerificationRequest = async (
+  createVerificationRequestInput: CreateVerificationRequestInput,
+  options?: RequestInit,
+): Promise<VerificationRequestResponse> => {
+  return customFetch<VerificationRequestResponse>(
+    getCreateVerificationRequestUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(createVerificationRequestInput),
+    },
+  );
+};
+
+export const getCreateVerificationRequestMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createVerificationRequest>>,
+    TError,
+    { data: BodyType<CreateVerificationRequestInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createVerificationRequest>>,
+  TError,
+  { data: BodyType<CreateVerificationRequestInput> },
+  TContext
+> => {
+  const mutationKey = ["createVerificationRequest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createVerificationRequest>>,
+    { data: BodyType<CreateVerificationRequestInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createVerificationRequest(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateVerificationRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createVerificationRequest>>
+>;
+export type CreateVerificationRequestMutationBody =
+  BodyType<CreateVerificationRequestInput>;
+export type CreateVerificationRequestMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create verification request
+ */
+export const useCreateVerificationRequest = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createVerificationRequest>>,
+    TError,
+    { data: BodyType<CreateVerificationRequestInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createVerificationRequest>>,
+  TError,
+  { data: BodyType<CreateVerificationRequestInput> },
+  TContext
+> => {
+  return useMutation(getCreateVerificationRequestMutationOptions(options));
+};
+
+/**
+ * List all verification requests for admin review.
+ * @summary List verification requests
+ */
+export const getListVerificationRequestsUrl = () => {
+  return `/api/nightforce/verification-requests`;
+};
+
+export const listVerificationRequests = async (
+  options?: RequestInit,
+): Promise<VerificationRequestListResponse> => {
+  return customFetch<VerificationRequestListResponse>(
+    getListVerificationRequestsUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListVerificationRequestsQueryKey = () => {
+  return [`/api/nightforce/verification-requests`] as const;
+};
+
+export const getListVerificationRequestsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listVerificationRequests>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listVerificationRequests>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListVerificationRequestsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listVerificationRequests>>
+  > = ({ signal }) => listVerificationRequests({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listVerificationRequests>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListVerificationRequestsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listVerificationRequests>>
+>;
+export type ListVerificationRequestsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List verification requests
+ */
+
+export function useListVerificationRequests<
+  TData = Awaited<ReturnType<typeof listVerificationRequests>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listVerificationRequests>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListVerificationRequestsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Get a single verification request by id.
+ * @summary Get verification request
+ */
+export const getGetVerificationRequestUrl = (id: string) => {
+  return `/api/nightforce/verification-requests/${id}`;
+};
+
+export const getVerificationRequest = async (
+  id: string,
+  options?: RequestInit,
+): Promise<VerificationRequestResponse> => {
+  return customFetch<VerificationRequestResponse>(
+    getGetVerificationRequestUrl(id),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetVerificationRequestQueryKey = (id: string) => {
+  return [`/api/nightforce/verification-requests/${id}`] as const;
+};
+
+export const getGetVerificationRequestQueryOptions = <
+  TData = Awaited<ReturnType<typeof getVerificationRequest>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getVerificationRequest>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetVerificationRequestQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getVerificationRequest>>
+  > = ({ signal }) => getVerificationRequest(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getVerificationRequest>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetVerificationRequestQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getVerificationRequest>>
+>;
+export type GetVerificationRequestQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get verification request
+ */
+
+export function useGetVerificationRequest<
+  TData = Awaited<ReturnType<typeof getVerificationRequest>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getVerificationRequest>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetVerificationRequestQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Mark a verification request as approved.
+ * @summary Approve verification request
+ */
+export const getApproveVerificationRequestUrl = (id: string) => {
+  return `/api/nightforce/verification-requests/${id}/approve`;
+};
+
+export const approveVerificationRequest = async (
+  id: string,
+  reviewVerificationRequestInput?: ReviewVerificationRequestInput,
+  options?: RequestInit,
+): Promise<VerificationRequestResponse> => {
+  return customFetch<VerificationRequestResponse>(
+    getApproveVerificationRequestUrl(id),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(reviewVerificationRequestInput),
+    },
+  );
+};
+
+export const getApproveVerificationRequestMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof approveVerificationRequest>>,
+    TError,
+    { id: string; data: BodyType<ReviewVerificationRequestInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof approveVerificationRequest>>,
+  TError,
+  { id: string; data: BodyType<ReviewVerificationRequestInput> },
+  TContext
+> => {
+  const mutationKey = ["approveVerificationRequest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof approveVerificationRequest>>,
+    { id: string; data: BodyType<ReviewVerificationRequestInput> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return approveVerificationRequest(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ApproveVerificationRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof approveVerificationRequest>>
+>;
+export type ApproveVerificationRequestMutationBody =
+  BodyType<ReviewVerificationRequestInput>;
+export type ApproveVerificationRequestMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Approve verification request
+ */
+export const useApproveVerificationRequest = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof approveVerificationRequest>>,
+    TError,
+    { id: string; data: BodyType<ReviewVerificationRequestInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof approveVerificationRequest>>,
+  TError,
+  { id: string; data: BodyType<ReviewVerificationRequestInput> },
+  TContext
+> => {
+  return useMutation(getApproveVerificationRequestMutationOptions(options));
+};
+
+/**
+ * Mark a verification request as rejected.
+ * @summary Reject verification request
+ */
+export const getRejectVerificationRequestUrl = (id: string) => {
+  return `/api/nightforce/verification-requests/${id}/reject`;
+};
+
+export const rejectVerificationRequest = async (
+  id: string,
+  reviewVerificationRequestInput?: ReviewVerificationRequestInput,
+  options?: RequestInit,
+): Promise<VerificationRequestResponse> => {
+  return customFetch<VerificationRequestResponse>(
+    getRejectVerificationRequestUrl(id),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(reviewVerificationRequestInput),
+    },
+  );
+};
+
+export const getRejectVerificationRequestMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rejectVerificationRequest>>,
+    TError,
+    { id: string; data: BodyType<ReviewVerificationRequestInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof rejectVerificationRequest>>,
+  TError,
+  { id: string; data: BodyType<ReviewVerificationRequestInput> },
+  TContext
+> => {
+  const mutationKey = ["rejectVerificationRequest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof rejectVerificationRequest>>,
+    { id: string; data: BodyType<ReviewVerificationRequestInput> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return rejectVerificationRequest(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RejectVerificationRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof rejectVerificationRequest>>
+>;
+export type RejectVerificationRequestMutationBody =
+  BodyType<ReviewVerificationRequestInput>;
+export type RejectVerificationRequestMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Reject verification request
+ */
+export const useRejectVerificationRequest = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rejectVerificationRequest>>,
+    TError,
+    { id: string; data: BodyType<ReviewVerificationRequestInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof rejectVerificationRequest>>,
+  TError,
+  { id: string; data: BodyType<ReviewVerificationRequestInput> },
+  TContext
+> => {
+  return useMutation(getRejectVerificationRequestMutationOptions(options));
+};
+
+/**
+ * Bind an approved verification request to a Midnight wallet address.
+ * @summary Create wallet binding
+ */
+export const getCreateWalletBindingUrl = () => {
+  return `/api/nightforce/wallet-bindings`;
+};
+
+export const createWalletBinding = async (
+  createWalletBindingInput: CreateWalletBindingInput,
+  options?: RequestInit,
+): Promise<WalletBindingResponse> => {
+  return customFetch<WalletBindingResponse>(getCreateWalletBindingUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createWalletBindingInput),
+  });
+};
+
+export const getCreateWalletBindingMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createWalletBinding>>,
+    TError,
+    { data: BodyType<CreateWalletBindingInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createWalletBinding>>,
+  TError,
+  { data: BodyType<CreateWalletBindingInput> },
+  TContext
+> => {
+  const mutationKey = ["createWalletBinding"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createWalletBinding>>,
+    { data: BodyType<CreateWalletBindingInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createWalletBinding(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateWalletBindingMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createWalletBinding>>
+>;
+export type CreateWalletBindingMutationBody =
+  BodyType<CreateWalletBindingInput>;
+export type CreateWalletBindingMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create wallet binding
+ */
+export const useCreateWalletBinding = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createWalletBinding>>,
+    TError,
+    { data: BodyType<CreateWalletBindingInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createWalletBinding>>,
+  TError,
+  { data: BodyType<CreateWalletBindingInput> },
+  TContext
+> => {
+  return useMutation(getCreateWalletBindingMutationOptions(options));
+};
+
+/**
+ * Look up an existing wallet binding using Midnight wallet address.
+ * @summary Get wallet binding by wallet address
+ */
+export const getGetWalletBindingByWalletAddressUrl = (
+  walletAddress: string,
+) => {
+  return `/api/nightforce/wallet-bindings/by-wallet/${walletAddress}`;
+};
+
+export const getWalletBindingByWalletAddress = async (
+  walletAddress: string,
+  options?: RequestInit,
+): Promise<WalletBindingResponse> => {
+  return customFetch<WalletBindingResponse>(
+    getGetWalletBindingByWalletAddressUrl(walletAddress),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetWalletBindingByWalletAddressQueryKey = (
+  walletAddress: string,
+) => {
+  return [
+    `/api/nightforce/wallet-bindings/by-wallet/${walletAddress}`,
+  ] as const;
+};
+
+export const getGetWalletBindingByWalletAddressQueryOptions = <
+  TData = Awaited<ReturnType<typeof getWalletBindingByWalletAddress>>,
+  TError = ErrorType<unknown>,
+>(
+  walletAddress: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getWalletBindingByWalletAddress>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetWalletBindingByWalletAddressQueryKey(walletAddress);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getWalletBindingByWalletAddress>>
+  > = ({ signal }) =>
+    getWalletBindingByWalletAddress(walletAddress, {
+      signal,
+      ...requestOptions,
+    });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!walletAddress,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getWalletBindingByWalletAddress>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetWalletBindingByWalletAddressQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getWalletBindingByWalletAddress>>
+>;
+export type GetWalletBindingByWalletAddressQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get wallet binding by wallet address
+ */
+
+export function useGetWalletBindingByWalletAddress<
+  TData = Awaited<ReturnType<typeof getWalletBindingByWalletAddress>>,
+  TError = ErrorType<unknown>,
+>(
+  walletAddress: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getWalletBindingByWalletAddress>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetWalletBindingByWalletAddressQueryOptions(
+    walletAddress,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Create or update a Nightforce profile for an approved verification request and wallet binding.
+ * @summary Create or update profile
+ */
+export const getUpsertProfileUrl = (verificationRequestId: string) => {
+  return `/api/nightforce/profiles/${verificationRequestId}`;
+};
+
+export const upsertProfile = async (
+  verificationRequestId: string,
+  upsertProfileInput: UpsertProfileInput,
+  options?: RequestInit,
+): Promise<ProfileResponse> => {
+  return customFetch<ProfileResponse>(
+    getUpsertProfileUrl(verificationRequestId),
+    {
+      ...options,
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(upsertProfileInput),
+    },
+  );
+};
+
+export const getUpsertProfileMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof upsertProfile>>,
+    TError,
+    { verificationRequestId: string; data: BodyType<UpsertProfileInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof upsertProfile>>,
+  TError,
+  { verificationRequestId: string; data: BodyType<UpsertProfileInput> },
+  TContext
+> => {
+  const mutationKey = ["upsertProfile"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof upsertProfile>>,
+    { verificationRequestId: string; data: BodyType<UpsertProfileInput> }
+  > = (props) => {
+    const { verificationRequestId, data } = props ?? {};
+
+    return upsertProfile(verificationRequestId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpsertProfileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof upsertProfile>>
+>;
+export type UpsertProfileMutationBody = BodyType<UpsertProfileInput>;
+export type UpsertProfileMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create or update profile
+ */
+export const useUpsertProfile = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof upsertProfile>>,
+    TError,
+    { verificationRequestId: string; data: BodyType<UpsertProfileInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof upsertProfile>>,
+  TError,
+  { verificationRequestId: string; data: BodyType<UpsertProfileInput> },
+  TContext
+> => {
+  return useMutation(getUpsertProfileMutationOptions(options));
+};
+
+/**
+ * Get the profile associated with a verification request id.
+ * @summary Get profile by verification request id
+ */
+export const getGetProfileByVerificationRequestIdUrl = (
+  verificationRequestId: string,
+) => {
+  return `/api/nightforce/profiles/${verificationRequestId}`;
+};
+
+export const getProfileByVerificationRequestId = async (
+  verificationRequestId: string,
+  options?: RequestInit,
+): Promise<ProfileResponse> => {
+  return customFetch<ProfileResponse>(
+    getGetProfileByVerificationRequestIdUrl(verificationRequestId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetProfileByVerificationRequestIdQueryKey = (
+  verificationRequestId: string,
+) => {
+  return [`/api/nightforce/profiles/${verificationRequestId}`] as const;
+};
+
+export const getGetProfileByVerificationRequestIdQueryOptions = <
+  TData = Awaited<ReturnType<typeof getProfileByVerificationRequestId>>,
+  TError = ErrorType<unknown>,
+>(
+  verificationRequestId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getProfileByVerificationRequestId>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetProfileByVerificationRequestIdQueryKey(verificationRequestId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getProfileByVerificationRequestId>>
+  > = ({ signal }) =>
+    getProfileByVerificationRequestId(verificationRequestId, {
+      signal,
+      ...requestOptions,
+    });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!verificationRequestId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getProfileByVerificationRequestId>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetProfileByVerificationRequestIdQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getProfileByVerificationRequestId>>
+>;
+export type GetProfileByVerificationRequestIdQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get profile by verification request id
+ */
+
+export function useGetProfileByVerificationRequestId<
+  TData = Awaited<ReturnType<typeof getProfileByVerificationRequestId>>,
+  TError = ErrorType<unknown>,
+>(
+  verificationRequestId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getProfileByVerificationRequestId>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetProfileByVerificationRequestIdQueryOptions(
+    verificationRequestId,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * List profiles that the directory can render.
+ * @summary List directory profiles
+ */
+export const getListDirectoryProfilesUrl = () => {
+  return `/api/nightforce/directory`;
+};
+
+export const listDirectoryProfiles = async (
+  options?: RequestInit,
+): Promise<DirectoryProfileListResponse> => {
+  return customFetch<DirectoryProfileListResponse>(
+    getListDirectoryProfilesUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListDirectoryProfilesQueryKey = () => {
+  return [`/api/nightforce/directory`] as const;
+};
+
+export const getListDirectoryProfilesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listDirectoryProfiles>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listDirectoryProfiles>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListDirectoryProfilesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listDirectoryProfiles>>
+  > = ({ signal }) => listDirectoryProfiles({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listDirectoryProfiles>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListDirectoryProfilesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listDirectoryProfiles>>
+>;
+export type ListDirectoryProfilesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List directory profiles
+ */
+
+export function useListDirectoryProfiles<
+  TData = Awaited<ReturnType<typeof listDirectoryProfiles>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listDirectoryProfiles>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListDirectoryProfilesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Get a public-facing profile by its public id.
+ * @summary Get public profile by public id
+ */
+export const getGetPublicProfileByPublicIdUrl = (publicId: string) => {
+  return `/api/nightforce/public-profiles/${publicId}`;
+};
+
+export const getPublicProfileByPublicId = async (
+  publicId: string,
+  options?: RequestInit,
+): Promise<PublicProfileResponse> => {
+  return customFetch<PublicProfileResponse>(
+    getGetPublicProfileByPublicIdUrl(publicId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetPublicProfileByPublicIdQueryKey = (publicId: string) => {
+  return [`/api/nightforce/public-profiles/${publicId}`] as const;
+};
+
+export const getGetPublicProfileByPublicIdQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPublicProfileByPublicId>>,
+  TError = ErrorType<unknown>,
+>(
+  publicId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPublicProfileByPublicId>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetPublicProfileByPublicIdQueryKey(publicId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getPublicProfileByPublicId>>
+  > = ({ signal }) =>
+    getPublicProfileByPublicId(publicId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!publicId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPublicProfileByPublicId>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPublicProfileByPublicIdQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPublicProfileByPublicId>>
+>;
+export type GetPublicProfileByPublicIdQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get public profile by public id
+ */
+
+export function useGetPublicProfileByPublicId<
+  TData = Awaited<ReturnType<typeof getPublicProfileByPublicId>>,
+  TError = ErrorType<unknown>,
+>(
+  publicId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPublicProfileByPublicId>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPublicProfileByPublicIdQueryOptions(
+    publicId,
+    options,
+  );
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

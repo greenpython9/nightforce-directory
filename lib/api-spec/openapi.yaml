@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: nightforce
+    description: Nightforce verification, wallet binding, and profile operations
 paths:
   /healthz:
     get:
@@ -24,7 +26,233 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /nightforce/verification-requests:
+    post:
+      operationId: createVerificationRequest
+      tags: [nightforce]
+      summary: Create verification request
+      description: Create a new Nightforce ambassador verification request without requiring a wallet first.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateVerificationRequestInput"
+      responses:
+        "200":
+          description: Verification request created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationRequestResponse"
+    get:
+      operationId: listVerificationRequests
+      tags: [nightforce]
+      summary: List verification requests
+      description: List all verification requests for admin review.
+      responses:
+        "200":
+          description: Verification requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationRequestListResponse"
+
+  /nightforce/verification-requests/{id}:
+    get:
+      operationId: getVerificationRequest
+      tags: [nightforce]
+      summary: Get verification request
+      description: Get a single verification request by id.
+      parameters:
+        - $ref: "#/components/parameters/VerificationRequestId"
+      responses:
+        "200":
+          description: Verification request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationRequestResponse"
+
+  /nightforce/verification-requests/{id}/approve:
+    post:
+      operationId: approveVerificationRequest
+      tags: [nightforce]
+      summary: Approve verification request
+      description: Mark a verification request as approved.
+      parameters:
+        - $ref: "#/components/parameters/VerificationRequestId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewVerificationRequestInput"
+      responses:
+        "200":
+          description: Verification request approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationRequestResponse"
+
+  /nightforce/verification-requests/{id}/reject:
+    post:
+      operationId: rejectVerificationRequest
+      tags: [nightforce]
+      summary: Reject verification request
+      description: Mark a verification request as rejected.
+      parameters:
+        - $ref: "#/components/parameters/VerificationRequestId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewVerificationRequestInput"
+      responses:
+        "200":
+          description: Verification request rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationRequestResponse"
+
+  /nightforce/wallet-bindings:
+    post:
+      operationId: createWalletBinding
+      tags: [nightforce]
+      summary: Create wallet binding
+      description: Bind an approved verification request to a Midnight wallet address.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWalletBindingInput"
+      responses:
+        "200":
+          description: Wallet binding created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalletBindingResponse"
+
+  /nightforce/wallet-bindings/by-wallet/{walletAddress}:
+    get:
+      operationId: getWalletBindingByWalletAddress
+      tags: [nightforce]
+      summary: Get wallet binding by wallet address
+      description: Look up an existing wallet binding using Midnight wallet address.
+      parameters:
+        - $ref: "#/components/parameters/WalletAddress"
+      responses:
+        "200":
+          description: Wallet binding
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalletBindingResponse"
+
+  /nightforce/profiles/{verificationRequestId}:
+    put:
+      operationId: upsertProfile
+      tags: [nightforce]
+      summary: Create or update profile
+      description: Create or update a Nightforce profile for an approved verification request and wallet binding.
+      parameters:
+        - $ref: "#/components/parameters/VerificationRequestIdPathAsVerificationRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertProfileInput"
+      responses:
+        "200":
+          description: Profile created or updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileResponse"
+    get:
+      operationId: getProfileByVerificationRequestId
+      tags: [nightforce]
+      summary: Get profile by verification request id
+      description: Get the profile associated with a verification request id.
+      parameters:
+        - $ref: "#/components/parameters/VerificationRequestIdPathAsVerificationRequestId"
+      responses:
+        "200":
+          description: Profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileResponse"
+
+  /nightforce/directory:
+    get:
+      operationId: listDirectoryProfiles
+      tags: [nightforce]
+      summary: List directory profiles
+      description: List profiles that the directory can render.
+      responses:
+        "200":
+          description: Directory profiles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DirectoryProfileListResponse"
+
+  /nightforce/public-profiles/{publicId}:
+    get:
+      operationId: getPublicProfileByPublicId
+      tags: [nightforce]
+      summary: Get public profile by public id
+      description: Get a public-facing profile by its public id.
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200":
+          description: Public profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicProfileResponse"
+
 components:
+  parameters:
+    VerificationRequestId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    VerificationRequestIdPathAsVerificationRequestId:
+      name: verificationRequestId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    WalletAddress:
+      name: walletAddress
+      in: path
+      required: true
+      schema:
+        type: string
+
+    PublicId:
+      name: publicId
+      in: path
+      required: true
+      schema:
+        type: string
+
   schemas:
     HealthStatus:
       type: object
@@ -34,3 +262,450 @@ components:
       required:
         - status
 
+    VerificationStatus:
+      type: string
+      enum:
+        - pending
+        - approved
+        - rejected
+
+    PublishState:
+      type: string
+      enum:
+        - draft
+        - published
+        - inactive
+
+    TrustedVisibility:
+      type: string
+      enum:
+        - public
+        - hidden
+
+    VisibilitySetting:
+      type: string
+      enum:
+        - public
+        - hidden
+
+    FieldVisibility:
+      type: object
+      properties:
+        displayName:
+          $ref: "#/components/schemas/VisibilitySetting"
+        country:
+          $ref: "#/components/schemas/VisibilitySetting"
+        role:
+          $ref: "#/components/schemas/VisibilitySetting"
+        bio:
+          $ref: "#/components/schemas/VisibilitySetting"
+        avatarUrl:
+          $ref: "#/components/schemas/VisibilitySetting"
+        websiteUrl:
+          $ref: "#/components/schemas/VisibilitySetting"
+        socials:
+          $ref: "#/components/schemas/VisibilitySetting"
+        realName:
+          type: string
+          enum:
+            - hidden
+        contact:
+          type: string
+          enum:
+            - hidden
+      required:
+        - displayName
+        - country
+        - role
+        - bio
+        - avatarUrl
+        - websiteUrl
+        - socials
+        - realName
+        - contact
+
+    EncryptedHiddenPayload:
+      type: object
+      properties:
+        version:
+          type: integer
+        algorithm:
+          type: string
+          enum:
+            - AES-GCM
+        kdf:
+          type: string
+          enum:
+            - PBKDF2
+        hash:
+          type: string
+          enum:
+            - SHA-256
+        iterations:
+          type: integer
+        saltBase64:
+          type: string
+        ivBase64:
+          type: string
+        ciphertextBase64:
+          type: string
+      required:
+        - version
+        - algorithm
+        - kdf
+        - hash
+        - iterations
+        - saltBase64
+        - ivBase64
+        - ciphertextBase64
+
+    VerificationRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        discordHandle:
+          type: string
+        region:
+          type: string
+        note:
+          type: string
+        status:
+          $ref: "#/components/schemas/VerificationStatus"
+        adminNotes:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        reviewedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - discordHandle
+        - region
+        - note
+        - status
+        - adminNotes
+        - createdAt
+        - reviewedAt
+        - updatedAt
+
+    WalletBinding:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        verificationRequestId:
+          type: string
+          format: uuid
+        midnightWalletAddress:
+          type: string
+        boundAt:
+          type: string
+          format: date-time
+        isActive:
+          type: boolean
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - verificationRequestId
+        - midnightWalletAddress
+        - boundAt
+        - isActive
+        - updatedAt
+
+    Profile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        verificationRequestId:
+          type: string
+          format: uuid
+        walletBindingId:
+          type: string
+          format: uuid
+        publicId:
+          type: string
+        slug:
+          type:
+            - string
+            - "null"
+        displayName:
+          type:
+            - string
+            - "null"
+        country:
+          type:
+            - string
+            - "null"
+        role:
+          type:
+            - string
+            - "null"
+        bio:
+          type:
+            - string
+            - "null"
+        avatarUrl:
+          type:
+            - string
+            - "null"
+        websiteUrl:
+          type:
+            - string
+            - "null"
+        socials:
+          type: array
+          items:
+            type: string
+        fieldVisibility:
+          $ref: "#/components/schemas/FieldVisibility"
+        encryptedHiddenPayload:
+          oneOf:
+            - $ref: "#/components/schemas/EncryptedHiddenPayload"
+            - type: "null"
+        publishState:
+          $ref: "#/components/schemas/PublishState"
+        requestedVisibility:
+          $ref: "#/components/schemas/TrustedVisibility"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        publishedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        inactiveAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+      required:
+        - id
+        - verificationRequestId
+        - walletBindingId
+        - publicId
+        - slug
+        - displayName
+        - country
+        - role
+        - bio
+        - avatarUrl
+        - websiteUrl
+        - socials
+        - fieldVisibility
+        - encryptedHiddenPayload
+        - publishState
+        - requestedVisibility
+        - createdAt
+        - updatedAt
+        - publishedAt
+        - inactiveAt
+
+    DirectoryProfile:
+      type: object
+      properties:
+        publicId:
+          type: string
+        slug:
+          type:
+            - string
+            - "null"
+        displayName:
+          type:
+            - string
+            - "null"
+        country:
+          type:
+            - string
+            - "null"
+        role:
+          type:
+            - string
+            - "null"
+        bio:
+          type:
+            - string
+            - "null"
+        avatarUrl:
+          type:
+            - string
+            - "null"
+        websiteUrl:
+          type:
+            - string
+            - "null"
+        socials:
+          type: array
+          items:
+            type: string
+        requestedVisibility:
+          $ref: "#/components/schemas/TrustedVisibility"
+        publishState:
+          $ref: "#/components/schemas/PublishState"
+      required:
+        - publicId
+        - slug
+        - displayName
+        - country
+        - role
+        - bio
+        - avatarUrl
+        - websiteUrl
+        - socials
+        - requestedVisibility
+        - publishState
+
+    CreateVerificationRequestInput:
+      type: object
+      properties:
+        discordHandle:
+          type: string
+        region:
+          type: string
+        note:
+          type: string
+      required:
+        - discordHandle
+        - region
+
+    ReviewVerificationRequestInput:
+      type: object
+      properties:
+        adminNotes:
+          type: string
+
+    CreateWalletBindingInput:
+      type: object
+      properties:
+        verificationRequestId:
+          type: string
+          format: uuid
+        midnightWalletAddress:
+          type: string
+      required:
+        - verificationRequestId
+        - midnightWalletAddress
+
+    UpsertProfileInput:
+      type: object
+      properties:
+        walletBindingId:
+          type: string
+          format: uuid
+        publicId:
+          type: string
+        slug:
+          type:
+            - string
+            - "null"
+        displayName:
+          type:
+            - string
+            - "null"
+        country:
+          type:
+            - string
+            - "null"
+        role:
+          type:
+            - string
+            - "null"
+        bio:
+          type:
+            - string
+            - "null"
+        avatarUrl:
+          type:
+            - string
+            - "null"
+        websiteUrl:
+          type:
+            - string
+            - "null"
+        socials:
+          type: array
+          items:
+            type: string
+        fieldVisibility:
+          $ref: "#/components/schemas/FieldVisibility"
+        encryptedHiddenPayload:
+          oneOf:
+            - $ref: "#/components/schemas/EncryptedHiddenPayload"
+            - type: "null"
+        requestedVisibility:
+          $ref: "#/components/schemas/TrustedVisibility"
+        publishState:
+          $ref: "#/components/schemas/PublishState"
+      required:
+        - walletBindingId
+        - fieldVisibility
+        - requestedVisibility
+
+    VerificationRequestResponse:
+      type: object
+      properties:
+        request:
+          $ref: "#/components/schemas/VerificationRequest"
+      required:
+        - request
+
+    VerificationRequestListResponse:
+      type: object
+      properties:
+        requests:
+          type: array
+          items:
+            $ref: "#/components/schemas/VerificationRequest"
+      required:
+        - requests
+
+    WalletBindingResponse:
+      type: object
+      properties:
+        binding:
+          $ref: "#/components/schemas/WalletBinding"
+      required:
+        - binding
+
+    ProfileResponse:
+      type: object
+      properties:
+        profile:
+          $ref: "#/components/schemas/Profile"
+      required:
+        - profile
+
+    DirectoryProfileListResponse:
+      type: object
+      properties:
+        profiles:
+          type: array
+          items:
+            $ref: "#/components/schemas/DirectoryProfile"
+      required:
+        - profiles
+
+    PublicProfileResponse:
+      type: object
+      properties:
+        profile:
+          $ref: "#/components/schemas/DirectoryProfile"
+      required:
+        - profile

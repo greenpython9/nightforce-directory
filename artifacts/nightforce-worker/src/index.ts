@@ -107,6 +107,13 @@ const upsertProfileInputSchema = z.object({
   publishState: publishStateSchema.optional(),
 });
 
+const updateContactModeSyncInputSchema = z.object({
+  contactModeContractAddress: z.string().trim().min(1).nullable().optional(),
+  contactModeSyncStatus: z.enum(["not_created", "synced", "failed"]),
+  contactModeLastSyncedAt: z.string().trim().min(1).nullable().optional(),
+  contactModeSyncError: z.string().trim().optional().nullable(),
+});
+
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
   "access-control-allow-origin": "*",
@@ -1012,6 +1019,10 @@ export default {
             avatarUrl: nextAvatarUrl,
             websiteUrl: nextWebsiteUrl,
             publicEmail: nextPublicEmail,
+            contactModeContractAddress: null,
+            contactModeSyncStatus: "not_created",
+            contactModeLastSyncedAt: null,
+            contactModeSyncError: null,
             socials: nextSocials,
             fieldVisibility: input.fieldVisibility,
             encryptedHiddenPayload: nextEncryptedHiddenPayload,
@@ -1047,6 +1058,71 @@ export default {
         return json(
           {
             error: "Failed to create or update profile",
+            details: getErrorMessage(error),
+          },
+          500,
+        );
+      }
+    }
+
+    if (
+      parts.length === 5 &&
+      parts[0] === "api" &&
+      parts[1] === "nightforce" &&
+      parts[2] === "profiles" &&
+      parts[4] === "contact-mode-sync" &&
+      request.method === "POST"
+    ) {
+      try {
+        const verificationRequestId = uuidSchema.parse(parts[3]);
+        let rawBody: unknown;
+
+        try {
+          rawBody = await request.json();
+        } catch {
+          return json({ error: "Invalid JSON body" }, 400);
+        }
+
+        const input = updateContactModeSyncInputSchema.parse(rawBody);
+        const now = new Date().toISOString();
+
+        const [existingProfile] = await db
+          .select()
+          .from(profilesTable)
+          .where(eq(profilesTable.verificationRequestId, verificationRequestId))
+          .limit(1);
+
+        if (!existingProfile) {
+          return json({ error: "Profile not found" }, 404);
+        }
+
+        const [updated] = await db
+          .update(profilesTable)
+          .set({
+            contactModeContractAddress: input.contactModeContractAddress ?? null,
+            contactModeSyncStatus: input.contactModeSyncStatus,
+            contactModeLastSyncedAt: input.contactModeLastSyncedAt ?? null,
+            contactModeSyncError: input.contactModeSyncError ?? null,
+            updatedAt: now,
+          })
+          .where(eq(profilesTable.id, existingProfile.id))
+          .returning();
+
+        return json({ profile: updated });
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          return json(
+            {
+              error: "Invalid contact-mode sync input",
+              details: error.flatten(),
+            },
+            400,
+          );
+        }
+
+        return json(
+          {
+            error: "Failed to update contact-mode sync metadata",
             details: getErrorMessage(error),
           },
           500,

@@ -8,3 +8,232 @@
 export interface HealthStatus {
   status: string;
 }
+
+export type VerificationStatus =
+  (typeof VerificationStatus)[keyof typeof VerificationStatus];
+
+export const VerificationStatus = {
+  pending: "pending",
+  approved: "approved",
+  rejected: "rejected",
+} as const;
+
+export type PublishState = (typeof PublishState)[keyof typeof PublishState];
+
+export const PublishState = {
+  draft: "draft",
+  published: "published",
+  inactive: "inactive",
+} as const;
+
+export type TrustedVisibility =
+  (typeof TrustedVisibility)[keyof typeof TrustedVisibility];
+
+export const TrustedVisibility = {
+  public: "public",
+  hidden: "hidden",
+} as const;
+
+export type VisibilitySetting =
+  (typeof VisibilitySetting)[keyof typeof VisibilitySetting];
+
+export const VisibilitySetting = {
+  public: "public",
+  hidden: "hidden",
+} as const;
+
+export type FieldVisibilityRealName =
+  (typeof FieldVisibilityRealName)[keyof typeof FieldVisibilityRealName];
+
+export const FieldVisibilityRealName = {
+  hidden: "hidden",
+} as const;
+
+export type FieldVisibilityContact =
+  (typeof FieldVisibilityContact)[keyof typeof FieldVisibilityContact];
+
+export const FieldVisibilityContact = {
+  hidden: "hidden",
+} as const;
+
+export interface FieldVisibility {
+  displayName: VisibilitySetting;
+  country: VisibilitySetting;
+  role: VisibilitySetting;
+  bio: VisibilitySetting;
+  avatarUrl: VisibilitySetting;
+  websiteUrl: VisibilitySetting;
+  socials: VisibilitySetting;
+  realName: FieldVisibilityRealName;
+  contact: FieldVisibilityContact;
+}
+
+export type EncryptedHiddenPayloadAlgorithm =
+  (typeof EncryptedHiddenPayloadAlgorithm)[keyof typeof EncryptedHiddenPayloadAlgorithm];
+
+export const EncryptedHiddenPayloadAlgorithm = {
+  "AES-GCM": "AES-GCM",
+} as const;
+
+export type EncryptedHiddenPayloadKdf =
+  (typeof EncryptedHiddenPayloadKdf)[keyof typeof EncryptedHiddenPayloadKdf];
+
+export const EncryptedHiddenPayloadKdf = {
+  PBKDF2: "PBKDF2",
+} as const;
+
+export type EncryptedHiddenPayloadHash =
+  (typeof EncryptedHiddenPayloadHash)[keyof typeof EncryptedHiddenPayloadHash];
+
+export const EncryptedHiddenPayloadHash = {
+  "SHA-256": "SHA-256",
+} as const;
+
+export interface EncryptedHiddenPayload {
+  version: number;
+  algorithm: EncryptedHiddenPayloadAlgorithm;
+  kdf: EncryptedHiddenPayloadKdf;
+  hash: EncryptedHiddenPayloadHash;
+  iterations: number;
+  saltBase64: string;
+  ivBase64: string;
+  ciphertextBase64: string;
+}
+
+export interface VerificationRequest {
+  id: string;
+  discordHandle: string;
+  region: string;
+  note: string;
+  status: VerificationStatus;
+  adminNotes: string;
+  createdAt: string;
+  /** @nullable */
+  reviewedAt: string | null;
+  updatedAt: string;
+}
+
+export interface WalletBinding {
+  id: string;
+  verificationRequestId: string;
+  midnightWalletAddress: string;
+  boundAt: string;
+  isActive: boolean;
+  updatedAt: string;
+}
+
+export interface Profile {
+  id: string;
+  verificationRequestId: string;
+  walletBindingId: string;
+  publicId: string;
+  /** @nullable */
+  slug: string | null;
+  /** @nullable */
+  displayName: string | null;
+  /** @nullable */
+  country: string | null;
+  /** @nullable */
+  role: string | null;
+  /** @nullable */
+  bio: string | null;
+  /** @nullable */
+  avatarUrl: string | null;
+  /** @nullable */
+  websiteUrl: string | null;
+  socials: string[];
+  fieldVisibility: FieldVisibility;
+  encryptedHiddenPayload: EncryptedHiddenPayload | null;
+  publishState: PublishState;
+  requestedVisibility: TrustedVisibility;
+  createdAt: string;
+  updatedAt: string;
+  /** @nullable */
+  publishedAt: string | null;
+  /** @nullable */
+  inactiveAt: string | null;
+}
+
+export interface DirectoryProfile {
+  publicId: string;
+  /** @nullable */
+  slug: string | null;
+  /** @nullable */
+  displayName: string | null;
+  /** @nullable */
+  country: string | null;
+  /** @nullable */
+  role: string | null;
+  /** @nullable */
+  bio: string | null;
+  /** @nullable */
+  avatarUrl: string | null;
+  /** @nullable */
+  websiteUrl: string | null;
+  socials: string[];
+  requestedVisibility: TrustedVisibility;
+  publishState: PublishState;
+}
+
+export interface CreateVerificationRequestInput {
+  discordHandle: string;
+  region: string;
+  note?: string;
+}
+
+export interface ReviewVerificationRequestInput {
+  adminNotes?: string;
+}
+
+export interface CreateWalletBindingInput {
+  verificationRequestId: string;
+  midnightWalletAddress: string;
+}
+
+export interface UpsertProfileInput {
+  walletBindingId: string;
+  publicId?: string;
+  /** @nullable */
+  slug?: string | null;
+  /** @nullable */
+  displayName?: string | null;
+  /** @nullable */
+  country?: string | null;
+  /** @nullable */
+  role?: string | null;
+  /** @nullable */
+  bio?: string | null;
+  /** @nullable */
+  avatarUrl?: string | null;
+  /** @nullable */
+  websiteUrl?: string | null;
+  socials?: string[];
+  fieldVisibility: FieldVisibility;
+  encryptedHiddenPayload?: EncryptedHiddenPayload | null;
+  requestedVisibility: TrustedVisibility;
+  publishState?: PublishState;
+}
+
+export interface VerificationRequestResponse {
+  request: VerificationRequest;
+}
+
+export interface VerificationRequestListResponse {
+  requests: VerificationRequest[];
+}
+
+export interface WalletBindingResponse {
+  binding: WalletBinding;
+}
+
+export interface ProfileResponse {
+  profile: Profile;
+}
+
+export interface DirectoryProfileListResponse {
+  profiles: DirectoryProfile[];
+}
+
+export interface PublicProfileResponse {
+  profile: DirectoryProfile;
+}

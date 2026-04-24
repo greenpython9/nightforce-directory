@@ -6,4 +6,29 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./createVerificationRequestInput";
+export * from "./createWalletBindingInput";
+export * from "./directoryProfile";
+export * from "./directoryProfileListResponse";
+export * from "./encryptedHiddenPayload";
+export * from "./encryptedHiddenPayloadAlgorithm";
+export * from "./encryptedHiddenPayloadHash";
+export * from "./encryptedHiddenPayloadKdf";
+export * from "./fieldVisibility";
+export * from "./fieldVisibilityContact";
+export * from "./fieldVisibilityRealName";
 export * from "./healthStatus";
+export * from "./profile";
+export * from "./profileResponse";
+export * from "./publicProfileResponse";
+export * from "./publishState";
+export * from "./reviewVerificationRequestInput";
+export * from "./trustedVisibility";
+export * from "./upsertProfileInput";
+export * from "./verificationRequest";
+export * from "./verificationRequestListResponse";
+export * from "./verificationRequestResponse";
+export * from "./verificationStatus";
+export * from "./visibilitySetting";
+export * from "./walletBinding";
+export * from "./walletBindingResponse";
