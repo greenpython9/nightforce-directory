@@ -1181,6 +1181,58 @@ export function MyProfile() {
         throw new Error(message);
       }
 
+      const data = payload as ProfileResponse;
+      const existingContactModeAddress =
+        data.profile.contactModeContractAddress ?? contactModeContractAddress ?? null;
+      const nextMode: ContactMode = "NO_CONTACT";
+
+      let syncPending = false;
+
+      if (existingContactModeAddress && savedContactMode !== nextMode) {
+        try {
+          const updateResult = await updateContactMode(
+            existingContactModeAddress,
+            nextMode,
+          );
+          const syncedAt = new Date().toISOString();
+
+          await updateContactModeSyncMetadata({
+            verificationRequestId,
+            contactModeContractAddress: updateResult.contractAddress,
+            contactModeSyncStatus: "synced",
+            contactModeLastSyncedAt: syncedAt,
+            contactModeSyncError: null,
+          });
+
+          setContactModeContractAddress(updateResult.contractAddress);
+          setSavedContactMode(nextMode);
+        } catch (syncError) {
+          const syncMessage =
+            syncError instanceof Error
+              ? syncError.message
+              : "Failed to update contact-mode contract.";
+
+          syncPending = true;
+
+          try {
+            await updateContactModeSyncMetadata({
+              verificationRequestId,
+              contactModeContractAddress: existingContactModeAddress,
+              contactModeSyncStatus: "failed",
+              contactModeLastSyncedAt:
+                data.profile.contactModeLastSyncedAt ?? null,
+              contactModeSyncError: syncMessage,
+            });
+          } catch {
+            // Keep backend removal success even if sync metadata update also fails.
+          }
+
+          setContactModeContractAddress(existingContactModeAddress);
+        }
+      } else {
+        setSavedContactMode(nextMode);
+      }
+
       setEmail("");
       setShowEmail(false);
       setSavedEncryptedHiddenPayload(null);
@@ -1215,7 +1267,11 @@ export function MyProfile() {
           showTelegram,
         }),
       );
-      setSaveMsg("Saved private email removed.");
+      setSaveMsg(
+        syncPending
+          ? "Saved private email removed. Contact-mode sync pending."
+          : "Saved private email removed.",
+      );
       setTimeout(() => setSaveMsg(""), 2500);
     } catch (err) {
       setError(
