@@ -1,4 +1,4 @@
-deployment.json
+deployment*.json
 midnight-level-db/
 nightforce-midnight-proof@*
 docker
