@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useWallet } from "../hooks/useWallet";
-import { getConnectedMidnightApi } from "../services/walletService";
+import { getConnectedMidnightApi, NIGHTFORCE_APP_MODE } from "../services/walletService";
 import { ProfileCard } from "../components/ProfileCard";
 import type { ContactMode, ProfileVisibility, PublicProfile } from "../types";
 
@@ -699,6 +699,8 @@ export function MyProfile() {
     updateContactMode,
     readContactMode,
   } = useWallet();
+
+  const canVerifyContactModeSync = NIGHTFORCE_APP_MODE === "preprod-write";
 
   const [verificationRequestId, setVerificationRequestId] = useState<string | null>(null);
   const [walletBindingId, setWalletBindingId] = useState<string | null>(null);
@@ -1848,14 +1850,16 @@ export function MyProfile() {
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={() => void compareContactModeSync()}
-                disabled={contactModeCompareLoading || !contactModeContractAddress}
-                className="shrink-0 font-mono text-[11px] bg-zinc-950 hover:bg-zinc-800 text-zinc-200 border border-zinc-700 px-3 py-2 rounded-lg transition-colors disabled:opacity-50"
-              >
-                {contactModeCompareLoading ? "Verifying..." : "Verify Sync"}
-              </button>
+              {canVerifyContactModeSync && (
+                <button
+                  type="button"
+                  onClick={() => void compareContactModeSync()}
+                  disabled={contactModeCompareLoading || !contactModeContractAddress}
+                  className="shrink-0 font-mono text-[11px] bg-zinc-950 hover:bg-zinc-800 text-zinc-200 border border-zinc-700 px-3 py-2 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {contactModeCompareLoading ? "Verifying..." : "Verify Sync"}
+                </button>
+              )}
             </div>
 
             <div className="mt-4 grid gap-2 text-[11px] font-mono">
@@ -1866,26 +1870,28 @@ export function MyProfile() {
                 </span>
               </div>
 
-              <div className="flex items-start justify-between gap-3">
-                <span className="text-zinc-500">Sync check</span>
-                <span
-                  className={
-                    contactModeCompareResult
+              {canVerifyContactModeSync && (
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-zinc-500">Sync check</span>
+                  <span
+                    className={
+                      contactModeCompareResult
+                        ? contactModeCompareResult.matched
+                          ? "text-emerald-300 text-right"
+                          : "text-red-300 text-right"
+                        : "text-zinc-400 text-right"
+                    }
+                  >
+                    {contactModeCompareResult
                       ? contactModeCompareResult.matched
-                        ? "text-emerald-300 text-right"
-                        : "text-red-300 text-right"
-                      : "text-zinc-400 text-right"
-                  }
-                >
-                  {contactModeCompareResult
-                    ? contactModeCompareResult.matched
-                      ? "Verified"
-                      : "Mismatch"
-                    : contactModeContractAddress
-                      ? "Ready to verify"
-                      : "No contract yet"}
-                </span>
-              </div>
+                        ? "Verified"
+                        : "Mismatch"
+                      : contactModeContractAddress
+                        ? "Ready to verify"
+                        : "No contract yet"}
+                  </span>
+                </div>
+              )}
 
               <div className="flex items-start justify-between gap-3">
                 <span className="text-zinc-500">Contract</span>
@@ -1895,13 +1901,13 @@ export function MyProfile() {
               </div>
             </div>
 
-            {contactModeCompareError && (
+            {canVerifyContactModeSync && contactModeCompareError && (
               <div className="mt-3 text-[11px] font-mono text-red-300">
                 {contactModeCompareError}
               </div>
             )}
 
-            {contactModeCompareResult && (
+            {canVerifyContactModeSync && contactModeCompareResult && (
               <div className="mt-4 border-t border-zinc-800 pt-3 grid gap-1 text-[11px] font-mono text-zinc-400">
                 <div>
                   Backend-derived fallback:{" "}
