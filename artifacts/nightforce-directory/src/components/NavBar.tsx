@@ -105,10 +105,10 @@ export function NavBar() {
             </div>
           ) : (
             <Link
-              href="/"
+              href="/wallet"
               className="text-xs font-mono bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 px-3 py-1.5 rounded transition-colors"
             >
-              Connect on Home
+              Wallet / Profile
             </Link>
           )}
         </div>
