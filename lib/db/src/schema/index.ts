@@ -105,6 +105,9 @@ export const profilesTable = sqliteTable("profiles", {
     .default("not_created"),
   contactModeLastSyncedAt: text("contact_mode_last_synced_at"),
   contactModeSyncError: text("contact_mode_sync_error"),
+  contactModeSyncedValue: text("contact_mode_synced_value").$type<
+    "NO_CONTACT" | "PRIVATE_CONTACT_AVAILABLE" | "PUBLIC_CONTACT_ALLOWED" | null
+  >(),
   socials: text("socials", { mode: "json" })
     .$type<string[]>()
     .notNull()

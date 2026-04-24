@@ -43,6 +43,11 @@ type ProfileRecord = JsonRecord & {
   contactModeSyncStatus: "not_created" | "synced" | "failed";
   contactModeLastSyncedAt: string | null;
   contactModeSyncError: string | null;
+  contactModeSyncedValue:
+    | "NO_CONTACT"
+    | "PRIVATE_CONTACT_AVAILABLE"
+    | "PUBLIC_CONTACT_ALLOWED"
+    | null;
   socials: string[];
   fieldVisibility: unknown;
   encryptedHiddenPayload: unknown;
@@ -314,6 +319,7 @@ router.put("/nightforce/profiles/:verificationRequestId", (req, res) => {
     contactModeSyncStatus: existingProfile?.contactModeSyncStatus ?? "not_created",
     contactModeLastSyncedAt: existingProfile?.contactModeLastSyncedAt ?? null,
     contactModeSyncError: existingProfile?.contactModeSyncError ?? null,
+    contactModeSyncedValue: existingProfile?.contactModeSyncedValue ?? null,
     socials: asStringArray(body.socials),
     fieldVisibility: body.fieldVisibility ?? {},
     encryptedHiddenPayload: body.encryptedHiddenPayload ?? null,
@@ -357,12 +363,25 @@ router.post("/nightforce/profiles/:verificationRequestId/contact-mode-sync", (re
     return;
   }
 
+  const syncedValue = asString(body.contactModeSyncedValue);
+
+  const validSyncedValue =
+    syncedValue === "NO_CONTACT" ||
+    syncedValue === "PRIVATE_CONTACT_AVAILABLE" ||
+    syncedValue === "PUBLIC_CONTACT_ALLOWED"
+      ? syncedValue
+      : null;
+
   profile.contactModeContractAddress =
     asString(body.contactModeContractAddress) ?? null;
   profile.contactModeSyncStatus = syncStatus;
   profile.contactModeLastSyncedAt =
     asString(body.contactModeLastSyncedAt) ?? null;
   profile.contactModeSyncError = asString(body.contactModeSyncError);
+  profile.contactModeSyncedValue =
+    syncStatus === "synced"
+      ? validSyncedValue
+      : profile.contactModeSyncedValue ?? null;
   profile.updatedAt = nowIso();
 
   profilesByVerificationRequestId.set(verificationRequestId, profile);

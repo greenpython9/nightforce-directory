@@ -107,11 +107,18 @@ const upsertProfileInputSchema = z.object({
   publishState: publishStateSchema.optional(),
 });
 
+const contactModeSchema = z.enum([
+  "NO_CONTACT",
+  "PRIVATE_CONTACT_AVAILABLE",
+  "PUBLIC_CONTACT_ALLOWED",
+]);
+
 const updateContactModeSyncInputSchema = z.object({
   contactModeContractAddress: z.string().trim().min(1).nullable().optional(),
   contactModeSyncStatus: z.enum(["not_created", "synced", "failed"]),
   contactModeLastSyncedAt: z.string().trim().min(1).nullable().optional(),
   contactModeSyncError: z.string().trim().optional().nullable(),
+  contactModeSyncedValue: contactModeSchema.nullable().optional(),
 });
 
 const jsonHeaders = {
@@ -1023,6 +1030,7 @@ export default {
             contactModeSyncStatus: "not_created",
             contactModeLastSyncedAt: null,
             contactModeSyncError: null,
+            contactModeSyncedValue: null,
             socials: nextSocials,
             fieldVisibility: input.fieldVisibility,
             encryptedHiddenPayload: nextEncryptedHiddenPayload,
@@ -1103,6 +1111,10 @@ export default {
             contactModeSyncStatus: input.contactModeSyncStatus,
             contactModeLastSyncedAt: input.contactModeLastSyncedAt ?? null,
             contactModeSyncError: input.contactModeSyncError ?? null,
+            contactModeSyncedValue:
+              input.contactModeSyncStatus === "synced"
+                ? input.contactModeSyncedValue ?? null
+                : existingProfile.contactModeSyncedValue ?? null,
             updatedAt: now,
           })
           .where(eq(profilesTable.id, existingProfile.id))
