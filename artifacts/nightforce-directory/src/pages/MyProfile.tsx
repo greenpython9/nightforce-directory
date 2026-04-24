@@ -1837,14 +1837,14 @@ export function MyProfile() {
             </div>
           </div>
 
-          <div className="border border-cyan-900 rounded-lg p-4 bg-cyan-950/20">
+          <div className="border border-zinc-800 rounded-lg p-4 bg-zinc-900">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="text-xs font-mono text-cyan-300 mb-1">
-                  Temporary Contact Mode Sync Check
+                <div className="text-sm font-mono font-semibold text-white mb-1">
+                  Contact Mode
                 </div>
                 <p className="text-[11px] font-mono text-zinc-500 leading-relaxed">
-                  Testing-only debug check. Public UI still uses backend-derived Contact Mode.
+                  Read-only status. This is derived from your saved contact settings and mirrored to Midnight.
                 </p>
               </div>
 
@@ -1852,10 +1852,47 @@ export function MyProfile() {
                 type="button"
                 onClick={() => void compareContactModeSync()}
                 disabled={contactModeCompareLoading || !contactModeContractAddress}
-                className="shrink-0 font-mono text-[11px] bg-cyan-950/60 hover:bg-cyan-950 text-cyan-200 border border-cyan-800 px-3 py-2 rounded-lg transition-colors disabled:opacity-50"
+                className="shrink-0 font-mono text-[11px] bg-zinc-950 hover:bg-zinc-800 text-zinc-200 border border-zinc-700 px-3 py-2 rounded-lg transition-colors disabled:opacity-50"
               >
-                {contactModeCompareLoading ? "Checking..." : "Compare"}
+                {contactModeCompareLoading ? "Verifying..." : "Verify Sync"}
               </button>
+            </div>
+
+            <div className="mt-4 grid gap-2 text-[11px] font-mono">
+              <div className="flex items-start justify-between gap-3">
+                <span className="text-zinc-500">Saved mode</span>
+                <span className="text-white text-right">
+                  {savedContactMode ?? "Not synced yet"}
+                </span>
+              </div>
+
+              <div className="flex items-start justify-between gap-3">
+                <span className="text-zinc-500">Sync check</span>
+                <span
+                  className={
+                    contactModeCompareResult
+                      ? contactModeCompareResult.matched
+                        ? "text-emerald-300 text-right"
+                        : "text-red-300 text-right"
+                      : "text-zinc-400 text-right"
+                  }
+                >
+                  {contactModeCompareResult
+                    ? contactModeCompareResult.matched
+                      ? "Verified"
+                      : "Mismatch"
+                    : contactModeContractAddress
+                      ? "Ready to verify"
+                      : "No contract yet"}
+                </span>
+              </div>
+
+              <div className="flex items-start justify-between gap-3">
+                <span className="text-zinc-500">Contract</span>
+                <span className="text-zinc-500 text-right break-all">
+                  {contactModeContractAddress ?? "Not created yet"}
+                </span>
+              </div>
             </div>
 
             {contactModeCompareError && (
@@ -1865,15 +1902,15 @@ export function MyProfile() {
             )}
 
             {contactModeCompareResult && (
-              <div className="mt-3 grid gap-1 text-[11px] font-mono text-zinc-400">
+              <div className="mt-4 border-t border-zinc-800 pt-3 grid gap-1 text-[11px] font-mono text-zinc-400">
                 <div>
-                  Backend-derived:{" "}
+                  Backend-derived fallback:{" "}
                   <span className="text-white">
                     {contactModeCompareResult.backendMode}
                   </span>
                 </div>
                 <div>
-                  Midnight contract:{" "}
+                  Midnight synced value:{" "}
                   <span className="text-white">
                     {contactModeCompareResult.midnightMode}
                   </span>
@@ -1893,9 +1930,6 @@ export function MyProfile() {
                   >
                     {contactModeCompareResult.matched ? "yes" : "no"}
                   </span>
-                </div>
-                <div className="text-zinc-600 break-all">
-                  Contract: {contactModeCompareResult.contractAddress}
                 </div>
                 <div className="text-zinc-600">
                   Checked: {contactModeCompareResult.checkedAt}
