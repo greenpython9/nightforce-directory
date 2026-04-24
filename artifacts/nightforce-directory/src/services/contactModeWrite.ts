@@ -181,6 +181,20 @@ function toContractModeValue(initialMode: ContactModeWriteValue): number {
   }
 }
 
+function fromContractModeValue(value: unknown): ContactModeWriteValue {
+  const ContactMode = (ContactModeContract as any).ContactMode;
+
+  if (value === ContactMode.PUBLIC_CONTACT_ALLOWED || value === 2) {
+    return "PUBLIC_CONTACT_ALLOWED";
+  }
+
+  if (value === ContactMode.PRIVATE_CONTACT_AVAILABLE || value === 1) {
+    return "PRIVATE_CONTACT_AVAILABLE";
+  }
+
+  return "NO_CONTACT";
+}
+
 export async function deployContactModePublic(
   initialMode: ContactModeWriteValue,
 ): Promise<{
@@ -467,5 +481,66 @@ export async function updateContactModePublic(
     contractAddress,
     networkId: configuration.networkId ?? MIDNIGHT_NETWORK_ID,
     nextMode,
+  };
+}
+
+export async function readContactModePublic(contractAddress: string): Promise<{
+  contractAddress: string;
+  networkId: string;
+  contactMode: ContactModeWriteValue;
+  rawValue: number | string;
+}> {
+  if (MIDNIGHT_NETWORK_ID !== "preprod") {
+    throw new Error(
+      `Contact-mode read is only enabled in preprod-write mode. Current network: ${MIDNIGHT_NETWORK_ID}`,
+    );
+  }
+
+  const connectedApi = getConnectedMidnightApi();
+
+  if (!connectedApi) {
+    throw new Error("Connect a Midnight wallet first.");
+  }
+
+  const cleanContractAddress = contractAddress.trim();
+
+  if (!cleanContractAddress) {
+    throw new Error("Contact-mode contract address is required.");
+  }
+
+  const configuration =
+    ((await connectedApi.getConfiguration?.()) as ConnectedConfiguration | undefined) ??
+    undefined;
+
+  if (!configuration?.indexerUri || !configuration?.indexerWsUri) {
+    throw new Error(
+      "Connected Midnight wallet did not provide indexer configuration.",
+    );
+  }
+
+  setNetworkId(MIDNIGHT_NETWORK_ID);
+
+  const publicDataProvider = indexerPublicDataProvider(
+    configuration.indexerUri,
+    configuration.indexerWsUri,
+  );
+
+  const state = await publicDataProvider.queryContractState(cleanContractAddress);
+
+  if (!state) {
+    throw new Error("No Contact Mode contract state was found.");
+  }
+
+  const ledgerState = (ContactModeContract as any).ledger(state.data);
+  const rawValue = ledgerState.contactMode;
+
+  return {
+    contractAddress: cleanContractAddress,
+    networkId: configuration.networkId ?? MIDNIGHT_NETWORK_ID,
+    contactMode: fromContractModeValue(rawValue),
+    rawValue:
+      typeof rawValue === "number" || typeof rawValue === "string"
+        ? rawValue
+        : String(rawValue),
   };
 }

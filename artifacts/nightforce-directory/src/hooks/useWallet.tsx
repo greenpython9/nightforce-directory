@@ -13,6 +13,7 @@ import {
 import { writeProfileProofPublicMy } from "../services/profileProofWrite";
 import {
   deployContactModePublic,
+  readContactModePublic,
   updateContactModePublic,
   type ContactModeWriteValue,
 } from "../services/contactModeWrite";
@@ -51,6 +52,12 @@ interface WalletContextType {
     contractAddress: string;
     networkId: string;
     nextMode: ContactModeWriteValue;
+  }>;
+  readContactMode: (contractAddress: string) => Promise<{
+    contractAddress: string;
+    networkId: string;
+    contactMode: ContactModeWriteValue;
+    rawValue: number | string;
   }>;
   disconnect: () => Promise<void>;
   refreshStatus: () => Promise<void>;
@@ -344,6 +351,36 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   );
 
 
+  const readContactMode = useCallback(async (contractAddress: string) => {
+    setIsWalletLoading(true);
+    setWalletError(null);
+
+    try {
+      const result = await readContactModePublic(contractAddress);
+      const snapshot = await getMidnightWalletSnapshot();
+      const resolvedWalletId = resolveMidnightWalletAddress(snapshot);
+      const backendStatus = await fetchBackendVerificationStatus(resolvedWalletId);
+
+      setConnectionMode("midnight");
+      setWalletId(resolvedWalletId);
+      setVerificationStatus(backendStatus);
+      setMidnightSnapshot(snapshot);
+
+      return result;
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to read contact-mode contract.";
+
+      setWalletError(message);
+      throw error;
+    } finally {
+      setIsWalletLoading(false);
+    }
+  }, []);
+
+
   const disconnect = useCallback(async () => {
     setIsWalletLoading(true);
     setWalletError(null);
@@ -390,6 +427,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         writeProfileProof,
         deployContactMode,
         updateContactMode,
+        readContactMode,
         disconnect,
         refreshStatus,
       }}

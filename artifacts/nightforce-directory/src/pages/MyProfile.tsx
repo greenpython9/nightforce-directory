@@ -695,6 +695,7 @@ export function MyProfile() {
     connectionMode,
     deployContactMode,
     updateContactMode,
+    readContactMode,
   } = useWallet();
 
   const [verificationRequestId, setVerificationRequestId] = useState<string | null>(null);
@@ -737,6 +738,16 @@ export function MyProfile() {
     useState<EncryptedHiddenPayload | null>(null);
   const [hasSavedShieldedEmail, setHasSavedShieldedEmail] = useState(false);
   const [savedContactMode, setSavedContactMode] = useState<ContactMode | null>(null);
+  const [contactModeCompareLoading, setContactModeCompareLoading] = useState(false);
+  const [contactModeCompareResult, setContactModeCompareResult] = useState<{
+    backendMode: ContactMode;
+    midnightMode: ContactMode;
+    contractAddress: string;
+    rawValue: number | string;
+    matched: boolean;
+    checkedAt: string;
+  } | null>(null);
+  const [contactModeCompareError, setContactModeCompareError] = useState("");
   const [saveMsg, setSaveMsg] = useState("");
   const [error, setError] = useState("");
 
@@ -772,6 +783,8 @@ export function MyProfile() {
     setSavedEncryptedHiddenPayload(null);
     setHasSavedShieldedEmail(false);
     setSavedContactMode(null);
+    setContactModeCompareResult(null);
+    setContactModeCompareError("");
   }, []);
 
   const load = useCallback(async () => {
@@ -1083,6 +1096,81 @@ export function MyProfile() {
       );
     } finally {
       setAvatarUploading(false);
+    }
+  };
+
+  const compareContactModeSync = async () => {
+    if (contactModeCompareLoading) {
+      return;
+    }
+
+    if (!verificationRequestId) {
+      setContactModeCompareError("No verification request was found.");
+      return;
+    }
+
+    setContactModeCompareLoading(true);
+    setContactModeCompareError("");
+    setContactModeCompareResult(null);
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/nightforce/profiles/${verificationRequestId}`,
+      );
+
+      let payload: unknown = null;
+
+      try {
+        payload = await response.json();
+      } catch {
+        payload = null;
+      }
+
+      if (!response.ok) {
+        const message =
+          typeof payload === "object" &&
+          payload !== null &&
+          "error" in payload &&
+          typeof payload.error === "string"
+            ? payload.error
+            : "Failed to load profile for Contact Mode comparison.";
+
+        throw new Error(message);
+      }
+
+      const data = payload as ProfileResponse;
+      const contractAddress = data.profile.contactModeContractAddress;
+
+      if (!contractAddress) {
+        throw new Error("No Contact Mode contract address is stored for this profile.");
+      }
+
+      const backendMode = deriveContactModeForSync({
+        publicEmail: data.profile.publicEmail,
+        encryptedHiddenPayload: parseEncryptedHiddenPayload(
+          data.profile.encryptedHiddenPayload,
+        ),
+      });
+
+      const midnightResult = await readContactMode(contractAddress);
+      const checkedAt = new Date().toISOString();
+
+      setContactModeCompareResult({
+        backendMode,
+        midnightMode: midnightResult.contactMode,
+        contractAddress: midnightResult.contractAddress,
+        rawValue: midnightResult.rawValue,
+        matched: backendMode === midnightResult.contactMode,
+        checkedAt,
+      });
+    } catch (err) {
+      setContactModeCompareError(
+        err instanceof Error
+          ? err.message
+          : "Failed to compare Contact Mode sync.",
+      );
+    } finally {
+      setContactModeCompareLoading(false);
     }
   };
 
@@ -1739,6 +1827,73 @@ export function MyProfile() {
             <div className="mt-2 text-xs font-mono text-emerald-400">
               ✓ Verified Ambassador
             </div>
+          </div>
+
+          <div className="border border-cyan-900 rounded-lg p-4 bg-cyan-950/20">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-xs font-mono text-cyan-300 mb-1">
+                  Temporary Contact Mode Sync Check
+                </div>
+                <p className="text-[11px] font-mono text-zinc-500 leading-relaxed">
+                  Testing-only debug check. Public UI still uses backend-derived Contact Mode.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => void compareContactModeSync()}
+                disabled={contactModeCompareLoading || !contactModeContractAddress}
+                className="shrink-0 font-mono text-[11px] bg-cyan-950/60 hover:bg-cyan-950 text-cyan-200 border border-cyan-800 px-3 py-2 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {contactModeCompareLoading ? "Checking..." : "Compare"}
+              </button>
+            </div>
+
+            {contactModeCompareError && (
+              <div className="mt-3 text-[11px] font-mono text-red-300">
+                {contactModeCompareError}
+              </div>
+            )}
+
+            {contactModeCompareResult && (
+              <div className="mt-3 grid gap-1 text-[11px] font-mono text-zinc-400">
+                <div>
+                  Backend-derived:{" "}
+                  <span className="text-white">
+                    {contactModeCompareResult.backendMode}
+                  </span>
+                </div>
+                <div>
+                  Midnight contract:{" "}
+                  <span className="text-white">
+                    {contactModeCompareResult.midnightMode}
+                  </span>
+                  <span className="text-zinc-600">
+                    {" "}
+                    raw {String(contactModeCompareResult.rawValue)}
+                  </span>
+                </div>
+                <div>
+                  Match:{" "}
+                  <span
+                    className={
+                      contactModeCompareResult.matched
+                        ? "text-emerald-300"
+                        : "text-red-300"
+                    }
+                  >
+                    {contactModeCompareResult.matched ? "yes" : "no"}
+                  </span>
+                </div>
+                <div className="text-zinc-600 break-all">
+                  Contract: {contactModeCompareResult.contractAddress}
+                </div>
+                <div className="text-zinc-600">
+                  Checked: {contactModeCompareResult.checkedAt}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="border border-zinc-800 rounded-lg p-4 bg-zinc-900">
