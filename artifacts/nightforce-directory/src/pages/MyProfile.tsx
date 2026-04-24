@@ -379,6 +379,7 @@ async function updateContactModeSyncMetadata(args: {
   contactModeSyncStatus: "not_created" | "synced" | "failed";
   contactModeLastSyncedAt: string | null;
   contactModeSyncError: string | null;
+  contactModeSyncedValue: ContactMode | null;
 }): Promise<void> {
   const response = await fetch(
     `${API_BASE_URL}/api/nightforce/profiles/${args.verificationRequestId}/contact-mode-sync`,
@@ -392,6 +393,7 @@ async function updateContactModeSyncMetadata(args: {
         contactModeSyncStatus: args.contactModeSyncStatus,
         contactModeLastSyncedAt: args.contactModeLastSyncedAt,
         contactModeSyncError: args.contactModeSyncError,
+        contactModeSyncedValue: args.contactModeSyncedValue,
       }),
     },
   );
@@ -1290,6 +1292,7 @@ export function MyProfile() {
             contactModeSyncStatus: "synced",
             contactModeLastSyncedAt: syncedAt,
             contactModeSyncError: null,
+            contactModeSyncedValue: nextMode,
           });
 
           setContactModeContractAddress(updateResult.contractAddress);
@@ -1310,6 +1313,7 @@ export function MyProfile() {
               contactModeLastSyncedAt:
                 data.profile.contactModeLastSyncedAt ?? null,
               contactModeSyncError: syncMessage,
+              contactModeSyncedValue: null,
             });
           } catch {
             // Keep backend removal success even if sync metadata update also fails.
@@ -1591,6 +1595,7 @@ export function MyProfile() {
             contactModeSyncStatus: "synced",
             contactModeLastSyncedAt: syncedAt,
             contactModeSyncError: null,
+            contactModeSyncedValue: nextMode,
           });
 
           setContactModeContractAddress(updateResult.contractAddress);
@@ -1610,6 +1615,7 @@ export function MyProfile() {
               contactModeLastSyncedAt:
                 data.profile.contactModeLastSyncedAt ?? null,
               contactModeSyncError: syncMessage,
+              contactModeSyncedValue: null,
             });
           } catch {
             // Keep backend publish success even if sync metadata update also fails.
@@ -1637,6 +1643,7 @@ export function MyProfile() {
           contactModeSyncStatus: "synced",
           contactModeLastSyncedAt: new Date().toISOString(),
           contactModeSyncError: null,
+          contactModeSyncedValue: initialMode,
         });
 
         setContactModeContractAddress(deployResult.contractAddress);
@@ -1655,6 +1662,7 @@ export function MyProfile() {
             contactModeSyncStatus: "failed",
             contactModeLastSyncedAt: null,
             contactModeSyncError: syncMessage,
+            contactModeSyncedValue: null,
           });
         } catch {
           // Keep backend publish success even if sync metadata update also fails.
