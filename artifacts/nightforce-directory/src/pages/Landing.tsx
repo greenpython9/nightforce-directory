@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { CobeAmbassadorGlobe } from "../components/CobeAmbassadorGlobe";
+import { ProfileCard } from "../components/ProfileCard";
 import { MOCK_DIRECTORY_PROFILES } from "../data/mockDirectoryProfiles";
 
 const API_BASE_URL = "http://127.0.0.1:8787";
@@ -35,8 +36,8 @@ const quickLinks = [
   { label: "Browse", href: "/directory" },
   { label: "Globe", href: "#globe" },
   { label: "Updates", href: "#updates" },
-  { label: "About", href: "#about" },
-  { label: "Contact", href: "#contact" },
+  { label: "About", href: "/about" },
+  { label: "Contact", href: "/contact" },
 ];
 
 const categories = [
@@ -136,24 +137,6 @@ const midnightUpdates = [
 ];
 
 
-function getInitials(name: string | null): string {
-  const source = name?.trim() || "Nightforce Ambassador";
-  const parts = source.split(/\s+/).filter(Boolean);
-
-  return (
-    parts
-      .slice(0, 2)
-      .map((part) => part.charAt(0).toUpperCase())
-      .join("") || "NF"
-  );
-}
-
-function getContactLabel(contactMode: ContactMode | null): string {
-  if (contactMode === "PUBLIC_CONTACT_ALLOWED") return "Public contact";
-  if (contactMode === "PRIVATE_CONTACT_AVAILABLE") return "Private contact";
-  return "No contact";
-}
-
 function getStatValue(loading: boolean, value: number): string {
   if (loading) return "…";
   return value.toLocaleString();
@@ -221,7 +204,7 @@ export function Landing() {
     };
   }, []);
 
-  const featuredProfiles = useMemo(() => profiles.slice(0, 8), [profiles]);
+  const featuredProfiles = useMemo(() => profiles.slice(0, 10), [profiles]);
 
   const countriesRepresented = useMemo(() => {
     return new Set(
@@ -355,11 +338,11 @@ export function Landing() {
             )}
 
             {loadingProfiles ? (
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                {Array.from({ length: 8 }).map((_, index) => (
+              <div className="flex gap-3 overflow-x-auto pb-3 [scrollbar-width:thin]">
+                {Array.from({ length: 10 }).map((_, index) => (
                   <div
                     key={index}
-                    className="rounded-2xl border border-zinc-900 bg-zinc-900 p-4"
+                    className="min-h-[255px] w-[260px] shrink-0 rounded-2xl border border-zinc-900 bg-zinc-900 p-5"
                   >
                     <div className="h-12 w-12 rounded-xl bg-zinc-900" />
                     <div className="mt-4 h-3 w-32 rounded bg-zinc-900" />
@@ -379,59 +362,24 @@ export function Landing() {
                 </p>
               </div>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="flex gap-3 overflow-x-auto pb-3 [scrollbar-width:thin]">
                 {featuredProfiles.map((profile) => (
-                  <Link
+                  <ProfileCard
                     key={profile.publicId}
-                    href={`/profile/${profile.publicId}`}
-                    className="group rounded-2xl border border-zinc-900 bg-zinc-900 p-4 transition-colors hover:border-zinc-500"
-                  >
-                    <div className="flex items-start gap-3">
-                      {profile.avatarUrl ? (
-                        <img
-                          src={profile.avatarUrl}
-                          alt=""
-                          className="h-12 w-12 rounded-xl border border-zinc-700 object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-zinc-700 bg-zinc-950 text-[11px] font-mono text-sky-300">
-                          {getInitials(profile.displayName)}
-                        </div>
-                      )}
-
-                      <div className="min-w-0">
-                        <div className="truncate text-[12px] font-mono font-semibold text-white">
-                          {profile.displayName || "Ambassador"}
-                        </div>
-                        <div className="mt-1 truncate text-[11px] font-mono text-zinc-500">
-                          {profile.country || "Global"}
-                          {profile.region ? ` · ${profile.region}` : ""}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 truncate text-[11px] font-mono text-zinc-400">
-                      {profile.role || "Nightforce ambassador"}
-                    </div>
-
-                    <div className="mt-4 rounded-xl border border-zinc-900 bg-zinc-950 px-3 py-2">
-                      <div className="text-[10px] font-mono text-zinc-600">
-                        Contact availability
-                      </div>
-                      <div className="mt-1 text-[11px] font-mono text-sky-300">
-                        {getContactLabel(profile.contactMode)}
-                      </div>
-                    </div>
-
-                    <div className="mt-4 flex items-center justify-between border-t border-zinc-900 pt-3">
-                      <span className="text-[10px] font-mono text-emerald-400">
-                        verified
-                      </span>
-                      <span className="text-[10px] font-mono text-zinc-600">
-                        View profile →
-                      </span>
-                    </div>
-                  </Link>
+                    profile={{
+                      publicId: profile.publicId,
+                      displayName: profile.displayName,
+                      avatarUrl: profile.avatarUrl,
+                      role: profile.role,
+                      country: profile.country,
+                      region: profile.region,
+                      contactMode: profile.contactMode,
+                      socials: profile.socials,
+                      isVerified: true,
+                      visibility: profile.displayName ? "public" : "anonymous",
+                    }}
+                    className="w-[260px] shrink-0"
+                  />
                 ))}
               </div>
             )}
@@ -476,10 +424,10 @@ export function Landing() {
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h2 className="text-[13px] font-mono font-semibold text-zinc-300">
-                  Latest from Midnight
+                  Latest from Midnight Network
                 </h2>
                 <p className="mt-1 text-[11px] font-mono text-zinc-600">
-                  Curated official Midnight updates and builder resources
+                  Curated news and updates
                 </p>
               </div>
 
@@ -639,6 +587,9 @@ export function Landing() {
                   className="block hover:text-zinc-300"
                 >
                   Request Verification
+                </Link>
+                <Link href="/contact" className="block hover:text-zinc-300">
+                  Contact
                 </Link>
               </div>
             </div>

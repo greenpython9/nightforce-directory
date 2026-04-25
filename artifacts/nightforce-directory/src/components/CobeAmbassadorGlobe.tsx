@@ -150,7 +150,9 @@ function buildCountryPoints(
         country,
         regionCount: regions.size,
         count: countryProfiles.length,
-        publicProfiles: countryProfiles.length,
+        publicProfiles: countryProfiles.filter(
+          (profile) => profile.requestedVisibility === "public",
+        ).length,
         anonymousProfiles: countryProfiles.filter(
           (profile) => !profile.displayName,
         ).length,
@@ -248,6 +250,8 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
+const DEFAULT_GLOBE_ZOOM = 0.63;
+
 export function CobeAmbassadorGlobe({
   profiles,
   loading,
@@ -260,12 +264,13 @@ export function CobeAmbassadorGlobe({
   const lastPointerRef = useRef<{ x: number; y: number } | null>(null);
   const phiRef = useRef(0);
   const thetaRef = useRef(0.22);
-  const zoomRef = useRef(1);
+  const zoomRef = useRef(DEFAULT_GLOBE_ZOOM);
 
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [dimensions, setDimensions] = useState({ width: 960, height: 620 });
   const [reducedMotion, setReducedMotion] = useState(false);
-  const [zoomLevel, setZoomLevel] = useState(1);
+  const [zoomLevel, setZoomLevel] = useState(DEFAULT_GLOBE_ZOOM);
+  const [countryPanelExpanded, setCountryPanelExpanded] = useState(false);
 
   const countryPoints = useMemo(() => buildCountryPoints(profiles), [profiles]);
 
@@ -330,7 +335,7 @@ export function CobeAmbassadorGlobe({
   }, [displayPoints]);
 
   const topCountryChoices = useMemo(() => {
-    return displayPoints.slice(0, 8);
+    return displayPoints;
   }, [displayPoints]);
 
   const topCountryChips = useMemo(() => {
@@ -467,7 +472,7 @@ export function CobeAmbassadorGlobe({
       markers: cobeMarkers,
       markerElevation: 0.03,
       scale: baseScale * zoomRef.current,
-      offset: width >= 768 ? [170, 8] : [0, 92],
+      offset: width >= 768 ? [0, 8] : [0, 92],
       opacity: 0.98,
       context: {
         alpha: true,
@@ -475,22 +480,31 @@ export function CobeAmbassadorGlobe({
       },
     });
 
-    function animate() {
+    function animate(timestamp = 0) {
       if (!reducedMotion && !isDraggingRef.current) {
         phiRef.current += 0.0022;
       }
+
+      const pulse = reducedMotion
+        ? 1
+        : 1 + Math.sin(timestamp * 0.0022) * 0.16;
+
+      const pulsingMarkers = cobeMarkers.map((marker) => ({
+        ...marker,
+        size: marker.size * pulse,
+      }));
 
       globe.update({
         phi: phiRef.current,
         theta: thetaRef.current,
         scale: baseScale * zoomRef.current,
-        markers: cobeMarkers,
+        markers: pulsingMarkers,
       });
 
       frameId = requestAnimationFrame(animate);
     }
 
-    animate();
+    frameId = requestAnimationFrame(animate);
 
     return () => {
       cancelAnimationFrame(frameId);
@@ -502,8 +516,8 @@ export function CobeAmbassadorGlobe({
     setSelectedCountry(null);
     phiRef.current = 0;
     thetaRef.current = 0.22;
-    zoomRef.current = 1;
-    setZoomLevel(1);
+    zoomRef.current = DEFAULT_GLOBE_ZOOM;
+    setZoomLevel(DEFAULT_GLOBE_ZOOM);
   }
 
   function handleGlobePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
@@ -562,7 +576,7 @@ export function CobeAmbassadorGlobe({
               Ambassador Globe
             </h2>
             <p className="mt-1 text-[10px] font-mono text-zinc-600">
-              Country-level ambassador distribution
+              Profile distribution
             </p>
           </div>
 
@@ -579,8 +593,8 @@ export function CobeAmbassadorGlobe({
           ref={containerRef}
           className="relative min-h-[760px] overflow-hidden bg-[#050708] md:min-h-[640px]"
         >
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_55%_50%,rgba(16,185,129,0.16),transparent_27%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_55%_50%,rgba(6,182,212,0.07),transparent_44%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.16),transparent_27%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(6,182,212,0.07),transparent_44%)]" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(5,7,8,0.20)_46%,rgba(5,7,8,0.86)_100%)]" />
 
           <div
@@ -812,7 +826,7 @@ export function CobeAmbassadorGlobe({
             </div>
           </div>
 
-          <div className="absolute right-4 top-[365px] z-20 w-[calc(100%-2rem)] rounded-xl border border-zinc-800 bg-zinc-900/95 p-4 backdrop-blur md:top-4 md:w-[300px]">
+          <div className="absolute right-4 top-[365px] z-20 w-[calc(100%-2rem)] rounded-xl border border-zinc-800/70 bg-[#1d1d1f]/55 p-4 shadow-2xl backdrop-blur-md md:top-4 md:w-[300px]">
             {selectedCountryData ? (
               <>
                 <div className="mb-3 flex items-start justify-between gap-3">
@@ -841,17 +855,8 @@ export function CobeAmbassadorGlobe({
                       value: selectedCountryData.count.toLocaleString(),
                     },
                     {
-                      label: "Regions",
-                      value: selectedCountryData.regionCount.toLocaleString(),
-                    },
-                    {
                       label: "Public",
                       value: selectedCountryData.publicProfiles.toLocaleString(),
-                    },
-                    {
-                      label: "Contact",
-                      value:
-                        selectedCountryData.contactEnabledProfiles.toLocaleString(),
                     },
                   ].map((stat) => (
                     <div
@@ -878,39 +883,68 @@ export function CobeAmbassadorGlobe({
               </>
             ) : (
               <>
-                <div className="text-[10px] font-mono uppercase tracking-wide text-zinc-600">
-                  Ambassador countries
-                </div>
-                <div className="mt-1 text-sm font-mono font-semibold text-white">
-                  Explore the directory
-                </div>
-                <p className="mt-2 text-[11px] leading-5 text-zinc-500">
-                  Drag the globe to rotate it. Scroll or use your trackpad over
-                  this section to zoom. Select a country below to view its
-                  ambassador summary.
-                </p>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-mono uppercase tracking-wide text-zinc-600">
+                      Ambassador countries
+                    </div>
+                    <div className="mt-1 text-sm font-mono font-semibold text-white">
+                      Explore directory
+                    </div>
+                  </div>
 
-                <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-[10px] font-mono text-zinc-500">
-                  Zoom: {Math.round(zoomLevel * 100)}%
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCountryPanelExpanded((current) => !current)
+                    }
+                    className="shrink-0 rounded-md border border-zinc-800 bg-zinc-950/80 px-2 py-1 text-[10px] font-mono text-zinc-500 transition-colors hover:border-zinc-600 hover:text-zinc-300"
+                    aria-expanded={countryPanelExpanded}
+                  >
+                    {countryPanelExpanded ? "collapse" : "expand"}
+                  </button>
                 </div>
 
-                <div className="mt-3 space-y-2">
-                  {topCountryChoices.map((point) => (
-                    <button
-                      key={point.country}
-                      type="button"
-                      onClick={() => setSelectedCountry(point.country)}
-                      className="flex w-full items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-left transition-colors hover:border-emerald-700"
+                {countryPanelExpanded ? (
+                  <>
+                    <p className="mt-2 text-[11px] leading-5 text-zinc-500">
+                      Select a country below to view its ambassador summary.
+                    </p>
+
+                    <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950/90 px-3 py-2 text-[10px] font-mono text-zinc-500">
+                      Zoom: {Math.round(zoomLevel * 100)}%
+                    </div>
+
+                    <div
+                      data-vertical-scroll
+                      onWheel={(event) => {
+                        event.stopPropagation();
+                      }}
+                      className="mt-3 max-h-[230px] space-y-2 overflow-y-auto pr-2 [scrollbar-width:thin]"
                     >
-                      <span className="min-w-0 truncate text-[11px] font-mono text-zinc-300">
-                        {point.country}
-                      </span>
-                      <span className="ml-3 shrink-0 text-[10px] font-mono text-emerald-400">
-                        {point.count}
-                      </span>
-                    </button>
-                  ))}
-                </div>
+                      {topCountryChoices.map((point) => (
+                        <button
+                          key={point.country}
+                          type="button"
+                          onClick={() => setSelectedCountry(point.country)}
+                          className="flex w-full items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/90 px-3 py-2 text-left transition-colors hover:border-emerald-700"
+                        >
+                          <span className="min-w-0 truncate text-[11px] font-mono text-zinc-300">
+                            {point.country}
+                          </span>
+                          <span className="ml-3 shrink-0 text-[10px] font-mono text-emerald-400">
+                            {point.count}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950/80 px-3 py-2 text-[10px] font-mono text-zinc-500">
+                    {topCountryChoices.length} countries available · Zoom{" "}
+                    {Math.round(zoomLevel * 100)}%
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -935,9 +969,6 @@ export function CobeAmbassadorGlobe({
             />
           </div>
 
-          <div className="absolute bottom-3 right-3 z-20 rounded border border-emerald-900/60 bg-zinc-900/90 px-2 py-1 text-[10px] font-mono text-emerald-400/80">
-            country-level only
-          </div>
         </div>
       </div>
     </section>

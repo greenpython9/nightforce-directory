@@ -8,6 +8,8 @@ import { RequestVerification } from "./pages/RequestVerification";
 import { AdminReview } from "./pages/AdminReview";
 import { MyProfile } from "./pages/MyProfile";
 import { PublicProfile } from "./pages/PublicProfile";
+import { About } from "./pages/About";
+import { Contact } from "./pages/Contact";
 
 function NotFound() {
   return (
@@ -26,6 +28,8 @@ function AppRoutes() {
       <Route path="/" component={Landing} />
 <Route path="/wallet" component={WalletAccess} />
 <Route path="/directory" component={Directory} />
+      <Route path="/about" component={About} />
+      <Route path="/contact" component={Contact} />
       <Route path="/request-verification" component={RequestVerification} />
       <Route path="/admin/review" component={AdminReview} />
       <Route path="/my-profile" component={MyProfile} />
