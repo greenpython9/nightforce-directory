@@ -1,564 +1,711 @@
-import { Link } from "wouter";
-import { useWallet } from "../hooks/useWallet";
-import { StatusBadge } from "../components/StatusBadge";
-import {
-  MOCK_WALLETS,
-  ADMIN_WALLET_ID,
-  NIGHTFORCE_APP_MODE,
-  MIDNIGHT_CONNECT_ENABLED,
-  getProfileProofState,
-  type ProfileProofState,
-} from "../services/walletService";
-import { useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { Link, useLocation } from "wouter";
+import { CobeAmbassadorGlobe } from "../components/CobeAmbassadorGlobe";
+import { MOCK_DIRECTORY_PROFILES } from "../data/mockDirectoryProfiles";
 
 const API_BASE_URL = "http://127.0.0.1:8787";
 
-function shortenValue(value: string | null, left = 10, right = 8) {
-  if (!value) return "—";
-  if (value.length <= left + right + 3) return value;
-  return `${value.slice(0, left)}...${value.slice(-right)}`;
+type ContactMode =
+  | "NO_CONTACT"
+  | "PRIVATE_CONTACT_AVAILABLE"
+  | "PUBLIC_CONTACT_ALLOWED";
+
+type DirectoryProfileRecord = {
+  publicId: string;
+  slug: string | null;
+  displayName: string | null;
+  region: string | null;
+  country: string | null;
+  role: string | null;
+  bio: string | null;
+  avatarUrl: string | null;
+  websiteUrl: string | null;
+  publicEmail: string | null;
+  contactMode: ContactMode | null;
+  socials: string[];
+  requestedVisibility: "public" | "hidden";
+  publishState: "draft" | "published" | "inactive";
+};
+
+type DirectoryResponse = {
+  profiles: DirectoryProfileRecord[];
+};
+
+const quickLinks = [
+  { label: "Browse", href: "/directory" },
+  { label: "Globe", href: "#globe" },
+  { label: "Updates", href: "#updates" },
+  { label: "About", href: "#about" },
+  { label: "Contact", href: "#contact" },
+];
+
+const categories = [
+  "Ambassadors",
+  "Countries",
+  "Regions",
+  "Public Contact",
+  "Private Contact",
+  "Midnight",
+  "Builders",
+  "Community",
+  "APAC",
+  "EMEA",
+  "Global",
+  "Verified",
+];
+
+const midnightUpdates = [
+  {
+    author: "Midnight",
+    source: "Official Blog",
+    date: "Mar 31, 2026",
+    title: "State of the Network - March 2026",
+    excerpt:
+      "The Midnight network is officially live. This update covers the genesis block, federated node operators, ecosystem progress, and developer resources.",
+    href: "https://midnight.network/blog/state-of-the-network-march-2026",
+    tag: "Network Updates",
+    visual: "pulse",
+    imageUrl:
+      "https://midnight.network/_next/image?q=75&url=https%3A%2F%2Fcdn.sanity.io%2Fimages%2F330xhmya%2Fproduction%2F74d7348c5da8570d4657d5e55bb965d9d1eea723-2160x2160.jpg&w=1080",
+  },
+  {
+    author: "Midnight",
+    source: "Official Blog",
+    date: "Mar 29, 2026",
+    title: "Midnight network is live",
+    excerpt:
+      "The launch initiates the genesis block, establishing state continuity and permanence for Midnight's programmable privacy network.",
+    href: "https://midnight.network/blog/midnight-network-is-live",
+    tag: "Mainnet",
+    visual: "launch",
+    imageUrl:
+      "https://midnight.network/_next/image?q=75&url=https%3A%2F%2Fcdn.sanity.io%2Fimages%2F330xhmya%2Fproduction%2F74d7348c5da8570d4657d5e55bb965d9d1eea723-2160x2160.jpg&w=1080",
+  },
+  {
+    author: "Midnight",
+    source: "Official Blog",
+    date: "Mar 25, 2026",
+    title: "Monument tokenises retail deposits with Midnight",
+    excerpt:
+      "Monument Bank is set to become the first UK bank to tokenise retail customer deposits on a public blockchain through Midnight.",
+    href: "https://midnight.network/blog/monument-becomes-the-first-bank-to-securely-tokenise-retail-deposits-midnight-partnership",
+    tag: "Ecosystem Partners",
+    visual: "bank",
+    imageUrl:
+      "https://midnight.network/_next/image?q=75&url=https%3A%2F%2Fcdn.sanity.io%2Fimages%2F330xhmya%2Fproduction%2Ff154e064e6629cca4eca0391fc8211f81c716a25-2160x2160.jpg&w=1080",
+  },
+  {
+    author: "Midnight",
+    source: "Official Blog",
+    date: "Mar 09, 2026",
+    title: "Getting mainnet ready: A developer’s guide",
+    excerpt:
+      "A practical guide for developers preparing DApps for Midnight mainnet, including Preprod migration, Academy resources, and DUST generation.",
+    href: "https://midnight.network/blog/getting-mainnet-ready-a-developer-s-guide",
+    tag: "Developers",
+    visual: "docs",
+    imageUrl:
+      "https://midnight.network/_next/image?q=75&url=https%3A%2F%2Fcdn.sanity.io%2Fimages%2F330xhmya%2Fproduction%2F3e14cf1840214c160c00a9c6def387c64a1d9fc7-2160x2160.jpg&w=640",
+  },
+  {
+    author: "Midnight",
+    source: "Official Blog",
+    date: "Jun 25, 2025",
+    title: "The tokenomics powering Midnight network",
+    excerpt:
+      "An overview of NIGHT, DUST, resource generation, ecosystem incentives, and the dual-component tokenomics behind Midnight.",
+    href: "https://midnight.network/blog/the-tokenomics-powering-midnight-network",
+    tag: "Tokenomics",
+    visual: "token",
+    imageUrl:
+      "https://midnight.network/_next/image?q=75&url=https%3A%2F%2Fcdn.sanity.io%2Fimages%2F330xhmya%2Fproduction%2F9b4964213c3da33ed550efb144d47de900ec4284-1080x1080.png&w=640",
+  },
+  {
+    author: "Midnight",
+    source: "Official Blog",
+    date: "Dec 04, 2025",
+    title: "Guide to the NIGHT token launch and Redemption",
+    excerpt:
+      "A guide covering NIGHT launch phases, redemption, thawing schedules, and how the token distribution roadmap unfolds.",
+    href: "https://midnight.network/blog/guide-to-the-night-token-launch-and-redemption",
+    tag: "NIGHT",
+    visual: "directory",
+    imageUrl:
+      "https://midnight.network/_next/image?q=75&url=https%3A%2F%2Fcdn.sanity.io%2Fimages%2F330xhmya%2Fproduction%2F890c1515269142d8ef0df2449eabe586db3e5863-2250x2250.png&w=640",
+  },
+];
+
+
+function getInitials(name: string | null): string {
+  const source = name?.trim() || "Nightforce Ambassador";
+  const parts = source.split(/\s+/).filter(Boolean);
+
+  return (
+    parts
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("") || "NF"
+  );
+}
+
+function getContactLabel(contactMode: ContactMode | null): string {
+  if (contactMode === "PUBLIC_CONTACT_ALLOWED") return "Public contact";
+  if (contactMode === "PRIVATE_CONTACT_AVAILABLE") return "Private contact";
+  return "No contact";
+}
+
+function getStatValue(loading: boolean, value: number): string {
+  if (loading) return "…";
+  return value.toLocaleString();
 }
 
 export function Landing() {
-  const {
-    walletId,
-    isConnected,
-    verificationStatus,
-    connectionMode,
-    midnightSnapshot,
-    availableMidnightWallets,
-    walletError,
-    isWalletLoading,
-    connect,
-    connectMidnight,
-    writeProfileProof,
-    disconnect,
-    refreshStatus,
-  } = useWallet();
+  const [, navigate] = useLocation();
 
-  const [showMockPicker, setShowMockPicker] = useState(false);
-  const [profileProofState, setProfileProofState] =
-    useState<ProfileProofState | null>(null);
-  const [isProfileProofLoading, setIsProfileProofLoading] = useState(false);
-  const [profileProofError, setProfileProofError] = useState<string | null>(null);
-  const [profileProofWriteMessage, setProfileProofWriteMessage] =
-    useState<string | null>(null);
-
-  const [requestIdToBind, setRequestIdToBind] = useState("");
-  const [bindError, setBindError] = useState<string | null>(null);
-  const [bindSuccess, setBindSuccess] = useState<string | null>(null);
-  const [isBinding, setIsBinding] = useState(false);
-
-  async function reloadProfileProofState() {
-    setIsProfileProofLoading(true);
-    setProfileProofError(null);
-
-    try {
-      const data = await getProfileProofState();
-      setProfileProofState(data);
-    } catch (error) {
-      setProfileProofState(null);
-      setProfileProofError(
-        error instanceof Error
-          ? error.message
-          : "Failed to load profile-proof state.",
-      );
-    } finally {
-      setIsProfileProofLoading(false);
-    }
-  }
+  const [searchQuery, setSearchQuery] = useState("");
+  const [profiles, setProfiles] = useState<DirectoryProfileRecord[]>([]);
+  const [loadingProfiles, setLoadingProfiles] = useState(true);
+  const [directoryError, setDirectoryError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadProfileProofState() {
-      setIsProfileProofLoading(true);
-      setProfileProofError(null);
+    async function loadDirectoryPreview() {
+      setLoadingProfiles(true);
+      setDirectoryError("");
 
       try {
-        const data = await getProfileProofState();
+        const response = await fetch(`${API_BASE_URL}/api/nightforce/directory`);
+
+        let payload: unknown = null;
+
+        try {
+          payload = await response.json();
+        } catch {
+          payload = null;
+        }
+
+        if (!response.ok) {
+          throw new Error("Failed to load directory preview.");
+        }
+
+        const data = payload as DirectoryResponse;
+        const safeProfiles = Array.isArray(data.profiles) ? data.profiles : [];
+        const previewProfiles: DirectoryProfileRecord[] = import.meta.env.DEV
+          ? [...safeProfiles, ...MOCK_DIRECTORY_PROFILES]
+          : safeProfiles;
 
         if (!cancelled) {
-          setProfileProofState(data);
+          setProfiles(previewProfiles);
         }
       } catch (error) {
         if (!cancelled) {
-          setProfileProofState(null);
-          setProfileProofError(
+          setDirectoryError(
             error instanceof Error
               ? error.message
-              : "Failed to load profile-proof state.",
+              : "Failed to load directory preview.",
           );
+          setProfiles([]);
         }
       } finally {
         if (!cancelled) {
-          setIsProfileProofLoading(false);
+          setLoadingProfiles(false);
         }
       }
     }
 
-    void loadProfileProofState();
+    void loadDirectoryPreview();
 
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const isPreprodWriteMode = NIGHTFORCE_APP_MODE === "preprod-write";
+  const featuredProfiles = useMemo(() => profiles.slice(0, 8), [profiles]);
 
-  const midnightModeLabel = isPreprodWriteMode
-    ? "Midnight Wallet (Preprod)"
-    : "Midnight Wallet (Local)";
+  const countriesRepresented = useMemo(() => {
+    return new Set(
+      profiles
+        .map((profile) => profile.country)
+        .filter((country): country is string => Boolean(country)),
+    ).size;
+  }, [profiles]);
 
-  const midnightModeHelpText = isPreprodWriteMode
-    ? "Preprod mode is enabled. Browser wallet connection is intended for the first real app-side write flow."
-    : "Injected Midnight browser wallets currently reject the local undeployed network in this app flow. The live read-only Profile Proof State panel below is still connected to the local contract.";
+  const regionsRepresented = useMemo(() => {
+    return new Set(
+      profiles
+        .map((profile) => profile.region)
+        .filter((region): region is string => Boolean(region)),
+    ).size;
+  }, [profiles]);
 
-  const connectedLabel = useMemo(() => {
-    if (connectionMode === "midnight" && midnightSnapshot) {
-      return midnightSnapshot.providerName;
-    }
-    return walletId;
-  }, [connectionMode, midnightSnapshot, walletId]);
+  function handleSearchSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
 
-  const handleBindWallet = async () => {
-    if (!walletId) {
-      setBindError("No Midnight wallet address is available to bind.");
+    const query = searchQuery.trim();
+
+    if (!query) {
+      navigate("/directory");
       return;
     }
 
-    if (!requestIdToBind.trim()) {
-      setBindError("Approved verification request ID is required.");
-      return;
-    }
+    navigate(`/directory?q=${encodeURIComponent(query)}`);
+  }
 
-    setIsBinding(true);
-    setBindError(null);
-    setBindSuccess(null);
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/nightforce/wallet-bindings`, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          verificationRequestId: requestIdToBind.trim(),
-          midnightWalletAddress: walletId,
-        }),
-      });
-
-      let payload: unknown = null;
-
-      try {
-        payload = await response.json();
-      } catch {
-        payload = null;
-      }
-
-      if (!response.ok) {
-        const message =
-          typeof payload === "object" &&
-          payload !== null &&
-          "error" in payload &&
-          typeof payload.error === "string"
-            ? payload.error
-            : "Failed to bind wallet.";
-
-        throw new Error(message);
-      }
-
-      await refreshStatus();
-      setBindSuccess("Wallet binding created. You can now continue to My Profile.");
-      setRequestIdToBind("");
-    } catch (error) {
-      setBindError(
-        error instanceof Error ? error.message : "Failed to bind wallet.",
-      );
-    } finally {
-      setIsBinding(false);
-    }
-  };
+  function handleViewCountryProfiles(country: string) {
+    navigate(`/directory?q=${encodeURIComponent(country)}`);
+  }
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center px-4">
-      <div className="max-w-lg w-full">
-        <div className="mb-10 text-center">
-          <h1 className="text-3xl font-mono font-bold text-white tracking-wider mb-3">
-            NIGHTFORCE DIRECTORY
-          </h1>
-          <p className="text-sm font-mono text-zinc-400">
-            Unofficial directory for existing Nightforce ambassadors
-          </p>
-        </div>
+    <div className="min-h-screen bg-zinc-950 text-white">
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute left-1/2 top-[-260px] h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-zinc-700/10 blur-3xl" />
+        <div className="absolute left-[12%] top-[28%] h-80 w-80 rounded-full bg-zinc-800/10 blur-3xl" />
+        <div className="absolute right-[10%] top-[36%] h-96 w-96 rounded-full bg-zinc-800/10 blur-3xl" />
+      </div>
 
-        {walletError && (
-          <div className="border border-red-900 bg-red-950/40 rounded-lg p-4 mb-4">
-            <div className="text-xs font-mono text-red-300">{walletError}</div>
-          </div>
-        )}
+      <div className="relative z-10 mx-auto max-w-[1120px] px-4 sm:px-6 lg:px-8">
+        <header className="flex items-center justify-center pb-8 pt-7">
+          <Link
+            href="/"
+            className="flex items-center gap-2 text-[11px] font-mono text-zinc-500"
+          >
+            <span className="text-sky-300">✦</span>
+            <span>Nightforce Directory</span>
+          </Link>
+        </header>
 
-        {isConnected ? (
-          <div className="border border-zinc-800 rounded-lg p-5 bg-zinc-900 mb-8">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-mono text-zinc-500">Connected Wallet</span>
-              <button
-                onClick={() => void disconnect()}
-                disabled={isWalletLoading}
-                className="text-xs font-mono text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-50"
+        <main>
+          <section className="pb-6 text-center">
+            <h1 className="mx-auto max-w-[860px] text-3xl font-bold tracking-tight text-white md:text-5xl">
+              <span className="block">Unofficial directory for</span>
+              <span className="block">verified Nightforce ambassadors</span>
+            </h1>
+
+            <div className="mx-auto mt-7 max-w-[560px]">
+              <form
+                onSubmit={handleSearchSubmit}
+                className="flex flex-col gap-2 rounded-xl border border-zinc-900 bg-zinc-900 p-2 sm:flex-row sm:items-center"
               >
-                {isWalletLoading ? "Working..." : "Disconnect"}
-              </button>
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search ambassadors, countries, roles..."
+                  className="h-10 min-w-0 flex-1 rounded-lg border border-transparent bg-zinc-950 px-4 text-[12px] font-mono text-white placeholder:text-zinc-700 outline-none transition-colors focus:border-zinc-500"
+                />
+                <button
+                  type="submit"
+                  className="h-10 rounded-lg border border-zinc-700 bg-zinc-950 px-4 text-[11px] font-mono text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white"
+                >
+                  Search
+                </button>
+                <Link
+                  href="/request-verification"
+                  className="flex h-10 items-center justify-center rounded-lg border border-zinc-700 bg-white px-4 text-[11px] font-mono font-semibold text-black transition-colors hover:bg-zinc-200"
+                >
+                  Request Verification
+                </Link>
+              </form>
             </div>
 
-            <div className="font-mono text-white text-sm mb-3">
-              {connectedLabel ?? "—"}
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-[10px] font-mono text-zinc-600">
+              {quickLinks.map((link, index) => (
+                <span key={link.label} className="flex items-center gap-2">
+                  {link.href.startsWith("#") ? (
+                    <a href={link.href} className="hover:text-zinc-300">
+                      {link.label}
+                    </a>
+                  ) : (
+                    <Link href={link.href} className="hover:text-zinc-300">
+                      {link.label}
+                    </Link>
+                  )}
+                  {index < quickLinks.length - 1 && (
+                    <span className="text-zinc-800">·</span>
+                  )}
+                </span>
+              ))}
+            </div>
+          </section>
+
+          <section className="pt-4">
+            <div className="mb-4 flex items-end justify-between">
+              <div>
+                <h2 className="text-[11px] font-mono font-semibold text-zinc-300">
+                  Verified Ambassadors
+                </h2>
+                <p className="mt-1 text-[10px] font-mono text-zinc-600">
+                  Recently published public Nightforce profiles
+                </p>
+              </div>
+
+              <Link
+                href="/directory"
+                className="text-[10px] font-mono text-zinc-600 hover:text-zinc-300"
+              >
+                View all →
+              </Link>
             </div>
 
-            {connectionMode === "mock" ? (
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono text-zinc-500">Status:</span>
-                <StatusBadge status={verificationStatus} />
+            {directoryError && (
+              <div className="mb-4 rounded-lg border border-red-900/60 bg-red-950/20 px-3 py-2 text-[11px] font-mono text-red-300">
+                {directoryError}
+              </div>
+            )}
+
+            {loadingProfiles ? (
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {Array.from({ length: 8 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="rounded-2xl border border-zinc-900 bg-zinc-900 p-4"
+                  >
+                    <div className="h-12 w-12 rounded-xl bg-zinc-900" />
+                    <div className="mt-4 h-3 w-32 rounded bg-zinc-900" />
+                    <div className="mt-2 h-3 w-24 rounded bg-zinc-900" />
+                    <div className="mt-4 h-3 w-40 rounded bg-zinc-900" />
+                    <div className="mt-4 h-9 rounded-xl bg-zinc-900" />
+                  </div>
+                ))}
+              </div>
+            ) : featuredProfiles.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-900 px-4 py-10 text-center">
+                <div className="text-sm font-mono text-zinc-400">
+                  No public ambassador profiles yet.
+                </div>
+                <p className="mt-2 text-[11px] font-mono text-zinc-600">
+                  Verified profiles will appear here when available.
+                </p>
               </div>
             ) : (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-mono text-zinc-500">Mode:</span>
-                  <span className="text-xs font-mono text-cyan-300">Midnight Wallet</span>
-                  <span className="text-xs font-mono text-zinc-600">•</span>
-                  <span className="text-xs font-mono text-emerald-300">
-                    {(
-                      midnightSnapshot?.networkId ??
-                      (isPreprodWriteMode ? "preprod" : "undeployed")
-                    ).toUpperCase()}
-                  </span>
-                </div>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {featuredProfiles.map((profile) => (
+                  <Link
+                    key={profile.publicId}
+                    href={`/profile/${profile.publicId}`}
+                    className="group rounded-2xl border border-zinc-900 bg-zinc-900 p-4 transition-colors hover:border-zinc-500"
+                  >
+                    <div className="flex items-start gap-3">
+                      {profile.avatarUrl ? (
+                        <img
+                          src={profile.avatarUrl}
+                          alt=""
+                          className="h-12 w-12 rounded-xl border border-zinc-700 object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-zinc-700 bg-zinc-950 text-[11px] font-mono text-sky-300">
+                          {getInitials(profile.displayName)}
+                        </div>
+                      )}
 
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-mono text-zinc-500">Status:</span>
-                  <StatusBadge status={verificationStatus} />
-                </div>
-
-                <div className="grid gap-2">
-                  <div>
-                    <div className="text-[11px] font-mono text-zinc-500 mb-1">
-                      Provider
-                    </div>
-                    <div className="text-xs font-mono text-zinc-200">
-                      {midnightSnapshot?.providerName ?? "—"}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-[11px] font-mono text-zinc-500 mb-1">
-                      Shielded Address
-                    </div>
-                    <div className="text-xs font-mono text-zinc-200 break-all">
-                      {midnightSnapshot?.shieldedAddress ?? "—"}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-[11px] font-mono text-zinc-500 mb-1">
-                      Unshielded Address
-                    </div>
-                    <div className="text-xs font-mono text-zinc-200 break-all">
-                      {midnightSnapshot?.unshieldedAddress ?? "—"}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-[11px] font-mono text-zinc-500 mb-1">
-                      Dust Address
-                    </div>
-                    <div className="text-xs font-mono text-zinc-200 break-all">
-                      {midnightSnapshot?.dustAddress ?? "—"}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-[11px] font-mono text-zinc-500 mb-1">
-                      Dust Balance
-                    </div>
-                    <div className="text-xs font-mono text-zinc-200">
-                      {midnightSnapshot?.dustBalance
-                        ? `${midnightSnapshot.dustBalance.balance} / cap ${midnightSnapshot.dustBalance.cap}`
-                        : "—"}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-[11px] font-mono text-zinc-500 mb-1">
-                      Indexer
-                    </div>
-                    <div className="text-xs font-mono text-zinc-200 break-all">
-                      {midnightSnapshot?.configuration?.indexerUri || "—"}
-                    </div>
-                  </div>
-                </div>
-
-                {connectionMode === "midnight" &&
-                  verificationStatus !== "approved" && (
-                    <div className="mt-4 border-t border-zinc-800 pt-4">
-                      <div className="text-xs font-mono text-cyan-300 mb-2">
-                        Bind Approved Request to This Midnight Wallet
+                      <div className="min-w-0">
+                        <div className="truncate text-[12px] font-mono font-semibold text-white">
+                          {profile.displayName || "Ambassador"}
+                        </div>
+                        <div className="mt-1 truncate text-[11px] font-mono text-zinc-500">
+                          {profile.country || "Global"}
+                          {profile.region ? ` · ${profile.region}` : ""}
+                        </div>
                       </div>
-                      <p className="text-[11px] font-mono text-zinc-500 leading-relaxed mb-3">
-                        After admin approval, paste your approved verification request ID here to
-                        bind it to the currently connected Midnight wallet.
-                      </p>
+                    </div>
 
-                      <input
-                        type="text"
-                        value={requestIdToBind}
-                        onChange={(e) => setRequestIdToBind(e.target.value)}
-                        placeholder="Paste approved verification request ID"
-                        className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-xs font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 mb-3"
-                      />
+                    <div className="mt-4 truncate text-[11px] font-mono text-zinc-400">
+                      {profile.role || "Nightforce ambassador"}
+                    </div>
 
-                      {bindError && (
-                        <div className="mb-3 text-[11px] font-mono text-red-300">
-                          {bindError}
-                        </div>
-                      )}
+                    <div className="mt-4 rounded-xl border border-zinc-900 bg-zinc-950 px-3 py-2">
+                      <div className="text-[10px] font-mono text-zinc-600">
+                        Contact availability
+                      </div>
+                      <div className="mt-1 text-[11px] font-mono text-sky-300">
+                        {getContactLabel(profile.contactMode)}
+                      </div>
+                    </div>
 
-                      {bindSuccess && (
-                        <div className="mb-3 text-[11px] font-mono text-emerald-300">
-                          {bindSuccess}
-                        </div>
-                      )}
+                    <div className="mt-4 flex items-center justify-between border-t border-zinc-900 pt-3">
+                      <span className="text-[10px] font-mono text-emerald-400">
+                        verified
+                      </span>
+                      <span className="text-[10px] font-mono text-zinc-600">
+                        View profile →
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
 
-                      <button
-                        onClick={() => void handleBindWallet()}
-                        disabled={isBinding || !walletId}
-                        className="w-full font-mono text-sm bg-cyan-950/40 hover:bg-cyan-950/60 text-cyan-300 border border-cyan-900 px-4 py-3 rounded-lg transition-colors disabled:opacity-50"
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              {[
+                {
+                  label: "Profiles",
+                  value: getStatValue(loadingProfiles, profiles.length),
+                },
+                {
+                  label: "Countries",
+                  value: getStatValue(loadingProfiles, countriesRepresented),
+                },
+                {
+                  label: "Regions",
+                  value: getStatValue(loadingProfiles, regionsRepresented),
+                },
+              ].map((stat) => (
+                <div
+                  key={stat.label}
+                  className="rounded-2xl border border-zinc-900 bg-zinc-900 px-4 py-4"
+                >
+                  <div className="text-2xl font-mono font-semibold text-white">
+                    {stat.value}
+                  </div>
+                  <div className="mt-1 text-[11px] font-mono text-zinc-500">
+                    {stat.label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <CobeAmbassadorGlobe
+            profiles={profiles}
+            loading={loadingProfiles}
+            onViewCountry={handleViewCountryProfiles}
+          />
+
+          <section id="updates" className="mt-10">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-[13px] font-mono font-semibold text-zinc-300">
+                  Latest from Midnight
+                </h2>
+                <p className="mt-1 text-[11px] font-mono text-zinc-600">
+                  Curated official Midnight updates and builder resources
+                </p>
+              </div>
+
+              <a
+                href="https://midnight.network/blog"
+                target="_blank"
+                rel="noreferrer"
+                className="text-[10px] font-mono text-zinc-600 hover:text-zinc-300"
+              >
+                View feed →
+              </a>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-3">
+              {[0, 1, 2].map((columnIndex) => (
+                <div key={columnIndex} className="space-y-4">
+                  {midnightUpdates
+                    .slice(columnIndex * 2, columnIndex * 2 + 2)
+                    .map((item, itemIndex) => (
+                      <a
+                        key={item.title}
+                        href={item.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="group block overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-900 p-5 transition-colors hover:border-zinc-500"
                       >
-                        {isBinding ? "Binding Wallet..." : "Bind Wallet"}
-                      </button>
-                    </div>
-                  )}
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-700 bg-zinc-950 text-[12px] font-mono text-sky-300">
+                            ✦
+                          </div>
 
-                {isPreprodWriteMode && verificationStatus === "approved" && (
-                  <div className="mt-4 border-t border-zinc-800 pt-4">
-                    <button
-                      onClick={async () => {
-                        setProfileProofWriteMessage(null);
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-x-1 gap-y-1 text-[12px] font-mono font-semibold text-white">
+                              <span>{item.author}</span>
+                              <span className="text-zinc-600">on</span>
+                              <span>{item.source}</span>
+                              <span className="text-zinc-600">·</span>
+                              <span className="shrink-0 font-normal text-zinc-500">
+                                {item.date}
+                              </span>
+                            </div>
 
-                        try {
-                          const result = await writeProfileProof();
-                          await reloadProfileProofState();
+                            <div className="mt-1 inline-flex rounded-full border border-zinc-700 bg-zinc-950 px-2 py-0.5 text-[10px] font-mono text-zinc-500">
+                              {item.tag}
+                            </div>
+                          </div>
+                        </div>
 
-                          setProfileProofWriteMessage(
-                            `Write submitted on ${result.networkId}. Profile Proof state panel reloaded.`,
-                          );
-                        } catch {
-                          // walletError is already surfaced by the wallet hook
-                        }
-                      }}
-                      disabled={isWalletLoading}
-                      className="w-full font-mono text-sm bg-emerald-950/40 hover:bg-emerald-950/60 text-emerald-300 border border-emerald-900 px-4 py-3 rounded-lg transition-colors disabled:opacity-50"
-                    >
-                      {isWalletLoading
-                        ? "Writing Profile Proof..."
-                        : "Write Profile Proof (PUBLIC / MY)"}
-                    </button>
+                        <h3 className="mt-4 text-[14px] font-mono font-semibold leading-6 text-white">
+                          {item.title}
+                        </h3>
 
-                    {profileProofWriteMessage && (
-                      <div className="mt-3 text-[11px] font-mono text-emerald-300">
-                        {profileProofWriteMessage}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="mb-8 space-y-3">
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setShowMockPicker((prev) => !prev);
-                }}
-                disabled={isWalletLoading}
-                className="w-full font-mono text-sm bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 px-4 py-3 rounded-lg transition-colors disabled:opacity-50"
+                        <p className="mt-3 text-[12px] leading-6 text-zinc-300">
+                          {item.excerpt}
+                        </p>
+
+                        <div
+                          className={`mt-5 overflow-hidden rounded-xl border border-zinc-700 bg-zinc-950 ${
+                            columnIndex === 1 && itemIndex === 0
+                              ? "h-64"
+                              : "h-44"
+                          }`}
+                        >
+                          <img
+                            src={item.imageUrl}
+                            alt=""
+                            loading="lazy"
+                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                        </div>
+
+                        <div className="mt-5 flex items-center justify-between text-[11px] font-mono">
+                          <span className="text-zinc-500">
+                            {item.source}
+                          </span>
+                          <span className="text-zinc-400 group-hover:text-white">
+                            Read post →
+                          </span>
+                        </div>
+                      </a>
+                    ))}
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section id="about" className="mt-14 text-center">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-xl">
+              ✦
+            </div>
+
+            <h2 className="mx-auto max-w-[780px] text-2xl font-bold tracking-tight text-white md:text-3xl">
+              <span className="block">Unofficial directory for</span>
+              <span className="block">verified Nightforce ambassadors</span>
+            </h2>
+
+            <div className="mx-auto mt-6 max-w-[560px]">
+              <form
+                onSubmit={handleSearchSubmit}
+                className="flex flex-col gap-2 rounded-xl border border-zinc-900 bg-zinc-900 p-2 sm:flex-row sm:items-center"
               >
-                {isWalletLoading ? "Working..." : "Connect Mock Wallet"}
-              </button>
-
-              {showMockPicker && (
-                <div className="absolute left-0 right-0 top-full mt-1 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl z-50">
-                  <div className="px-3 py-2 border-b border-zinc-800">
-                    <span className="text-xs font-mono text-zinc-500">
-                      Select mock wallet
-                    </span>
-                  </div>
-                  {MOCK_WALLETS.map((wId) => (
-                    <button
-                      key={wId}
-                      onClick={async () => {
-                        await connect(wId);
-                        setShowMockPicker(false);
-                      }}
-                      className="w-full text-left px-3 py-2.5 text-sm font-mono text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors flex items-center justify-between"
-                    >
-                      <span>{wId}</span>
-                      {wId === ADMIN_WALLET_ID && (
-                        <span className="text-xs text-zinc-500">[admin]</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search directory..."
+                  className="h-10 min-w-0 flex-1 rounded-lg border border-transparent bg-zinc-950 px-4 text-[12px] font-mono text-white placeholder:text-zinc-700 outline-none transition-colors focus:border-zinc-500"
+                />
+                <button
+                  type="submit"
+                  className="h-10 rounded-lg border border-zinc-700 bg-zinc-950 px-4 text-[11px] font-mono text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white"
+                >
+                  Search
+                </button>
+                <Link
+                  href="/request-verification"
+                  className="flex h-10 items-center justify-center rounded-lg border border-zinc-700 bg-white px-4 text-[11px] font-mono font-semibold text-black transition-colors hover:bg-zinc-200"
+                >
+                  Request Verification
+                </Link>
+              </form>
             </div>
+          </section>
 
-            {MIDNIGHT_CONNECT_ENABLED && (
-              <button
-                onClick={async () => {
-                  const providerId = availableMidnightWallets[0]?.providerId ?? null;
+          <section className="mt-12 border-t border-zinc-900 pt-8">
+            <h2 className="text-center text-[11px] font-mono text-zinc-500">
+              Browse by category
+            </h2>
 
-                  if (!providerId) {
-                    throw new Error("No Midnight wallet detected.");
-                  }
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              {categories.map((category) => (
+                <Link
+                  key={category}
+                  href={`/directory?q=${encodeURIComponent(category)}`}
+                  className="rounded-md border border-zinc-900 bg-zinc-900 px-3 py-1.5 text-[10px] font-mono text-zinc-500 hover:border-zinc-500 hover:text-zinc-300"
+                >
+                  {category}
+                </Link>
+              ))}
+            </div>
+          </section>
+        </main>
 
-                  await connectMidnight(providerId);
-                }}
-                disabled={isWalletLoading || availableMidnightWallets.length === 0}
-                className="w-full font-mono text-sm bg-zinc-900 hover:bg-zinc-800 text-cyan-300 border border-cyan-900 px-4 py-3 rounded-lg transition-colors disabled:opacity-50"
-              >
-                {isWalletLoading
-                  ? "Working..."
-                  : availableMidnightWallets.length === 0
-                    ? "No Midnight Wallet Detected"
-                    : "Connect Midnight Wallet (Preprod)"}
-              </button>
-            )}
-
-            <div className="border border-cyan-950 bg-cyan-950/20 rounded-lg p-4">
-              <div className="text-xs font-mono text-cyan-300 mb-1">
-                {MIDNIGHT_CONNECT_ENABLED
-                  ? midnightModeLabel
-                  : "Midnight local browser wallet write is not available yet"}
+        <footer id="contact" className="mt-12 border-t border-zinc-900 py-10">
+          <div className="grid gap-8 text-[11px] font-mono text-zinc-600 md:grid-cols-4">
+            <div>
+              <div className="mb-3 text-zinc-400">Navigation</div>
+              <div className="space-y-2">
+                <Link href="/" className="block hover:text-zinc-300">
+                  Home
+                </Link>
+                <Link href="/directory" className="block hover:text-zinc-300">
+                  Directory
+                </Link>
+                <Link
+                  href="/request-verification"
+                  className="block hover:text-zinc-300"
+                >
+                  Request Verification
+                </Link>
               </div>
-              <div className="text-[11px] font-mono text-zinc-400 leading-relaxed">
-                {midnightModeHelpText}
+            </div>
+
+            <div>
+              <div className="mb-3 text-zinc-400">Browse</div>
+              <div className="space-y-2">
+                <a href="#globe" className="block hover:text-zinc-300">
+                  Globe
+                </a>
+                <a href="#updates" className="block hover:text-zinc-300">
+                  Updates
+                </a>
+                <Link href="/directory" className="block hover:text-zinc-300">
+                  All Profiles
+                </Link>
               </div>
             </div>
 
-            <p className="text-[11px] font-mono text-zinc-600 px-1">
-              {isPreprodWriteMode
-                ? "Mock wallet stays available for the existing proof-of-life UI flow. Preprod mode is the next path for real app-side write."
-                : "Mock wallet keeps the existing proof-of-life UI flow. Local Midnight contract state is shown below through the API bridge while app-side write remains blocked."}
-            </p>
-          </div>
-        )}
-
-        <div className="border border-cyan-950 bg-cyan-950/20 rounded-lg px-4 py-3 mb-6">
-          <div className="text-xs font-mono text-cyan-300 mb-2">
-            {isPreprodWriteMode
-              ? "Profile Proof State (Current Source)"
-              : "Profile Proof State"}
-          </div>
-
-          {isProfileProofLoading ? (
-            <div className="text-[11px] font-mono text-zinc-400">
-              Loading contract state...
-            </div>
-          ) : profileProofError ? (
-            <div className="text-[11px] font-mono text-red-300">
-              {profileProofError}
-            </div>
-          ) : profileProofState ? (
-            <div className="grid gap-2">
-              <div>
-                <div className="text-[11px] font-mono text-zinc-500 mb-1">
-                  Contract Address
-                </div>
-                <div className="text-xs font-mono text-zinc-200 break-all">
-                  {profileProofState.contractAddress}
-                </div>
+            <div>
+              <div className="mb-3 text-zinc-400">Account</div>
+              <div className="space-y-2">
+                <Link href="/wallet" className="block hover:text-zinc-300">
+                  Wallet / Profile
+                </Link>
+                <Link href="/my-profile" className="block hover:text-zinc-300">
+                  My Profile
+                </Link>
               </div>
+            </div>
 
-              <div>
-                <div className="text-[11px] font-mono text-zinc-500 mb-1">
+            <div>
+              <div className="mb-3 text-zinc-400">Midnight</div>
+              <div className="space-y-2">
+                <a
+                  href="https://midnight.network/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block hover:text-zinc-300"
+                >
                   Network
-                </div>
-                <div className="text-xs font-mono text-zinc-200">
-                  {profileProofState.network}
-                </div>
-              </div>
-
-              <div>
-                <div className="text-[11px] font-mono text-zinc-500 mb-1">
-                  Visibility
-                </div>
-                <div className="text-xs font-mono text-zinc-200">
-                  {profileProofState.visibility.name} ({profileProofState.visibility.value})
-                </div>
-              </div>
-
-              <div>
-                <div className="text-[11px] font-mono text-zinc-500 mb-1">
-                  Country Code
-                </div>
-                <div className="text-xs font-mono text-zinc-200">
-                  {profileProofState.countryCode.name} ({profileProofState.countryCode.value})
-                </div>
+                </a>
+                <a
+                  href="https://midnight.network/blog"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block hover:text-zinc-300"
+                >
+                  Blog
+                </a>
+                <a
+                  href="https://docs.midnight.network/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block hover:text-zinc-300"
+                >
+                  Docs
+                </a>
               </div>
             </div>
-          ) : (
-            <div className="text-[11px] font-mono text-zinc-500">
-              No profile-proof state loaded.
-            </div>
-          )}
-        </div>
+          </div>
 
-        <div className="flex flex-col gap-3">
-          <Link
-            href="/directory"
-            className="block text-center font-mono text-sm text-zinc-300 border border-zinc-700 px-4 py-3 rounded-lg hover:border-zinc-500 hover:text-white transition-colors"
-          >
-            Browse Directory
-          </Link>
-
-          <Link
-            href="/request-verification"
-            className="block text-center font-mono text-sm text-zinc-300 border border-zinc-700 px-4 py-3 rounded-lg hover:border-zinc-500 hover:text-white transition-colors"
-          >
-            Request Verification
-          </Link>
-
-          {verificationStatus === "approved" && connectionMode === "midnight" && (
-            <Link
-              href="/my-profile"
-              className="block text-center font-mono text-sm text-emerald-400 border border-emerald-800 px-4 py-3 rounded-lg hover:border-emerald-600 transition-colors"
-            >
-              My Profile
-            </Link>
-          )}
-
-          {connectionMode === "midnight" && midnightSnapshot && (
-            <div className="border border-cyan-950 bg-cyan-950/20 rounded-lg px-4 py-3">
-              <div className="text-xs font-mono text-cyan-300 mb-1">
-                {isPreprodWriteMode
-                  ? "Midnight Preprod connection active"
-                  : "Midnight local connection active"}
-              </div>
-              <div className="text-[11px] font-mono text-zinc-400">
-                {isPreprodWriteMode
-                  ? "Preprod mode active: browser wallet connection is enabled for future app-side write."
-                  : "Local read-only mode active: browser wallet write is currently unavailable."}
-              </div>
-              <div className="text-[11px] font-mono text-zinc-500 mt-2">
-                Active address:{" "}
-                {shortenValue(
-                  midnightSnapshot.shieldedAddress ??
-                    midnightSnapshot.unshieldedAddress,
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+          <div className="mt-10 border-t border-zinc-900 pt-6 text-[10px] leading-5 text-zinc-700">
+            Nightforce Directory is an unofficial community-built directory and
+            is not an official Midnight product.
+          </div>
+        </footer>
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ProfileCard } from "../components/ProfileCard";
+import { MOCK_DIRECTORY_PROFILES } from "../data/mockDirectoryProfiles";
 import type { PublicProfile } from "../types";
 
 const API_BASE_URL = "http://127.0.0.1:8787";
@@ -83,7 +84,10 @@ export function Directory() {
         }
 
         const data = payload as DirectoryResponse;
-        const mapped = data.profiles.map(toPublicProfile);
+        const sourceProfiles: DirectoryProfileRecord[] = import.meta.env.DEV
+          ? [...data.profiles, ...MOCK_DIRECTORY_PROFILES]
+          : data.profiles;
+        const mapped = sourceProfiles.map(toPublicProfile);
 
         if (!cancelled) {
           setAllProfiles(mapped);
