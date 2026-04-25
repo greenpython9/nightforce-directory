@@ -48,7 +48,7 @@ export function NavBar() {
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
         <div className="flex items-center gap-6 min-w-0">
           <Link href="/" className="font-mono font-bold text-white text-sm tracking-wider">
-            NIGHTFORCE DIR
+            dir.
           </Link>
 
           <div className="hidden sm:flex items-center gap-4">

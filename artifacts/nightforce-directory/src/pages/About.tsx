@@ -63,12 +63,11 @@ export function About() {
             </div>
 
             <h1 className="mx-auto max-w-[820px] text-3xl font-bold tracking-tight text-white md:text-5xl">
-              <span className="block">A privacy-aware directory for</span>
-              <span className="block">verified Nightforce ambassadors</span>
+              <span className="block">Hello world!</span>
             </h1>
 
             <p className="mx-auto mt-5 max-w-[620px] text-sm leading-7 text-zinc-400">
-              Nightforce Directory is an unofficial community-built directory
+              nightforce.cc is an unofficial community-built Nightforce directory
               for discovering verified ambassadors across countries, regions,
               and roles.
             </p>
@@ -113,7 +112,7 @@ export function About() {
                 Not an official Midnight product
               </h2>
               <p className="mt-3 text-sm leading-7 text-zinc-400">
-                Nightforce Directory is community-built and unofficial. It is
+                nightforce.cc is community-built and unofficial. It is
                 not a wallet authority, not a doxxing tool, and not a place for
                 exposing private personal data.
               </p>
@@ -246,7 +245,7 @@ export function About() {
                 </h2>
 
                 <p className="mt-5 max-w-[440px] text-sm leading-7 text-zinc-400">
-                  Nightforce Directory uses three layers: a backend for profile
+                  nightforce.cc uses three layers: a backend for profile
                   records, a user wallet for authorization, and Midnight
                   contracts for privacy-aware synchronization.
                 </p>
@@ -342,10 +341,10 @@ export function About() {
 
                     <div className="absolute left-1/2 top-1/2 flex h-[126px] w-[152px] -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-[30px] border border-emerald-800/70 bg-[#121417]/90 px-4 text-center">
                       <div className="relative text-[10px] font-mono uppercase tracking-[0.18em] text-emerald-400">
-                        Nightforce
+                        nightforce.cc
                       </div>
                       <div className="relative mt-1 text-lg font-bold tracking-tight text-white">
-                        Directory
+                        dir
                       </div>
                       <div className="relative mt-1.5 text-[10px] font-mono text-zinc-500">
                         product layer
@@ -475,7 +474,7 @@ export function About() {
                   <div className="relative z-10 grid gap-3 sm:hidden">
                     <div className="rounded-2xl border border-emerald-800/70 bg-[#121417]/90 p-4 text-center shadow-[0_0_34px_rgba(16,185,129,0.14)]">
                       <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-emerald-400">
-                        Nightforce Directory
+                        nightforce.cc
                       </div>
                       <div className="mt-1 text-base font-bold tracking-tight text-white">
                         Hybrid architecture
@@ -662,26 +661,6 @@ export function About() {
           </section>
         </main>
 
-        <footer className="mt-12 border-t border-zinc-900 py-10">
-          <div className="flex flex-col gap-3 text-[11px] font-mono text-zinc-600 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              Nightforce Directory is an unofficial community-built directory
-              and is not an official Midnight product.
-            </div>
-
-            <div className="flex gap-4">
-              <Link href="/" className="hover:text-zinc-300">
-                Home
-              </Link>
-              <Link href="/directory" className="hover:text-zinc-300">
-                Directory
-              </Link>
-              <Link href="/request-verification" className="hover:text-zinc-300">
-                Request Verification
-              </Link>
-            </div>
-          </div>
-        </footer>
       </div>
     </div>
   );

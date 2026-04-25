@@ -1,6 +1,8 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
+import { useEffect } from "react";
 import { WalletProvider } from "./hooks/useWallet";
 import { NavBar } from "./components/NavBar";
+import { SiteFooter } from "./components/SiteFooter";
 import { Landing } from "./pages/Landing";
 import { WalletAccess } from "./pages/WalletAccess";
 import { Directory } from "./pages/Directory";
@@ -11,6 +13,22 @@ import { PublicProfile } from "./pages/PublicProfile";
 import { About } from "./pages/About";
 import { Contact } from "./pages/Contact";
 import { Faq } from "./pages/Faq";
+import { Privacy } from "./pages/Privacy";
+import { Terms } from "./pages/Terms";
+
+function ScrollToTop() {
+  const [location] = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "instant",
+    });
+  }, [location]);
+
+  return null;
+}
 
 function NotFound() {
   return (
@@ -32,6 +50,8 @@ function AppRoutes() {
       <Route path="/about" component={About} />
       <Route path="/contact" component={Contact} />
       <Route path="/faq" component={Faq} />
+      <Route path="/privacy" component={Privacy} />
+      <Route path="/terms" component={Terms} />
       <Route path="/request-verification" component={RequestVerification} />
       <Route path="/admin/review" component={AdminReview} />
       <Route path="/my-profile" component={MyProfile} />
@@ -45,12 +65,14 @@ function App() {
   return (
     <WalletProvider>
       <div className="min-h-screen bg-zinc-950">
+        <ScrollToTop />
         <Switch>
           <Route path="/">{null}</Route>
           <Route path="/wallet">{<NavBar />}</Route>
           <Route>{<NavBar />}</Route>
         </Switch>
         <AppRoutes />
+        <SiteFooter />
       </div>
     </WalletProvider>
   );

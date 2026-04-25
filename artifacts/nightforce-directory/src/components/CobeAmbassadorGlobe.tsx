@@ -666,20 +666,16 @@ export function CobeAmbassadorGlobe({
                 >
                   {[
                     {
-                      label: "Verified",
-                      value: getStatValue(loading, profiles.length),
-                    },
-                    {
                       label: "Public",
                       value: getStatValue(loading, publicProfiles),
                     },
                     {
-                      label: "Hidden",
-                      value: getStatValue(loading, hiddenProfiles),
-                    },
-                    {
                       label: "Anonymous",
                       value: getStatValue(loading, anonymousProfiles),
+                    },                   
+                    {
+                      label: "Hidden",
+                      value: getStatValue(loading, hiddenProfiles),
                     },
                   ].map((stat) => (
                     <span

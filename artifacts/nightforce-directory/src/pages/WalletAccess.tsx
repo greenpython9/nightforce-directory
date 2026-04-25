@@ -185,7 +185,7 @@ export function WalletAccess() {
       <div className="max-w-lg w-full">
         <div className="mb-10 text-center">
           <h1 className="text-3xl font-mono font-bold text-white tracking-wider mb-3">
-            NIGHTFORCE DIRECTORY
+            nightforce.cc
           </h1>
           <p className="text-sm font-mono text-zinc-400">
             Unofficial directory for existing Nightforce ambassadors

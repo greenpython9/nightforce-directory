@@ -320,7 +320,7 @@ export function Landing() {
                   Verified Ambassadors
                 </h2>
                 <p className="mt-1 text-[10px] font-mono text-zinc-600">
-                  Recently published public Nightforce profiles
+                  Published public Nightforce profiles
                 </p>
               </div>
 
@@ -572,95 +572,6 @@ export function Landing() {
           </section>
         </main>
 
-        <footer id="contact" className="mt-12 border-t border-zinc-900 py-10">
-          <div className="grid gap-8 text-[11px] font-mono text-zinc-600 md:grid-cols-4">
-            <div>
-              <div className="mb-3 text-zinc-400">Navigation</div>
-              <div className="space-y-2">
-                <Link href="/" className="block hover:text-zinc-300">
-                  Home
-                </Link>
-                <Link href="/directory" className="block hover:text-zinc-300">
-                  Directory
-                </Link>
-                <Link
-                  href="/request-verification"
-                  className="block hover:text-zinc-300"
-                >
-                  Request Verification
-                </Link>
-                <Link href="/faq" className="block hover:text-zinc-300">
-                  FAQ
-                </Link>
-                <Link href="/contact" className="block hover:text-zinc-300">
-                  Contact
-                </Link>
-              </div>
-            </div>
-
-            <div>
-              <div className="mb-3 text-zinc-400">Browse</div>
-              <div className="space-y-2">
-                <a href="#globe" className="block hover:text-zinc-300">
-                  Globe
-                </a>
-                <a href="#updates" className="block hover:text-zinc-300">
-                  Updates
-                </a>
-                <Link href="/directory" className="block hover:text-zinc-300">
-                  All Profiles
-                </Link>
-              </div>
-            </div>
-
-            <div>
-              <div className="mb-3 text-zinc-400">Account</div>
-              <div className="space-y-2">
-                <Link href="/wallet" className="block hover:text-zinc-300">
-                  Wallet / Profile
-                </Link>
-                <Link href="/my-profile" className="block hover:text-zinc-300">
-                  My Profile
-                </Link>
-              </div>
-            </div>
-
-            <div>
-              <div className="mb-3 text-zinc-400">Midnight</div>
-              <div className="space-y-2">
-                <a
-                  href="https://midnight.network/"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block hover:text-zinc-300"
-                >
-                  Network
-                </a>
-                <a
-                  href="https://midnight.network/blog"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block hover:text-zinc-300"
-                >
-                  Blog
-                </a>
-                <a
-                  href="https://docs.midnight.network/"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block hover:text-zinc-300"
-                >
-                  Docs
-                </a>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-10 border-t border-zinc-900 pt-6 text-[10px] leading-5 text-zinc-700">
-            Nightforce Directory is an unofficial community-built directory and
-            is not an official Midnight product.
-          </div>
-        </footer>
       </div>
     </div>
   );

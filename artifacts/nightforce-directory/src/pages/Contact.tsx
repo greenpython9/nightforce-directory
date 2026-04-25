@@ -20,7 +20,7 @@ const contactTopics = [
 
 const safetyNotes = [
   "Do not send wallet seed phrases, private keys, recovery words, or secret credentials.",
-  "Nightforce Directory will never ask for wallet recovery phrases.",
+  "nightforce.cc will never ask for wallet recovery phrases.",
   "Only include information you are comfortable sharing with the directory team.",
 ];
 
@@ -51,8 +51,7 @@ export function Contact() {
             </div>
 
             <h1 className="mx-auto max-w-[820px] text-3xl font-bold tracking-tight text-white md:text-5xl">
-              <span className="block">Contact Nightforce</span>
-              <span className="block">Directory</span>
+              <span className="block">Say hello!</span>
             </h1>
 
             <p className="mx-auto mt-5 max-w-[620px] text-sm leading-7 text-zinc-400">
@@ -270,35 +269,12 @@ export function Contact() {
                 href="/about"
                 className="flex h-10 items-center justify-center rounded-lg border border-zinc-700 bg-zinc-950 px-4 text-[11px] font-mono text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white"
               >
-                Learn About the Directory
+                About nightforce.cc
               </Link>
             </div>
           </section>
         </main>
 
-        <footer className="mt-12 border-t border-zinc-900 py-10">
-          <div className="flex flex-col gap-3 text-[11px] font-mono text-zinc-600 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              Nightforce Directory is an unofficial community-built directory
-              and is not an official Midnight product.
-            </div>
-
-            <div className="flex gap-4">
-              <Link href="/" className="hover:text-zinc-300">
-                Home
-              </Link>
-              <Link href="/directory" className="hover:text-zinc-300">
-                Directory
-              </Link>
-              <Link href="/about" className="hover:text-zinc-300">
-                About
-              </Link>
-              <Link href="/request-verification" className="hover:text-zinc-300">
-                Request Verification
-              </Link>
-            </div>
-          </div>
-        </footer>
       </div>
     </div>
   );

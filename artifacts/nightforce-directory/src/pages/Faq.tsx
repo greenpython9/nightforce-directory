@@ -5,14 +5,14 @@ const faqSections = [
     title: "Directory basics",
     items: [
       {
-        question: "What is Nightforce Directory?",
+        question: "What is nightforce.cc?",
         answer:
-          "Nightforce Directory is an unofficial community-built directory for discovering verified Nightforce ambassadors across countries, regions, roles, and public profile status.",
+          "nightforce.cc is an unofficial community-built directory for discovering verified Nightforce ambassadors across countries, regions, roles, and public profile status.",
       },
       {
-        question: "Is Nightforce Directory an official Midnight product?",
+        question: "Is nightforce.cc an official Midnight product?",
         answer:
-          "No. Nightforce Directory is community-built and unofficial. It is not an official Midnight product, wallet authority, or official ambassador registration portal.",
+          "No. nightforce.cc is community-built and unofficial. It is not an official Midnight product, wallet authority, or official ambassador registration portal.",
       },
       {
         question: "Who can appear in the directory?",
@@ -28,7 +28,7 @@ const faqSections = [
   question: "How do I register as an official ambassador?",
   answer: (
     <>
-      Nightforce Directory does not handle ambassador registration. This
+      nightforce.cc does not handle ambassador registration. This
       website only helps display and organize directory profiles after someone
       is already part of the relevant Midnight ambassador program. To become an
       official ambassador, follow the official Midnight community channels and{" "}
@@ -92,7 +92,7 @@ const faqSections = [
       {
         question: "What technology does the directory use?",
         answer:
-          "Nightforce Directory uses a hybrid architecture: the backend remains the source of truth for profile records, the user wallet is used for user-authorized actions, and selected metadata may be synchronized through Midnight contracts as a privacy-aware blockchain layer.",
+          "nightforce.cc uses a hybrid architecture: the backend remains the source of truth for profile records, the user wallet is used for user-authorized actions, and selected metadata may be synchronized through Midnight contracts as a privacy-aware blockchain layer.",
       },
       {
         question: "Is all profile data stored on Midnight?",
@@ -155,8 +155,8 @@ export function Faq() {
             </div>
           </section>
 
-          <section className="grid gap-6 lg:grid-cols-[0.78fr_1.22fr]">
-            <div className="rounded-2xl border border-zinc-800 bg-[#18181b] p-5">
+          <section className="grid gap-6 lg:grid-cols-[0.78fr_1.22fr] lg:items-start">
+            <div className="self-start rounded-2xl border border-zinc-800 bg-[#18181b] p-5">
               <div className="text-[10px] font-mono uppercase tracking-wide text-emerald-400">
                 Quick guide
               </div>
@@ -272,29 +272,6 @@ export function Faq() {
           </section>
         </main>
 
-        <footer className="mt-12 border-t border-zinc-900 py-10">
-          <div className="flex flex-col gap-3 text-[11px] font-mono text-zinc-600 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              Nightforce Directory is an unofficial community-built directory
-              and is not an official Midnight product.
-            </div>
-
-            <div className="flex gap-4">
-              <Link href="/" className="hover:text-zinc-300">
-                Home
-              </Link>
-              <Link href="/directory" className="hover:text-zinc-300">
-                Directory
-              </Link>
-              <Link href="/about" className="hover:text-zinc-300">
-                About
-              </Link>
-              <Link href="/contact" className="hover:text-zinc-300">
-                Contact
-              </Link>
-            </div>
-          </div>
-        </footer>
       </div>
     </div>
   );
