@@ -75,9 +75,9 @@ const faqSections = [
           "The globe is meant to show country-level ambassador distribution based on directory profile data. It is not meant to show exact locations.",
       },
       {
-        question: "Is Recent Visitor Activity real-time tracking?",
+        question: "What does Recent Visitor Activity show?",
         answer:
-          "No. The Recent Visitor Activity panel is currently a demo-style UI placeholder. It does not track real visitors, IP addresses, or live visits yet.",
+          "Recent Visitor Activity shows limited country-level public page activity. It may display an anonymous generated visitor alias, approximate country, visited public page path, and recent timestamp. It does not show exact locations, city-level location, raw IP addresses, wallet identity, profile identity, or personal identity.",
       },
     ],
   },

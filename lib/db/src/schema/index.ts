@@ -134,6 +134,15 @@ export const profilesTable = sqliteTable("profiles", {
   inactiveAt: text("inactive_at"),
 });
 
+export const visitorActivityTable = sqliteTable("visitor_activity", {
+  id: text("id").primaryKey().$defaultFn(createId),
+  alias: text("alias").notNull(),
+  countryCode: text("country_code").notNull().$defaultFn(() => "XX"),
+  countryName: text("country_name").notNull().$defaultFn(() => "Unknown"),
+  path: text("path").notNull(),
+  createdAt: text("created_at").notNull().$defaultFn(nowIso),
+});
+
 export const insertVerificationRequestSchema = createInsertSchema(
   verificationRequestsTable,
 ).omit({
@@ -159,6 +168,13 @@ export const insertProfileSchema = createInsertSchema(profilesTable).omit({
   inactiveAt: true,
 });
 
+export const insertVisitorActivitySchema = createInsertSchema(
+  visitorActivityTable,
+).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertVerificationRequest = z.infer<
   typeof insertVerificationRequestSchema
 >;
@@ -170,3 +186,8 @@ export type WalletBinding = typeof walletBindingsTable.$inferSelect;
 
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
 export type Profile = typeof profilesTable.$inferSelect;
+
+export type InsertVisitorActivity = z.infer<
+  typeof insertVisitorActivitySchema
+>;
+export type VisitorActivity = typeof visitorActivityTable.$inferSelect;

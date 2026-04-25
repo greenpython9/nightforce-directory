@@ -179,16 +179,17 @@ export function Privacy() {
             </p>
 
             <p className="mt-4">
-              The Recent Visitor Activity panel is currently a demo placeholder.
-              It does not track real visitors, IP addresses, or live visits at
-              this stage.
+              The Recent Visitor Activity panel may show limited country-level
+              public page activity. This may include an anonymous generated
+              visitor alias, approximate country, visited public page path, and
+              recent timestamp.
             </p>
 
             <p className="mt-4">
-              If we later make visitor activity real, we may process limited
-              visitor activity information such as page visits, timestamps, and
-              approximate country-level location estimates. We will update this
-              Privacy Policy before or when that feature becomes active.
+              Recent Visitor Activity is not intended to identify individual
+              visitors. It does not show exact locations, city-level location,
+              raw IP addresses, wallet identity, profile identity, or personal
+              identity.
             </p>
 
             <h3 className="mt-8 text-lg font-bold text-white">
@@ -227,6 +228,7 @@ export function Privacy() {
               <li>Review verification requests</li>
               <li>Create, update, publish, hide, or remove profiles</li>
               <li>Display public or anonymous profile information</li>
+              <li>Show limited country-level recent visitor activity</li>
               <li>Manage profile visibility and contact access settings</li>
               <li>Support wallet-related profile features</li>
               <li>
@@ -270,6 +272,13 @@ export function Privacy() {
               Anonymous profiles may appear with limited public identity
               information. Hidden profiles are not intended to appear in the
               public directory.
+            </p>
+
+            <p className="mt-4">
+              Recent Visitor Activity may also be visible publicly. It is
+              limited to anonymous generated aliases, approximate country-level
+              activity, public page paths, and recent timestamps. It is not
+              intended to reveal who a visitor is.
             </p>
           </section>
 
@@ -351,8 +360,15 @@ export function Privacy() {
 
             <p className="mt-4">
               We may retain verification records, profile records, wallet
-              binding records, contact-mode records, technical records, or admin
-              review records as needed for the directory to function.
+              binding records, contact-mode records, technical records, visitor
+              activity records, or admin review records as needed for the
+              directory to function.
+            </p>
+
+            <p className="mt-4">
+              Visitor activity is intended to show recent public activity, not a
+              permanent visitor history. Older visitor activity may be deleted,
+              replaced, or no longer displayed as the feature operates.
             </p>
 
             <p className="mt-4">
@@ -486,8 +502,8 @@ export function Privacy() {
             </p>
 
             <p className="mt-4">
-              If we add new features, such as a working contact form, real
-              visitor activity tracking, new analytics tools, or additional
+              If we add new features, such as a working contact form, new
+              analytics tools, major visitor activity changes, or additional
               wallet/Midnight features, we may update this policy to explain how
               those features handle information.
             </p>

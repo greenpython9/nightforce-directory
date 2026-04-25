@@ -1,8 +1,9 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, lt } from "drizzle-orm";
 import {
   getDb,
   profilesTable,
   verificationRequestsTable,
+  visitorActivityTable,
   walletBindingsTable,
   type DatabaseEnv,
 } from "@workspace/db";
@@ -152,6 +153,90 @@ const AVATAR_EXTENSION_BY_TYPE: Record<string, string> = {
   "image/webp": "webp",
 };
 
+const VISITOR_ACTIVITY_RETENTION_DAYS = 7;
+const VISITOR_ACTIVITY_DEFAULT_LIMIT = 8;
+const VISITOR_ACTIVITY_MAX_LIMIT = 25;
+
+const PUBLIC_VISITOR_ACTIVITY_PATHS = new Set([
+  "/",
+  "/directory",
+  "/about",
+  "/contact",
+  "/faq",
+  "/privacy",
+  "/terms",
+  "/request-verification",
+]);
+
+const visitorActivityInputSchema = z.object({
+  path: z.string().trim().optional(),
+});
+
+const visitorActivityAdjectives = [
+  "green",
+  "blue",
+  "silver",
+  "amber",
+  "quiet",
+  "swift",
+  "bright",
+  "lunar",
+  "hidden",
+  "brave",
+];
+
+const visitorActivityAnimals = [
+  "cobra",
+  "otter",
+  "falcon",
+  "tiger",
+  "panda",
+  "raven",
+  "gecko",
+  "lynx",
+  "heron",
+  "wolf",
+];
+
+const countryNamesByCode: Record<string, string> = {
+  AE: "United Arab Emirates",
+  AR: "Argentina",
+  AU: "Australia",
+  BD: "Bangladesh",
+  BR: "Brazil",
+  CA: "Canada",
+  CN: "China",
+  DE: "Germany",
+  DK: "Denmark",
+  ES: "Spain",
+  FI: "Finland",
+  FR: "France",
+  GB: "United Kingdom",
+  HK: "Hong Kong",
+  ID: "Indonesia",
+  IN: "India",
+  IT: "Italy",
+  JP: "Japan",
+  KR: "South Korea",
+  MX: "Mexico",
+  MY: "Malaysia",
+  NG: "Nigeria",
+  NL: "Netherlands",
+  NO: "Norway",
+  NZ: "New Zealand",
+  PH: "Philippines",
+  PK: "Pakistan",
+  SA: "Saudi Arabia",
+  SE: "Sweden",
+  SG: "Singapore",
+  TH: "Thailand",
+  TW: "Taiwan",
+  US: "United States",
+  VN: "Vietnam",
+  ZA: "South Africa",
+  XX: "Unknown",
+};
+
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
@@ -225,6 +310,102 @@ function createAvatarObjectKey(contentType: string): string {
 
 function buildAvatarImageUrl(requestUrl: URL, objectKey: string): string {
   return `${requestUrl.origin}/api/nightforce/images/${encodeURIComponent(objectKey)}`;
+}
+
+function normalizeCountryCode(value: string | null | undefined): string {
+  if (!value) {
+    return "XX";
+  }
+
+  const countryCode = value.trim().toUpperCase();
+
+  if (!/^[A-Z]{2}$/.test(countryCode) || countryCode === "T1") {
+    return "XX";
+  }
+
+  return countryCode;
+}
+
+function getCountryFromRequest(request: Request): {
+  countryCode: string;
+  countryName: string;
+} {
+  const requestWithCloudflareData = request as Request & {
+    cf?: {
+      country?: string;
+    };
+  };
+
+  const countryCode = normalizeCountryCode(
+    requestWithCloudflareData.cf?.country ??
+      request.headers.get("CF-IPCountry") ??
+      request.headers.get("x-country-code"),
+  );
+
+  return {
+    countryCode,
+    countryName:
+      countryNamesByCode[countryCode] ??
+      (countryCode === "XX" ? "Unknown" : countryCode),
+  };
+}
+
+function normalizeVisitorActivityPath(value: unknown): string {
+  const rawPath =
+    typeof value === "string" && value.trim().length > 0
+      ? value.trim()
+      : "/";
+
+  const pathOnly = rawPath.split("?")[0]?.split("#")[0] || "/";
+  const normalizedPath = pathOnly.startsWith("/") ? pathOnly : `/${pathOnly}`;
+
+  return normalizedPath.slice(0, 120);
+}
+
+function shouldStoreVisitorActivityPath(path: string): boolean {
+  return PUBLIC_VISITOR_ACTIVITY_PATHS.has(path);
+}
+
+function createVisitorAlias(): string {
+  const adjective =
+    visitorActivityAdjectives[
+      Math.floor(Math.random() * visitorActivityAdjectives.length)
+    ] ?? "green";
+
+  const animal =
+    visitorActivityAnimals[
+      Math.floor(Math.random() * visitorActivityAnimals.length)
+    ] ?? "cobra";
+
+  return `${adjective} ${animal}`;
+}
+
+async function pruneOldVisitorActivity(
+  db: ReturnType<typeof getDb>,
+): Promise<void> {
+  const cutoff = new Date(
+    Date.now() - VISITOR_ACTIVITY_RETENTION_DAYS * 24 * 60 * 60 * 1000,
+  ).toISOString();
+
+  await db
+    .delete(visitorActivityTable)
+    .where(lt(visitorActivityTable.createdAt, cutoff));
+}
+
+function getVisitorActivityLimit(url: URL): number {
+  const requestedLimit = Number.parseInt(
+    url.searchParams.get("limit") ?? "",
+    10,
+  );
+
+  if (!Number.isFinite(requestedLimit)) {
+    return VISITOR_ACTIVITY_DEFAULT_LIMIT;
+  }
+
+  return Math.min(
+    Math.max(requestedLimit, 1),
+    VISITOR_ACTIVITY_MAX_LIMIT,
+  );
 }
 
 type ContactMode =
@@ -362,6 +543,92 @@ export default {
 
     if (pathname === "/api/healthz") {
       return json({ status: "ok", service: "nightforce-worker" });
+    }
+
+    if (
+      pathname === "/api/nightforce/visitor-activity" &&
+      request.method === "POST"
+    ) {
+      try {
+        let rawBody: unknown = {};
+
+        try {
+          rawBody = await request.json();
+        } catch {}
+
+        const input = visitorActivityInputSchema.parse(rawBody);
+        const path = normalizeVisitorActivityPath(input.path);
+
+        if (!shouldStoreVisitorActivityPath(path)) {
+          return json({
+            skipped: true,
+            reason: "Path is not eligible for public visitor activity.",
+          });
+        }
+
+        const { countryCode, countryName } = getCountryFromRequest(request);
+        const now = new Date().toISOString();
+
+        await pruneOldVisitorActivity(db);
+
+        const [activity] = await db
+          .insert(visitorActivityTable)
+          .values({
+            alias: createVisitorAlias(),
+            countryCode,
+            countryName,
+            path,
+            createdAt: now,
+          })
+          .returning();
+
+        return json({ activity }, 201);
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          return json(
+            {
+              error: "Invalid visitor activity input",
+              details: error.flatten(),
+            },
+            400,
+          );
+        }
+
+        return json(
+          {
+            error: "Failed to create visitor activity",
+            details: getErrorMessage(error),
+          },
+          500,
+        );
+      }
+    }
+
+    if (
+      pathname === "/api/nightforce/visitor-activity/recent" &&
+      request.method === "GET"
+    ) {
+      try {
+        const limit = getVisitorActivityLimit(url);
+
+        await pruneOldVisitorActivity(db);
+
+        const activities = await db
+          .select()
+          .from(visitorActivityTable)
+          .orderBy(desc(visitorActivityTable.createdAt))
+          .limit(limit);
+
+        return json({ activities });
+      } catch (error) {
+        return json(
+          {
+            error: "Failed to list visitor activity",
+            details: getErrorMessage(error),
+          },
+          500,
+        );
+      }
     }
 
     if (

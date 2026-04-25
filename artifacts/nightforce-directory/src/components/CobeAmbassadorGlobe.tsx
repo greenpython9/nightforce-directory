@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { buildNightforceApiUrl } from "../lib/nightforceApi";
 
 type ContactMode =
   | "NO_CONTACT"
@@ -39,11 +40,19 @@ type CountryPoint = {
 };
 
 type VisitorActivity = {
-  name: string;
-  country: string;
+  id: string;
+  alias: string;
+  countryCode: string;
+  countryName: string;
   path: string;
-  time: string;
+  createdAt: string;
 };
+
+type VisitorActivityResponse = {
+  activities?: VisitorActivity[];
+};
+
+const VISITOR_ACTIVITY_REFRESH_MS = 30 * 1000;
 
 const COUNTRY_COORDINATES: Record<string, { lat: number; lng: number }> = {
   malaysia: { lat: 4.21, lng: 101.98 },
@@ -164,33 +173,45 @@ function buildCountryPoints(
     .sort((a, b) => b.count - a.count || a.country.localeCompare(b.country));
 }
 
-function buildVisitorActivity(points: CountryPoint[]): VisitorActivity[] {
-  const names = [
-    "green cobra",
-    "salmon butterfly",
-    "magenta giraffe",
-    "amber fox",
-    "silver manta",
-    "blue otter",
-    "violet raven",
-    "golden lynx",
-    "crimson heron",
-    "white tiger",
-  ];
+function formatVisitorActivityTime(createdAt: string): string {
+  const activityTime = Date.parse(createdAt);
 
-  const paths = ["/", "/directory", "/request-verification", "/profile"];
+  if (!Number.isFinite(activityTime)) {
+    return "recently";
+  }
 
-  const countryPool =
-    points.length > 0
-      ? points.map((point) => point.country)
-      : ["Morocco", "Malaysia", "United States", "Japan"];
+  const diffMs = Date.now() - activityTime;
+  const diffMinutes = Math.max(0, Math.floor(diffMs / 60_000));
 
-  return names.map((name, index) => ({
-    name,
-    country: countryPool[index % countryPool.length],
-    path: paths[index % paths.length],
-    time: `${index + 1}m ago`,
-  }));
+  if (diffMinutes < 1) {
+    return "just now";
+  }
+
+  if (diffMinutes < 60) {
+    return `${diffMinutes}m ago`;
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60);
+
+  if (diffHours < 24) {
+    return `${diffHours}h ago`;
+  }
+
+  const diffDays = Math.floor(diffHours / 24);
+
+  return `${diffDays}d ago`;
+}
+
+function getVisitorActivityCountry(activity: VisitorActivity): string {
+  if (activity.countryName && activity.countryName !== "Unknown") {
+    return activity.countryName;
+  }
+
+  if (activity.countryCode && activity.countryCode !== "XX") {
+    return activity.countryCode;
+  }
+
+  return "Unknown";
 }
 
 function getStatValue(loading: boolean | undefined, value: number): string {
@@ -271,6 +292,9 @@ export function CobeAmbassadorGlobe({
   const [reducedMotion, setReducedMotion] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(DEFAULT_GLOBE_ZOOM);
   const [countryPanelExpanded, setCountryPanelExpanded] = useState(false);
+  const [visitorActivity, setVisitorActivity] = useState<VisitorActivity[]>([]);
+  const [visitorActivityLoading, setVisitorActivityLoading] = useState(true);
+  const [visitorActivityError, setVisitorActivityError] = useState(false);
 
   const countryPoints = useMemo(() => buildCountryPoints(profiles), [profiles]);
 
@@ -317,11 +341,6 @@ export function CobeAmbassadorGlobe({
     ).size;
   }, [profiles]);
 
-  const visitorActivity = useMemo(
-    () => buildVisitorActivity(displayPoints),
-    [displayPoints],
-  );
-
   const displayedVisitorActivity = useMemo(() => {
     return [...visitorActivity].reverse();
   }, [visitorActivity]);
@@ -356,6 +375,66 @@ export function CobeAmbassadorGlobe({
       .sort((a, b) => b.count - a.count || a.region.localeCompare(b.region))
       .slice(0, 6);
   }, [profiles]);
+
+  useEffect(() => {
+  let cancelled = false;
+
+  async function loadVisitorActivity({
+    silent = false,
+  }: {
+    silent?: boolean;
+  } = {}) {
+    if (!silent) {
+      setVisitorActivityLoading(true);
+    }
+
+    try {
+      const response = await fetch(
+        buildNightforceApiUrl("/api/nightforce/visitor-activity/recent?limit=8"),
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to load visitor activity");
+      }
+
+      const payload = (await response.json()) as VisitorActivityResponse;
+      const activities = Array.isArray(payload.activities)
+        ? payload.activities
+        : [];
+
+      if (cancelled) {
+        return;
+      }
+
+      setVisitorActivity(activities);
+      setVisitorActivityError(false);
+    } catch {
+      if (!cancelled) {
+        setVisitorActivityError(true);
+      }
+    } finally {
+      if (!cancelled && !silent) {
+        setVisitorActivityLoading(false);
+      }
+    }
+  }
+
+  void loadVisitorActivity();
+
+  const delayedRefreshId = window.setTimeout(() => {
+    void loadVisitorActivity({ silent: true });
+  }, 1000);
+
+  const intervalId = window.setInterval(() => {
+    void loadVisitorActivity({ silent: true });
+  }, VISITOR_ACTIVITY_REFRESH_MS);
+
+  return () => {
+    cancelled = true;
+    window.clearTimeout(delayedRefreshId);
+    window.clearInterval(intervalId);
+  };
+}, []);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -760,67 +839,85 @@ export function CobeAmbassadorGlobe({
           </div>
 
           <div className="absolute bottom-4 left-4 right-4 z-20 rounded-2xl border border-zinc-800/70 bg-[#1d1d1f]/55 p-2 shadow-2xl backdrop-blur-md md:right-auto md:w-[400px]">
-            <div className="mb-1 flex items-center justify-between gap-3 border-b border-zinc-800/70 pb-1">
-              <div className="min-w-0 text-[10px] font-mono uppercase tracking-wide text-zinc-500">
-                Visitor activity
-              </div>
+  <div className="mb-1 flex items-center justify-between gap-3 border-b border-zinc-800/70 pb-1">
+    <div className="min-w-0 text-[10px] font-mono uppercase tracking-wide text-zinc-500">
+      Visitor activity
+    </div>
 
-              <span className="shrink-0 rounded-full bg-orange-500/15 px-2 py-0.5 text-[9px] font-mono uppercase tracking-wide text-orange-300">
-                preview
-              </span>
-            </div>
+    <span className="shrink-0 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[9px] font-mono uppercase tracking-wide text-emerald-300">
+      country-level
+    </span>
+  </div>
 
-            <div
-              ref={visitorActivityScrollRef}
-              data-vertical-scroll
-              onWheel={(event) => {
-                event.stopPropagation();
-              }}
-              className="max-h-[104px] space-y-0.5 overflow-y-auto pr-2 [scrollbar-width:thin]"
+  <div
+    ref={visitorActivityScrollRef}
+    data-vertical-scroll
+    onWheel={(event) => {
+      event.stopPropagation();
+    }}
+    className="max-h-[104px] space-y-0.5 overflow-y-auto pr-2 [scrollbar-width:thin]"
+  >
+    {visitorActivityLoading && displayedVisitorActivity.length === 0 ? (
+      <div className="rounded-md border border-zinc-800/70 bg-zinc-950/45 px-2 py-2 text-[11px] font-mono text-zinc-500">
+        Loading recent country-level activity…
+      </div>
+    ) : visitorActivityError && displayedVisitorActivity.length === 0 ? (
+      <div className="rounded-md border border-zinc-800/70 bg-zinc-950/45 px-2 py-2 text-[11px] font-mono text-zinc-500">
+        Visitor activity is unavailable right now.
+      </div>
+    ) : displayedVisitorActivity.length === 0 ? (
+      <div className="rounded-md border border-zinc-800/70 bg-zinc-950/45 px-2 py-2 text-[11px] font-mono text-zinc-500">
+        No recent activity yet.
+      </div>
+    ) : (
+      displayedVisitorActivity.map((activity) => {
+        const country = getVisitorActivityCountry(activity);
+
+        return (
+          <div
+            key={activity.id}
+            className="group flex items-start gap-1 rounded-md border border-transparent px-1 py-[1px] transition-colors hover:border-zinc-800/80 hover:bg-zinc-950/45"
+          >
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="mt-[2px] h-3 w-3 shrink-0 text-zinc-500"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              {displayedVisitorActivity.map((activity) => (
-                <div
-                  key={`${activity.name}-${activity.country}-${activity.path}`}
-                  className="group flex items-start gap-1 rounded-md border border-transparent px-1 py-[1px] transition-colors hover:border-zinc-800/80 hover:bg-zinc-950/45"
-                >
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 24 24"
-                    className="mt-[2px] h-3 w-3 shrink-0 text-zinc-500"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
-                    <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
-                  </svg>
+              <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+              <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+            </svg>
 
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[11px] leading-[14px] text-zinc-400">
-                      <span className="font-mono font-semibold text-white">
-                        {activity.name}
-                      </span>{" "}
-                      <span className="text-zinc-500">from</span>{" "}
-                      <span className="font-mono font-semibold text-white">
-                        {getCountryFlag(activity.country)} {activity.country}
-                      </span>{" "}
-                      <span className="text-zinc-500">visited</span>{" "}
-                      <span className="rounded bg-zinc-950/90 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-white">
-                        {activity.path}
-                      </span>
-                    </div>
-                    <div className="text-[10px] font-mono leading-none text-zinc-600">
-                      {activity.time}
-                    </div>
-                  </div>
-
-                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-400/90" />
-                </div>
-              ))}
+            <div className="min-w-0 flex-1">
+              <div className="text-[11px] leading-[14px] text-zinc-400">
+                <span className="font-mono font-semibold text-white">
+                  {activity.alias}
+                </span>{" "}
+                <span className="text-zinc-500">from</span>{" "}
+                <span className="font-mono font-semibold text-white">
+                  {getCountryFlag(country)} {country}
+                </span>{" "}
+                <span className="text-zinc-500">visited</span>{" "}
+                <span className="rounded bg-zinc-950/90 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-white">
+                  {activity.path}
+                </span>
+              </div>
+              <div className="text-[10px] font-mono leading-none text-zinc-600">
+                {formatVisitorActivityTime(activity.createdAt)}
+              </div>
             </div>
+
+            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400/90" />
           </div>
+        );
+      })
+    )}
+  </div>
+</div>
 
           <div className="absolute right-4 top-[365px] z-20 w-[calc(100%-2rem)] rounded-xl border border-zinc-800/70 bg-[#1d1d1f]/55 p-4 shadow-2xl backdrop-blur-md md:top-4 md:w-[300px]">
             {selectedCountryData ? (

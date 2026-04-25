@@ -225,7 +225,7 @@ export function Terms() {
 
           <section>
             <h2 className="text-2xl font-bold tracking-tight text-white">
-              8. Demo, Preview, and Experimental Features
+              8. Preview, Experimental, and Changing Features
             </h2>
 
             <p className="mt-5">
@@ -240,11 +240,11 @@ export function Terms() {
             </p>
 
             <p className="mt-4">
-              The Recent Visitor Activity feature is expected to be updated
-              before launch. Until a feature is fully connected and accurately
-              described in the Privacy Policy, you should not assume that
-              preview activity panels represent real-time tracking or complete
-              production behavior.
+              Recent Visitor Activity is intended to show limited country-level
+              public page activity. It may be incomplete, delayed, temporarily
+              unavailable, changed, or removed. You should not treat it as exact
+              location tracking, personal identity tracking, or a complete
+              real-time record of all website visits.
             </p>
           </section>
 

@@ -15,6 +15,61 @@ import { Contact } from "./pages/Contact";
 import { Faq } from "./pages/Faq";
 import { Privacy } from "./pages/Privacy";
 import { Terms } from "./pages/Terms";
+import { buildNightforceApiUrl } from "./lib/nightforceApi";
+
+const VISITOR_ACTIVITY_LOG_COOLDOWN_MS = 5 * 60 * 1000;
+
+const PUBLIC_VISITOR_ACTIVITY_PATHS = new Set([
+  "/",
+  "/directory",
+  "/about",
+  "/contact",
+  "/faq",
+  "/privacy",
+  "/terms",
+  "/request-verification",
+]);
+
+function normalizeVisitorActivityPath(location: string): string {
+  const pathOnly = location.split("?")[0]?.split("#")[0] || "/";
+  return pathOnly.startsWith("/") ? pathOnly : `/${pathOnly}`;
+}
+
+function shouldLogVisitorActivityPath(path: string): boolean {
+  return PUBLIC_VISITOR_ACTIVITY_PATHS.has(path);
+}
+
+function getVisitorActivitySessionKey(path: string): string {
+  return `nightforce:visitor-activity:${path}`;
+}
+
+function wasVisitorActivityRecentlyLogged(path: string): boolean {
+  try {
+    const storedValue = window.sessionStorage.getItem(
+      getVisitorActivitySessionKey(path),
+    );
+
+    const lastLoggedAt = Number.parseInt(storedValue ?? "", 10);
+
+    return (
+      Number.isFinite(lastLoggedAt) &&
+      Date.now() - lastLoggedAt < VISITOR_ACTIVITY_LOG_COOLDOWN_MS
+    );
+  } catch {
+    return false;
+  }
+}
+
+function markVisitorActivityLogged(path: string): void {
+  try {
+    window.sessionStorage.setItem(
+      getVisitorActivitySessionKey(path),
+      String(Date.now()),
+    );
+  } catch {
+    // Ignore storage failures. Visitor activity is non-critical.
+  }
+}
 
 function ScrollToTop() {
   const [location] = useLocation();
@@ -24,6 +79,37 @@ function ScrollToTop() {
       top: 0,
       left: 0,
       behavior: "instant",
+    });
+  }, [location]);
+
+  return null;
+}
+
+function VisitorActivityLogger() {
+  const [location] = useLocation();
+
+  useEffect(() => {
+    const path = normalizeVisitorActivityPath(location);
+
+    if (!shouldLogVisitorActivityPath(path)) {
+      return;
+    }
+
+    if (wasVisitorActivityRecentlyLogged(path)) {
+      return;
+    }
+
+    markVisitorActivityLogged(path);
+
+    void fetch(buildNightforceApiUrl("/api/nightforce/visitor-activity"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ path }),
+      keepalive: true,
+    }).catch(() => {
+      // Visitor activity should never break navigation or rendering.
     });
   }, [location]);
 
@@ -45,8 +131,8 @@ function AppRoutes() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
-<Route path="/wallet" component={WalletAccess} />
-<Route path="/directory" component={Directory} />
+      <Route path="/wallet" component={WalletAccess} />
+      <Route path="/directory" component={Directory} />
       <Route path="/about" component={About} />
       <Route path="/contact" component={Contact} />
       <Route path="/faq" component={Faq} />
@@ -66,6 +152,7 @@ function App() {
     <WalletProvider>
       <div className="min-h-screen bg-zinc-950">
         <ScrollToTop />
+        <VisitorActivityLogger />
         <Switch>
           <Route path="/">{null}</Route>
           <Route path="/wallet">{<NavBar />}</Route>
