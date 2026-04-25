@@ -37,15 +37,15 @@ export function Terms() {
             </h2>
 
             <p className="mt-5">
-              Welcome to Nightforce Directory. These Terms of Service
+              Welcome to nightforce.cc. These Terms of Service
               (“Terms”) govern your access to and use of nightforce.cc and any
-              related Nightforce Directory pages, profile flows, verification
+              related nightforce.cc pages, profile flows, verification
               flows, wallet-related features, directory features, and other
               services we provide.
             </p>
 
             <p className="mt-4">
-              Nightforce Directory is operated by cobra from Malaysia. By using
+              nightforce.cc is operated by cobra from Malaysia. By using
               the website, browsing the directory, submitting a verification
               request, connecting a wallet, creating or editing a profile, or
               using any related feature, you agree to these Terms.
@@ -63,7 +63,7 @@ export function Terms() {
             </h2>
 
             <p className="mt-5">
-              Nightforce Directory is intended for users who are 18 years old or
+              nightforce.cc is intended for users who are 18 years old or
               older.
             </p>
 
@@ -80,7 +80,7 @@ export function Terms() {
             </h2>
 
             <p className="mt-5">
-              Nightforce Directory is unofficial, community-built, and not an
+              nightforce.cc is unofficial, community-built, and not an
               official Midnight product, wallet provider, identity authority, or
               official ambassador registration portal.
             </p>
@@ -94,7 +94,7 @@ export function Terms() {
 
             <div className="mt-6 rounded-xl border border-emerald-800/60 bg-emerald-950/30 px-5 py-4">
               <p className="text-sm font-semibold leading-7 text-emerald-300">
-                Important: Nightforce Directory does not decide official
+                Important: nightforce.cc does not decide official
                 Midnight ambassador status and is not the official ambassador
                 application portal.
               </p>
@@ -107,7 +107,7 @@ export function Terms() {
             </h2>
 
             <p className="mt-5">
-              Verification on Nightforce Directory is only for directory-related
+              Verification on nightforce.cc is only for directory-related
               access, profile publication, and directory display purposes.
             </p>
 
@@ -119,7 +119,7 @@ export function Terms() {
             </p>
 
             <p className="mt-4">
-              Nightforce Directory does not handle official ambassador
+              nightforce.cc does not handle official ambassador
               registration. To become an official ambassador, follow the
               official Midnight community channels and{" "}
               <a
@@ -205,7 +205,7 @@ export function Terms() {
 
             <div className="mt-6 rounded-xl border border-emerald-800/60 bg-emerald-950/30 px-5 py-4">
               <p className="text-sm font-semibold leading-7 text-emerald-300">
-                Nightforce Directory will never ask for seed phrases, private
+                nightforce.cc will never ask for seed phrases, private
                 keys, wallet recovery phrases, or secret credentials.
               </p>
             </div>
@@ -265,7 +265,7 @@ export function Terms() {
               <li>Attempt to bypass access controls, admin controls, or wallet checks</li>
               <li>Scrape, overload, attack, probe, disrupt, or interfere with the website</li>
               <li>Upload or submit harmful code, malicious links, or deceptive content</li>
-              <li>Use the website in a way that harms Nightforce Directory, users, Midnight, or the broader community</li>
+              <li>Use the website in a way that harms nightforce.cc, users, Midnight, or the broader community</li>
             </ul>
           </section>
 
@@ -275,7 +275,7 @@ export function Terms() {
             </h2>
 
             <p className="mt-5">
-              Nightforce Directory may link to third-party websites, including
+              nightforce.cc may link to third-party websites, including
               Midnight Network pages, blog posts, documentation, ambassador
               program pages, wallet providers, analytics providers, or other
               external resources.
@@ -300,7 +300,7 @@ export function Terms() {
 
             <p className="mt-5">
               We may update, change, suspend, limit, remove, or discontinue any
-              part of Nightforce Directory at any time.
+              part of nightforce.cc at any time.
             </p>
 
             <p className="mt-4">
@@ -318,7 +318,7 @@ export function Terms() {
             </h2>
 
             <p className="mt-5">
-              Nightforce Directory is provided “as is” and “as available.”
+              nightforce.cc is provided “as is” and “as available.”
             </p>
 
             <p className="mt-4">
@@ -343,7 +343,7 @@ export function Terms() {
             </h2>
 
             <p className="mt-5">
-              To the maximum extent allowed by law, Nightforce Directory, cobra,
+              To the maximum extent allowed by law, nightforce.cc, cobra,
               and any contributors, maintainers, or related parties will not be
               liable for indirect, incidental, special, consequential,
               exemplary, punitive, or lost-profit damages.
@@ -370,7 +370,7 @@ export function Terms() {
 
             <p className="mt-5">
               To the extent allowed by law, you agree to defend, indemnify, and
-              hold harmless Nightforce Directory, cobra, and any contributors,
+              hold harmless nightforce.cc, cobra, and any contributors,
               maintainers, or related parties from claims, damages, losses,
               liabilities, costs, and expenses arising from your use of the
               website, your submitted information, your profile content, your
@@ -396,7 +396,7 @@ export function Terms() {
             </p>
 
             <p className="mt-4">
-              By using Nightforce Directory, you acknowledge that you have read
+              By using nightforce.cc, you acknowledge that you have read
               and understood the Privacy Policy.
             </p>
           </section>
@@ -429,7 +429,7 @@ export function Terms() {
 
             <p className="mt-4">
               If we update the Terms, we will change the “Last updated” date.
-              Your continued use of Nightforce Directory after changes are made
+              Your continued use of nightforce.cc after changes are made
               means you accept the updated Terms.
             </p>
           </section>

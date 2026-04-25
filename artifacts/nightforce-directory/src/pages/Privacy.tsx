@@ -37,7 +37,7 @@ export function Privacy() {
             </h2>
 
             <p className="mt-5">
-              Nightforce Directory (“Nightforce Directory,” “we,” “us,” or
+              nightforce.cc (“nightforce.cc,” “we,” “us,” or
               “our”) is an unofficial community-built directory operated by
               cobra.
             </p>
@@ -45,12 +45,12 @@ export function Privacy() {
             <p className="mt-4">
               This Privacy Policy explains how we collect, use, store, and
               protect information when you use nightforce.cc and related
-              Nightforce Directory pages, forms, profile flows, wallet-related
+              nightforce.cc pages, forms, profile flows, wallet-related
               flows, and directory features.
             </p>
 
             <p className="mt-4">
-              Nightforce Directory is not an official Midnight product. It is
+              nightforce.cc is not an official Midnight product. It is
               not the official ambassador registration portal. It is a
               community-built directory intended to help display and organize
               profiles for existing Nightforce ambassadors or relevant community
@@ -144,7 +144,7 @@ export function Privacy() {
 
             <div className="mt-6 rounded-xl border border-emerald-800/60 bg-emerald-950/30 px-5 py-4">
               <p className="text-sm font-semibold leading-7 text-emerald-300">
-                Important: Nightforce Directory never asks for private keys,
+                Important: nightforce.cc never asks for private keys,
                 seed phrases, wallet recovery phrases, or secret credentials. Do
                 not send these through the website, contact form, email,
                 Discord, or any other channel.
@@ -223,7 +223,7 @@ export function Privacy() {
             <p className="mt-5">We may use information to:</p>
 
             <ul className="mt-4 list-disc space-y-2 pl-6">
-              <li>Operate Nightforce Directory</li>
+              <li>Operate nightforce.cc</li>
               <li>Review verification requests</li>
               <li>Create, update, publish, hide, or remove profiles</li>
               <li>Display public or anonymous profile information</li>
@@ -279,7 +279,7 @@ export function Privacy() {
             </h2>
 
             <p className="mt-5">
-              Nightforce Directory uses a hybrid architecture. The backend
+              nightforce.cc uses a hybrid architecture. The backend
               remains the source of truth for profile records, verification
               state, visibility settings, and contact-mode data.
             </p>
@@ -334,7 +334,7 @@ export function Privacy() {
             <p className="mt-4">
               We may also disclose information if required by law, legal
               process, security needs, abuse prevention, or to protect the
-              rights and safety of Nightforce Directory, users, or others.
+              rights and safety of nightforce.cc, users, or others.
             </p>
           </section>
 
@@ -417,7 +417,7 @@ export function Privacy() {
 
             <div className="mt-6 rounded-xl border border-emerald-800/60 bg-emerald-950/30 px-5 py-4">
               <p className="text-sm font-semibold leading-7 text-emerald-300">
-                Nightforce Directory will never ask for wallet seed phrases,
+                nightforce.cc will never ask for wallet seed phrases,
                 private keys, or recovery phrases.
               </p>
             </div>
@@ -429,7 +429,7 @@ export function Privacy() {
             </h2>
 
             <p className="mt-5">
-              Nightforce Directory is intended for users who are 18 years old or
+              nightforce.cc is intended for users who are 18 years old or
               older.
             </p>
 
@@ -446,7 +446,7 @@ export function Privacy() {
             </h2>
 
             <p className="mt-5">
-              Nightforce Directory may link to third-party websites, including
+              nightforce.cc may link to third-party websites, including
               Midnight Network pages, blog posts, documentation, ambassador
               program pages, wallet providers, analytics providers, or other
               external resources.
@@ -465,7 +465,7 @@ export function Privacy() {
             </h2>
 
             <p className="mt-5">
-              Nightforce Directory is operated from Malaysia, but the website may
+              nightforce.cc is operated from Malaysia, but the website may
               be accessed by users in other countries.
             </p>
 

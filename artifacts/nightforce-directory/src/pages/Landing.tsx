@@ -272,11 +272,11 @@ export function Landing() {
                 className="flex flex-col gap-2 rounded-xl border border-zinc-900 bg-zinc-900 p-2 sm:flex-row sm:items-center"
               >
                 <input
-                  type="search"
+                  type="text"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder="Search ambassadors, countries, roles..."
-                  className="h-10 min-w-0 flex-1 rounded-lg border border-transparent bg-zinc-950 px-4 text-[12px] font-mono text-white placeholder:text-zinc-700 outline-none transition-colors focus:border-zinc-500"
+                  className="block h-12 min-h-12 w-full min-w-0 flex-1 appearance-none rounded-lg border border-transparent bg-zinc-950 px-4 py-0 text-[13px] leading-none font-mono text-white placeholder:text-zinc-700 outline-none transition-colors [-webkit-appearance:none] focus:border-zinc-500 sm:h-10 sm:min-h-10 sm:text-[12px]"
                 />
                 <button
                   type="submit"
@@ -531,11 +531,11 @@ export function Landing() {
                 className="flex flex-col gap-2 rounded-xl border border-zinc-900 bg-zinc-900 p-2 sm:flex-row sm:items-center"
               >
                 <input
-                  type="search"
+                  type="text"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder="Search directory..."
-                  className="h-10 min-w-0 flex-1 rounded-lg border border-transparent bg-zinc-950 px-4 text-[12px] font-mono text-white placeholder:text-zinc-700 outline-none transition-colors focus:border-zinc-500"
+                  className="block h-12 min-h-12 w-full min-w-0 flex-1 appearance-none rounded-lg border border-transparent bg-zinc-950 px-4 py-0 text-[13px] leading-none font-mono text-white placeholder:text-zinc-700 outline-none transition-colors [-webkit-appearance:none] focus:border-zinc-500 sm:h-10 sm:min-h-10 sm:text-[12px]"
                 />
                 <button
                   type="submit"
