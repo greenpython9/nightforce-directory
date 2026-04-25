@@ -255,6 +255,33 @@ function getCountryFlag(country: string): string {
   return flags[country.trim().toLowerCase()] ?? "✦";
 }
 
+function getFlagEmojiFromCountryCode(countryCode: string | null | undefined): string {
+  const normalizedCountryCode = countryCode?.trim().toUpperCase() ?? "";
+
+  if (
+    !/^[A-Z]{2}$/.test(normalizedCountryCode) ||
+    normalizedCountryCode === "XX"
+  ) {
+    return "✦";
+  }
+
+  const codePoints = [...normalizedCountryCode].map(
+    (character) => 127397 + character.charCodeAt(0),
+  );
+
+  return String.fromCodePoint(...codePoints);
+}
+
+function getVisitorActivityFlag(activity: VisitorActivity): string {
+  const flagFromCountryCode = getFlagEmojiFromCountryCode(activity.countryCode);
+
+  if (flagFromCountryCode !== "✦") {
+    return flagFromCountryCode;
+  }
+
+  return getCountryFlag(getVisitorActivityCountry(activity));
+}
+
 function getRegionIcon(region: string): string {
   const key = region.trim().toLowerCase();
 
@@ -899,7 +926,7 @@ export function CobeAmbassadorGlobe({
                 </span>{" "}
                 <span className="text-zinc-500">from</span>{" "}
                 <span className="font-mono font-semibold text-white">
-                  {getCountryFlag(country)} {country}
+                  {getVisitorActivityFlag(activity)} {country}
                 </span>{" "}
                 <span className="text-zinc-500">visited</span>{" "}
                 <span className="rounded bg-zinc-950/90 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-white">

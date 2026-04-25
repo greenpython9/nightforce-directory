@@ -32,6 +32,56 @@ const adjectives = [
   "lunar",
   "hidden",
   "brave",
+  "crimson",
+  "violet",
+  "golden",
+  "coral",
+  "ivory",
+  "jade",
+  "neon",
+  "obsidian",
+  "copper",
+  "frost",
+  "midnight",
+  "electric",
+  "velvet",
+  "smoky",
+  "wild",
+  "calm",
+  "tiny",
+  "bold",
+  "cosmic",
+  "radiant",
+  "sapphire",
+  "emerald",
+  "ruby",
+  "onyx",
+  "pearl",
+  "bronze",
+  "azure",
+  "indigo",
+  "scarlet",
+  "mint",
+  "opal",
+  "plum",
+  "sunny",
+  "dusky",
+  "misty",
+  "stormy",
+  "gentle",
+  "rapid",
+  "silent",
+  "glowing",
+  "shadow",
+  "solar",
+  "arctic",
+  "tropical",
+  "forest",
+  "ocean",
+  "desert",
+  "meadow",
+  "starlit",
+  "nova",
 ];
 
 const animals = [
@@ -45,46 +95,94 @@ const animals = [
   "lynx",
   "heron",
   "wolf",
+  "fox",
+  "manta",
+  "owl",
+  "hawk",
+  "leopard",
+  "panther",
+  "dolphin",
+  "badger",
+  "sparrow",
+  "beetle",
+  "orca",
+  "crane",
+  "koi",
+  "dragonfly",
+  "firefly",
+  "turtle",
+  "jaguar",
+  "ibex",
+  "seal",
+  "phoenix",
+  "eagle",
+  "whale",
+  "penguin",
+  "lemur",
+  "macaw",
+  "meerkat",
+  "moose",
+  "rabbit",
+  "salmon",
+  "yak",
+  "zebra",
+  "cheetah",
+  "antelope",
+  "bison",
+  "pelican",
+  "puffin",
+  "swan",
+  "robin",
+  "lizard",
+  "ferret",
+  "hamster",
+  "hedgehog",
+  "squid",
+  "octopus",
+  "narwhal",
+  "alpaca",
+  "llama",
+  "koala",
+  "wallaby",
+  "gazelle",
 ];
 
-const countryNamesByCode: Record<string, string> = {
-  AE: "United Arab Emirates",
-  AR: "Argentina",
-  AU: "Australia",
-  BD: "Bangladesh",
-  BR: "Brazil",
-  CA: "Canada",
-  CN: "China",
-  DE: "Germany",
-  DK: "Denmark",
-  ES: "Spain",
-  FI: "Finland",
-  FR: "France",
-  GB: "United Kingdom",
-  HK: "Hong Kong",
-  ID: "Indonesia",
-  IN: "India",
-  IT: "Italy",
-  JP: "Japan",
-  KR: "South Korea",
-  MX: "Mexico",
-  MY: "Malaysia",
-  NG: "Nigeria",
-  NL: "Netherlands",
-  NO: "Norway",
-  NZ: "New Zealand",
-  PH: "Philippines",
-  PK: "Pakistan",
-  SA: "Saudi Arabia",
-  SE: "Sweden",
-  SG: "Singapore",
-  TH: "Thailand",
-  TW: "Taiwan",
-  US: "United States",
-  VN: "Vietnam",
-  ZA: "South Africa",
-  XX: "Unknown",
+type CountryDisplayNames = {
+  of(code: string): string | undefined;
 };
+
+type IntlWithDisplayNames = {
+  DisplayNames?: new (
+    locales: string | string[],
+    options: { type: "region" },
+  ) => CountryDisplayNames;
+};
+
+function createCountryDisplayNames(): CountryDisplayNames | null {
+  try {
+    const intlWithDisplayNames = (globalThis as unknown as {
+      Intl?: IntlWithDisplayNames;
+    }).Intl;
+
+    if (!intlWithDisplayNames?.DisplayNames) {
+      return null;
+    }
+
+    return new intlWithDisplayNames.DisplayNames(["en"], { type: "region" });
+  } catch {
+    return null;
+  }
+}
+
+const countryDisplayNames = createCountryDisplayNames();
+
+function getCountryNameFromCode(countryCode: string): string {
+  if (countryCode === "XX") {
+    return "Unknown";
+  }
+
+  return countryDisplayNames?.of(countryCode) ?? countryCode;
+}
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -138,9 +236,7 @@ function getCountryFromRequest(req: Request): {
 
   return {
     countryCode,
-    countryName:
-      countryNamesByCode[countryCode] ??
-      (countryCode === "XX" ? "Unknown" : countryCode),
+    countryName: getCountryNameFromCode(countryCode),
   };
 }
 
