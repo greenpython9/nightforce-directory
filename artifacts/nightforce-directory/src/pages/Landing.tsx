@@ -37,6 +37,7 @@ const quickLinks = [
   { label: "Globe", href: "#globe" },
   { label: "Updates", href: "#updates" },
   { label: "About", href: "/about" },
+  { label: "FAQ", href: "/faq" },
   { label: "Contact", href: "/contact" },
 ];
 
@@ -587,6 +588,9 @@ export function Landing() {
                   className="block hover:text-zinc-300"
                 >
                   Request Verification
+                </Link>
+                <Link href="/faq" className="block hover:text-zinc-300">
+                  FAQ
                 </Link>
                 <Link href="/contact" className="block hover:text-zinc-300">
                   Contact

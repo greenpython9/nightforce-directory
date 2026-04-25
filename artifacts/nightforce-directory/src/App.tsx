@@ -10,6 +10,7 @@ import { MyProfile } from "./pages/MyProfile";
 import { PublicProfile } from "./pages/PublicProfile";
 import { About } from "./pages/About";
 import { Contact } from "./pages/Contact";
+import { Faq } from "./pages/Faq";
 
 function NotFound() {
   return (
@@ -30,6 +31,7 @@ function AppRoutes() {
 <Route path="/directory" component={Directory} />
       <Route path="/about" component={About} />
       <Route path="/contact" component={Contact} />
+      <Route path="/faq" component={Faq} />
       <Route path="/request-verification" component={RequestVerification} />
       <Route path="/admin/review" component={AdminReview} />
       <Route path="/my-profile" component={MyProfile} />
