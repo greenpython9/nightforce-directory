@@ -332,13 +332,20 @@ export function Landing() {
       </div>
 
       <div className="relative z-10 mx-auto max-w-[1120px] px-4 sm:px-6 lg:px-8">
-        <header className="flex items-center justify-center pb-8 pt-7">
+        <header className="relative flex items-center justify-center pb-8 pt-7">
           <Link
             href="/"
             className="flex items-center gap-2 text-[11px] font-mono text-zinc-500"
           >
             <span className="text-sky-300">✦</span>
             <span>Nightforce Directory</span>
+          </Link>
+
+          <Link
+            href="/wallet"
+            className="absolute right-0 top-6 inline-flex h-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] px-3 text-[11px] font-mono font-semibold text-zinc-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all hover:border-emerald-300/30 hover:bg-emerald-400/10 hover:text-emerald-100"
+          >
+            Wallet / Profile
           </Link>
         </header>
 
