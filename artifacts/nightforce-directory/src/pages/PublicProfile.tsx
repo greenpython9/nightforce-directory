@@ -1,8 +1,31 @@
-import { useEffect, useState } from "react";
-import { Link, useParams } from "wouter";
+import {
+  type ComponentType,
+  type SVGProps,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import {
+  ArrowLeft,
+  Ban,
+  CheckCircle2,
+  ExternalLink,
+  Github,
+  Globe2,
+  Info,
+  Instagram,
+  Linkedin,
+  LockKeyhole,
+  Mail,
+  MapPin,
+  Send,
+  ShieldCheck,
+  UserRound,
+  Youtube,
+} from "lucide-react";
+import { Link, useLocation, useParams } from "wouter";
+import { buildNightforceApiUrl } from "../lib/nightforceApi";
 import type { PublicProfile as PublicProfileType } from "../types";
-
-const API_BASE_URL = "http://127.0.0.1:8787";
 
 type BackendPublicProfile = {
   publicId: string;
@@ -15,7 +38,12 @@ type BackendPublicProfile = {
   avatarUrl: string | null;
   websiteUrl: string | null;
   publicEmail: string | null;
-  contactMode: "NO_CONTACT" | "PRIVATE_CONTACT_AVAILABLE" | "PUBLIC_CONTACT_ALLOWED";
+  contactMode: "NO_CONTACT" | "PRIVATE_CONTACT_AVAILABLE" | "PUBLIC_CONTACT_ALLOWED" | null;
+  contactModeSyncedValue?:
+    | "NO_CONTACT"
+    | "PRIVATE_CONTACT_AVAILABLE"
+    | "PUBLIC_CONTACT_ALLOWED"
+    | null;
   socials: string[];
   requestedVisibility: "public" | "hidden";
   publishState: "draft" | "published" | "inactive";
@@ -24,6 +52,59 @@ type BackendPublicProfile = {
 type PublicProfileResponse = {
   profile: BackendPublicProfile;
 };
+
+type SocialIconComponent = ComponentType<SVGProps<SVGSVGElement>>;
+
+type SocialLink = {
+  href: string | null;
+  label: string;
+  text: string;
+  Icon: SocialIconComponent;
+};
+
+function XIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
+      {...props}
+    >
+      <path d="M17.53 3H21l-7.59 8.67L22.34 21h-6.99l-5.47-6.8L3.62 21H.15l8.12-9.28L-.29 3h7.16l4.94 6.16L17.53 3Zm-1.22 16.36h1.92L5.82 4.55H3.76l12.55 14.81Z" />
+    </svg>
+  );
+}
+
+function DiscordIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
+      {...props}
+    >
+      <path d="M20.317 4.369a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.078.037c-.211.375-.444.864-.608 1.249a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.249.077.077 0 0 0-.078-.037 19.736 19.736 0 0 0-4.885 1.515.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .077-.01c3.927 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.009c.12.099.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.04.107c.36.698.772 1.363 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .031-.055c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028ZM8.02 15.331c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.418 2.157-2.418 1.211 0 2.176 1.094 2.157 2.418 0 1.334-.955 2.419-2.157 2.419Zm7.974 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.418 2.157-2.418 1.211 0 2.176 1.094 2.157 2.418 0 1.334-.946 2.419-2.157 2.419Z" />
+    </svg>
+  );
+}
+
+function resolveContactMode(
+  profile: BackendPublicProfile,
+): PublicProfileType["contactMode"] {
+  if (profile.contactMode) {
+    return profile.contactMode;
+  }
+
+  if (profile.contactModeSyncedValue) {
+    return profile.contactModeSyncedValue;
+  }
+
+  if (profile.publicEmail) {
+    return "PUBLIC_CONTACT_ALLOWED";
+  }
+
+  return "NO_CONTACT";
+}
 
 function toPublicProfile(profile: BackendPublicProfile): PublicProfileType {
   return {
@@ -38,75 +119,194 @@ function toPublicProfile(profile: BackendPublicProfile): PublicProfileType {
     avatarUrl: profile.avatarUrl,
     websiteUrl: profile.websiteUrl,
     publicEmail: profile.publicEmail,
-    contactMode: profile.contactMode,
+    contactMode: resolveContactMode(profile),
     socials: profile.socials,
     isVerified: true,
   };
 }
 
-function formatContactMode(value: PublicProfileType["contactMode"]): string {
-  switch (value) {
-    case "PRIVATE_CONTACT_AVAILABLE":
-      return "Private contact available";
-    case "PUBLIC_CONTACT_ALLOWED":
-      return "Public contact allowed";
-    case "NO_CONTACT":
-      return "No contact available";
-    default:
-      return "No contact available";
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+
+  return (
+    parts
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("") || "NF"
+  );
+}
+
+function normalizeExternalHref(value: string): string {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return "";
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  return `https://${trimmed}`;
+}
+
+function formatWebsiteLabel(value: string): string {
+  try {
+    const url = new URL(normalizeExternalHref(value));
+    return url.hostname.replace(/^www\./, "");
+  } catch {
+    return value;
   }
 }
 
-function formatSocial(
-  social: string,
-): { label: string; href: string | null; text: string } {
+function formatSocial(social: string): SocialLink {
   const value = social.trim();
 
   if (value.startsWith("https://x.com/")) {
     const username = value.replace("https://x.com/", "").trim();
+
     return {
       label: "X",
       href: value,
-      text: username ? `@${username}` : value,
+      text: username ? `@${username}` : "X profile",
+      Icon: XIcon,
     };
   }
 
   if (value.startsWith("https://youtube.com/@")) {
     const handle = value.replace("https://youtube.com/@", "").trim();
+
     return {
       label: "YouTube",
       href: value,
-      text: handle ? `@${handle}` : value,
+      text: handle ? `@${handle}` : "YouTube",
+      Icon: Youtube,
     };
   }
 
   if (value.startsWith("discord:")) {
     const username = value.replace("discord:", "").trim();
+
     return {
       label: "Discord",
       href: null,
-      text: username || value,
+      text: username || "Discord",
+      Icon: DiscordIcon,
     };
   }
 
   if (value.startsWith("https://t.me/")) {
     const username = value.replace("https://t.me/", "").trim();
+
     return {
       label: "Telegram",
       href: value,
-      text: username ? `@${username}` : value,
+      text: username ? `@${username}` : "Telegram",
+      Icon: Send,
     };
+  }
+
+  const href = normalizeExternalHref(value);
+  const lower = href.toLowerCase();
+
+  if (lower.includes("github.com")) {
+    return { label: "GitHub", href, text: "GitHub", Icon: Github };
+  }
+
+  if (lower.includes("linkedin.com")) {
+    return { label: "LinkedIn", href, text: "LinkedIn", Icon: Linkedin };
+  }
+
+  if (lower.includes("instagram.com")) {
+    return { label: "Instagram", href, text: "Instagram", Icon: Instagram };
   }
 
   return {
     label: "Link",
-    href: value,
-    text: value,
+    href,
+    text: formatWebsiteLabel(value),
+    Icon: ExternalLink,
   };
+}
+
+function getContactContent(profile: PublicProfileType): {
+  label: string;
+  title: string;
+  description: string;
+  Icon: SocialIconComponent;
+  accentClassName: string;
+} {
+  if (profile.contactMode === "PUBLIC_CONTACT_ALLOWED" && profile.publicEmail) {
+    return {
+      label: "Public access",
+      title: profile.publicEmail,
+      description:
+        "This profile has chosen to display a public email address.",
+      Icon: Mail,
+      accentClassName: "border-emerald-800/70 bg-emerald-950/25 text-emerald-300",
+    };
+  }
+
+  if (profile.contactMode === "PRIVATE_CONTACT_AVAILABLE") {
+    return {
+      label: "Private contact",
+      title: "Private contact available",
+      description:
+        "This profile supports a privacy-aware contact path, but does not display a public email address.",
+      Icon: LockKeyhole,
+      accentClassName: "border-sky-800/70 bg-sky-950/25 text-sky-300",
+    };
+  }
+
+  return {
+    label: "Contact unavailable",
+    title: "No public contact method",
+    description:
+      "This profile has not enabled a public or private contact path.",
+    Icon: Ban,
+    accentClassName: "border-zinc-800 bg-zinc-950/70 text-zinc-500",
+  };
+}
+
+function StatusPanel({
+  title,
+  description,
+  tone = "default",
+}: {
+  title: string;
+  description: string;
+  tone?: "default" | "error";
+}) {
+  return (
+    <div className="mx-auto max-w-[720px] px-4 py-16">
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center shadow-2xl">
+        <div
+          className={
+            tone === "error"
+              ? "text-sm font-mono font-semibold text-red-300"
+              : "text-sm font-mono font-semibold text-zinc-300"
+          }
+        >
+          {title}
+        </div>
+        <p className="mx-auto mt-2 max-w-[460px] text-xs font-mono leading-6 text-zinc-600">
+          {description}
+        </p>
+        <Link
+          href="/directory"
+          className="mt-5 inline-flex h-9 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-950 px-4 text-[11px] font-mono text-zinc-400 transition-colors hover:border-zinc-600 hover:text-white"
+        >
+          ← Back to Directory
+        </Link>
+      </div>
+    </div>
+  );
 }
 
 export function PublicProfile() {
   const { publicId } = useParams<{ publicId: string }>();
+  const [, navigate] = useLocation();
+
   const [profile, setProfile] = useState<PublicProfileType | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -129,7 +329,9 @@ export function PublicProfile() {
 
       try {
         const response = await fetch(
-          `${API_BASE_URL}/api/nightforce/public-profiles/${encodeURIComponent(publicId)}`,
+          buildNightforceApiUrl(
+            `/api/nightforce/public-profiles/${encodeURIComponent(publicId)}`,
+          ),
         );
 
         let payload: unknown = null;
@@ -169,7 +371,9 @@ export function PublicProfile() {
         if (!cancelled) {
           setProfile(null);
           setError(
-            err instanceof Error ? err.message : "Failed to load public profile.",
+            err instanceof Error
+              ? err.message
+              : "Failed to load public profile.",
           );
         }
       } finally {
@@ -186,235 +390,333 @@ export function PublicProfile() {
     };
   }, [publicId]);
 
+  function handleBackToDirectory() {
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    navigate("/directory");
+  }
+
+  const displayName =
+    profile?.visibility === "anonymous"
+      ? "Anonymous Ambassador"
+      : profile?.displayName || "Anonymous Ambassador";
+
+  const formattedSocials = useMemo(() => {
+    return (profile?.socials ?? []).map(formatSocial);
+  }, [profile?.socials]);
+
   if (loading) {
     return (
-      <div className="max-w-xl mx-auto py-16 px-4">
-        <div className="border border-zinc-800 rounded-lg p-8 bg-zinc-900 text-center">
-          <div className="text-zinc-400 font-mono text-sm font-semibold mb-2">
-            Loading Profile
-          </div>
-          <p className="text-zinc-600 font-mono text-xs">
-            Fetching public profile data...
-          </p>
-        </div>
-      </div>
+      <StatusPanel
+        title="Loading Profile"
+        description="Fetching public profile data..."
+      />
     );
   }
 
   if (error) {
     return (
-      <div className="max-w-xl mx-auto py-16 px-4">
-        <div className="border border-zinc-800 rounded-lg p-8 bg-zinc-900 text-center">
-          <div className="text-red-400 font-mono text-sm font-semibold mb-2">
-            Failed to Load Profile
-          </div>
-          <p className="text-zinc-600 font-mono text-xs">
-            {error}
-          </p>
-          <Link
-            href="/directory"
-            className="inline-block mt-4 text-xs font-mono text-zinc-500 hover:text-zinc-300 transition-colors"
-          >
-            ← Back to Directory
-          </Link>
-        </div>
-      </div>
+      <StatusPanel
+        title="Failed to Load Profile"
+        description={error}
+        tone="error"
+      />
     );
   }
 
   if (!profile || notFound || profile.visibility === "hidden") {
     return (
-      <div className="max-w-xl mx-auto py-16 px-4">
-        <div className="border border-zinc-800 rounded-lg p-8 bg-zinc-900 text-center">
-          <div className="text-zinc-400 font-mono text-sm font-semibold mb-2">
-            Profile Unavailable
-          </div>
-          <p className="text-zinc-600 font-mono text-xs">
-            This profile is hidden or does not exist.
-          </p>
-          <Link
-            href="/directory"
-            className="inline-block mt-4 text-xs font-mono text-zinc-500 hover:text-zinc-300 transition-colors"
-          >
-            ← Back to Directory
-          </Link>
-        </div>
-      </div>
+      <StatusPanel
+        title="Profile Unavailable"
+        description="This profile is hidden, inactive, or does not exist."
+      />
     );
   }
 
-  const displayName =
-    profile.visibility === "anonymous"
-      ? "Anonymous"
-      : profile.displayName || "Anonymous";
+  const contact = getContactContent(profile);
+  const ContactIcon = contact.Icon;
 
-  const formattedSocials = (profile.socials ?? []).map(formatSocial);
+  const profileDetails = [
+    {
+      label: "Region",
+      value: profile.region,
+      Icon: Globe2,
+    },
+    {
+      label: "Country",
+      value: profile.country,
+      Icon: MapPin,
+    },
+    {
+      label: "Role / Focus",
+      value: profile.role,
+      Icon: UserRound,
+    },
+  ].filter((item) => Boolean(item.value));
 
-  const hasAnyPublicInfo =
-    !!profile.contactMode ||
-    !!profile.region ||
-    !!profile.country ||
-    !!profile.role ||
-    !!profile.bio ||
-    !!profile.websiteUrl ||
-    !!profile.publicEmail ||
-    formattedSocials.length > 0;
+  const hasBio = Boolean(profile.bio);
+  const hasWebsite = Boolean(profile.websiteUrl);
+  const hasSocials = formattedSocials.length > 0;
+  const hasHeroLinks = hasSocials || hasWebsite;
+  const hasAnyPublicDetails =
+  profileDetails.length > 0 || hasBio || hasWebsite || hasSocials;
 
   return (
-    <div className="max-w-xl mx-auto py-12 px-4">
-      <Link
-        href="/directory"
-        className="text-xs font-mono text-zinc-500 hover:text-zinc-300 transition-colors mb-6 inline-block"
+    <div className="min-h-screen bg-zinc-950 text-white">
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute left-1/2 top-[-260px] h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-zinc-700/10 blur-3xl" />
+        <div className="absolute left-[15%] top-[28%] h-80 w-80 rounded-full bg-emerald-950/10 blur-3xl" />
+        <div className="absolute right-[10%] top-[36%] h-96 w-96 rounded-full bg-sky-950/10 blur-3xl" />
+      </div>
+
+      <main className="relative z-10 mx-auto max-w-[980px] px-4 py-10 sm:px-6 lg:px-8">
+        <button
+          type="button"
+          onClick={handleBackToDirectory}
+          className="mb-8 mt-2 inline-flex items-center gap-2 text-[11px] font-mono text-zinc-500 transition-colors hover:text-zinc-200"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+          Back to directory
+        </button>
+
+        <section className="overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900/80 shadow-2xl">
+          <div className="border-b border-zinc-800 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_32%),linear-gradient(135deg,rgba(255,255,255,0.04),transparent)] px-5 py-5 sm:px-7">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start">
+                {profile.avatarUrl ? (
+                  <img
+                    src={profile.avatarUrl}
+                    alt={`${displayName} avatar`}
+                    className="h-24 w-24 shrink-0 rounded-2xl border border-zinc-700 bg-zinc-950 object-cover shadow-xl"
+                  />
+                ) : (
+                  <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-950 text-xl font-mono text-sky-300 shadow-xl">
+                    {getInitials(displayName)}
+                  </div>
+                )}
+
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2.5">
+  <h1 className="min-w-0 break-words text-3xl font-bold tracking-tight text-white sm:text-4xl">
+    {displayName}
+  </h1>
+
+  <span
+    title="Verified profile"
+    aria-label="Verified profile"
+    className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-sky-400 text-white shadow-[0_0_8px_rgba(56,189,248,0.35)]"
+  >
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-3.5 w-3.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M6.5 12.5 10.2 16 17.8 8" />
+    </svg>
+  </span>
+
+  {profile.visibility === "anonymous" && (
+    <span className="rounded-full border border-zinc-700 bg-zinc-950/80 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wide text-zinc-400">
+      Anonymous
+    </span>
+  )}
+</div>
+
+{hasHeroLinks && (
+  <div className="mt-3 flex flex-wrap items-center gap-2">
+    {formattedSocials.map(({ href, label, text, Icon }) => {
+      if (!href) {
+        return (
+          <div
+            key={`${label}-${text}`}
+            title={text}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-zinc-700 bg-zinc-950/80 text-zinc-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
+          >
+            <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+          </div>
+        );
+      }
+
+      return (
+        <a
+          key={`${label}-${href}`}
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={label}
+          title={text}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-zinc-700 bg-zinc-950/80 text-zinc-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition-colors hover:border-sky-500/70 hover:text-white"
+        >
+          <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+        </a>
+      );
+    })}
+
+    {profile.websiteUrl && (
+      <a
+        href={normalizeExternalHref(profile.websiteUrl)}
+        target="_blank"
+        rel="noreferrer"
+        aria-label="Visit website"
+        title={formatWebsiteLabel(profile.websiteUrl)}
+        className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full border border-white bg-white px-3 text-[10px] font-mono font-semibold leading-none text-black shadow-[0_0_14px_rgba(255,255,255,0.08)] transition-colors hover:border-zinc-200 hover:bg-zinc-200"
       >
-        ← Back to Directory
-      </Link>
+        <span className="leading-none">Visit</span>
+        <ExternalLink className="h-3 w-3 text-black" aria-hidden="true" />
+      </a>
+    )}
+  </div>
+)}
 
-      <div className="border border-zinc-800 rounded-lg p-6 bg-zinc-900">
-        <div className="flex items-start justify-between gap-3 mb-6">
-          <div className="flex items-start gap-3">
-            {profile.avatarUrl ? (
-              <img
-                src={profile.avatarUrl}
-                alt={`${displayName} avatar`}
-                className="w-16 h-16 rounded-full object-cover border border-zinc-800 bg-zinc-950"
-              />
-            ) : (
-              <div className="w-16 h-16 rounded-full border border-zinc-800 bg-zinc-950 flex items-center justify-center text-lg font-mono text-zinc-500">
-                {displayName.slice(0, 1).toUpperCase()}
+{profile.bio && (
+  <p className="mt-4 max-w-[620px] text-sm leading-7 text-zinc-300">
+    {profile.bio}
+  </p>
+)}
+                </div>
               </div>
-            )}
 
-            <div>
-              <h1 className="text-xl font-mono font-bold text-white">
-                {displayName}
-              </h1>
-              {profile.isVerified && (
-                <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs font-mono bg-emerald-950 text-emerald-400 border border-emerald-800">
-                  ✓ Verified Ambassador
-                </span>
-              )}
+              <div
+  className={`rounded-3xl border px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] lg:w-[320px] ${contact.accentClassName}`}
+>
+  <div className="flex items-start gap-3">
+    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-current/25 bg-black/20">
+      <ContactIcon className="h-4 w-4" aria-hidden="true" />
+    </div>
+
+    <div className="min-w-0">
+      <div className="text-[10px] font-mono uppercase tracking-[0.18em] opacity-75">
+        {contact.label}
+      </div>
+
+      {profile.contactMode === "PUBLIC_CONTACT_ALLOWED" &&
+      profile.publicEmail ? (
+        <a
+          href={`mailto:${profile.publicEmail}`}
+          className="mt-1.5 block break-all text-[15px] font-mono font-semibold leading-6 text-white transition-colors hover:text-emerald-100"
+        >
+          {profile.publicEmail}
+        </a>
+      ) : (
+        <div className="mt-1.5 text-[15px] font-mono font-semibold leading-6 text-white">
+          {contact.title}
+        </div>
+      )}
+
+      <p className="mt-2 max-w-[210px] text-[11px] leading-5 opacity-80">
+        {contact.description}
+      </p>
+    </div>
+  </div>
+</div>
             </div>
           </div>
 
-          {profile.visibility === "anonymous" && (
-            <span className="text-xs font-mono text-zinc-600 border border-zinc-800 px-2 py-1 rounded">
-              Anonymous
-            </span>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-4 text-sm font-mono">
-          {profile.contactMode && (
-            <div>
-              <span className="text-xs text-zinc-600 block mb-0.5 uppercase tracking-wider">
-                Contact
-              </span>
-              <span className="text-zinc-300">{formatContactMode(profile.contactMode)}</span>
-            </div>
-          )}
-
-          {profile.region && (
-            <div>
-              <span className="text-xs text-zinc-600 block mb-0.5 uppercase tracking-wider">
-                Region
-              </span>
-              <span className="text-zinc-300">{profile.region}</span>
-            </div>
-          )}
-
-          {profile.country && (
-            <div>
-              <span className="text-xs text-zinc-600 block mb-0.5 uppercase tracking-wider">
-                Country
-              </span>
-              <span className="text-zinc-300">{profile.country}</span>
-            </div>
-          )}
-
-          {profile.role && (
-            <div>
-              <span className="text-xs text-zinc-600 block mb-0.5 uppercase tracking-wider">
-                Role / Focus
-              </span>
-              <span className="text-zinc-300">{profile.role}</span>
-            </div>
-          )}
-
-          {profile.bio && (
-            <div>
-              <span className="text-xs text-zinc-600 block mb-0.5 uppercase tracking-wider">
-                Bio
-              </span>
-              <span className="text-zinc-300 leading-relaxed">{profile.bio}</span>
-            </div>
-          )}
-
-          {profile.websiteUrl && (
-            <div>
-              <span className="text-xs text-zinc-600 block mb-0.5 uppercase tracking-wider">
-                Website
-              </span>
-              <a
-                href={profile.websiteUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="text-zinc-300 hover:text-white break-all"
-              >
-                {profile.websiteUrl}
-              </a>
-            </div>
-          )}
-
-          {profile.publicEmail && (
-            <div>
-              <span className="text-xs text-zinc-600 block mb-0.5 uppercase tracking-wider">
-                Email
-              </span>
-              <a
-                href={`mailto:${profile.publicEmail}`}
-                className="text-zinc-300 hover:text-white break-all"
-              >
-                {profile.publicEmail}
-              </a>
-            </div>
-          )}
-
-          {formattedSocials.length > 0 && (
-            <div>
-              <span className="text-xs text-zinc-600 block mb-2 uppercase tracking-wider">
-                Socials
-              </span>
-              <div className="flex flex-col gap-2">
-                {formattedSocials.map((social) => (
-                  <div key={`${social.label}-${social.text}`}>
-                    <span className="text-zinc-600 mr-2">{social.label}:</span>
-                    {social.href ? (
-                      <a
-                        href={social.href}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-zinc-300 hover:text-white break-all"
-                      >
-                        {social.text}
-                      </a>
-                    ) : (
-                      <span className="text-zinc-300 break-all">
-                        {social.text}
-                      </span>
-                    )}
-                  </div>
-                ))}
+          <div className="space-y-4 p-5 sm:p-7">
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-mono font-semibold text-white">
+                    Public profile details
+                  </h2>
+                  <p className="mt-1 text-[11px] font-mono text-zinc-600">
+                    Information this ambassador has chosen to show.
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
 
-          {!hasAnyPublicInfo && (
-            <div className="text-zinc-600 text-xs">
-              No public information disclosed.
+              {hasAnyPublicDetails ? (
+                <div className="space-y-3">
+                  {profileDetails.length > 0 && (
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      {profileDetails.map(({ label, value, Icon }) => (
+                        <div
+                          key={label}
+                          className="rounded-xl border border-zinc-800 bg-zinc-900/70 px-4 py-3"
+                        >
+                          <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wide text-zinc-500">
+                            <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                            <span>{label}</span>
+                          </div>
+                          <div className="mt-2 break-words text-sm font-mono leading-5 text-zinc-200">
+                            {value}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {!hasBio && (
+                    <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-900/40 p-4 text-[11px] font-mono leading-5 text-zinc-600">
+                      Bio is hidden or not provided.
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-900/40 p-5">
+                  <div className="text-sm font-mono text-zinc-400">
+                    Limited public details
+                  </div>
+                  <p className="mt-2 text-[11px] font-mono leading-5 text-zinc-600">
+                    This profile limits some public details by choice.
+                  </p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </div>
+
+            <div className="grid gap-4 lg:grid-cols-3">
+              <div className="min-h-[108px] rounded-2xl border border-emerald-900/60 bg-emerald-950/20 p-3.5 shadow-[0_0_0_1px_rgba(16,185,129,0.05)]">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-800/50 bg-emerald-950/40">
+                    <ShieldCheck
+                      className="h-3.5 w-3.5 text-emerald-300"
+                      aria-hidden="true"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="text-sm font-mono font-semibold text-emerald-200">
+                      Verified
+                    </div>
+                    <p className="mt-1.5 text-[11px] font-mono leading-5 text-zinc-400">
+                      Passed the directory verification flow. Not official Midnight identity
+                      verification.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="min-h-[108px] rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3.5">
+                <div className="flex items-start gap-3">
+                  <Info
+                    className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500"
+                    aria-hidden="true"
+                  />
+                  <div>
+                    <h2 className="text-sm font-mono font-semibold text-white">
+                      Privacy-aware profile
+                    </h2>
+                    <p className="mt-1.5 text-[11px] font-mono leading-5 text-zinc-600">
+                      Public fields are controlled by the ambassador. Any hidden details are
+                      intentional.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="hidden lg:block" aria-hidden="true" />
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
   );
 }

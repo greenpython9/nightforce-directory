@@ -3,8 +3,7 @@ import { Link, useLocation } from "wouter";
 import { CobeAmbassadorGlobe } from "../components/CobeAmbassadorGlobe";
 import { ProfileCard } from "../components/ProfileCard";
 import { MOCK_DIRECTORY_PROFILES } from "../data/mockDirectoryProfiles";
-
-const API_BASE_URL = "http://127.0.0.1:8787";
+import { buildNightforceApiUrl } from "../lib/nightforceApi";
 
 type ContactMode =
   | "NO_CONTACT"
@@ -159,7 +158,9 @@ export function Landing() {
       setDirectoryError("");
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/nightforce/directory`);
+        const response = await fetch(
+          buildNightforceApiUrl("/api/nightforce/directory"),
+        );
 
         let payload: unknown = null;
 

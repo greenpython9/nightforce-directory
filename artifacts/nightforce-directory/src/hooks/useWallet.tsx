@@ -18,8 +18,7 @@ import {
   type ContactModeWriteValue,
 } from "../services/contactModeWrite";
 import type { VerificationStatus } from "../types";
-
-const API_BASE_URL = "http://127.0.0.1:8787";
+import { buildNightforceApiUrl } from "../lib/nightforceApi";
 
 type ConnectionMode = "mock" | "midnight" | null;
 
@@ -97,7 +96,9 @@ async function fetchBackendVerificationStatus(
   }
 
   const response = await fetch(
-    `${API_BASE_URL}/api/nightforce/wallet-bindings/by-wallet/${encodeURIComponent(walletAddress)}`,
+    buildNightforceApiUrl(
+      `/api/nightforce/wallet-bindings/by-wallet/${encodeURIComponent(walletAddress)}`,
+    ),
   );
 
   if (response.status === 404) {

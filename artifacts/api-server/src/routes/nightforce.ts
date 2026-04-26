@@ -404,7 +404,11 @@ router.get("/nightforce/public-profiles/:publicId", (req, res) => {
     (item) => item.publicId === publicId || item.slug === publicId,
   );
 
-  if (!profile || profile.publishState !== "published") {
+  if (
+    !profile ||
+    profile.publishState !== "published" ||
+    profile.requestedVisibility !== "public"
+  ) {
     res.status(404).json({
       error: "Public profile not found.",
     });
@@ -412,7 +416,7 @@ router.get("/nightforce/public-profiles/:publicId", (req, res) => {
   }
 
   res.json({
-    profile,
+    profile: toPublicProfile(profile),
   });
 });
 
@@ -452,13 +456,109 @@ function getPublicContactMode(profile: ProfileRecord): ContactMode {
   return deriveContactMode(profile);
 }
 
+type FieldVisibilityKey =
+  | "avatarUrl"
+  | "displayName"
+  | "region"
+  | "country"
+  | "role"
+  | "bio"
+  | "websiteUrl"
+  | "email"
+  | "x"
+  | "youtube"
+  | "discord"
+  | "telegram";
+
+function isPublicField(profile: ProfileRecord, key: FieldVisibilityKey): boolean {
+  return asRecord(profile.fieldVisibility)[key] === "public";
+}
+
+function getSocialVisibilityKey(
+  social: string,
+): "x" | "youtube" | "discord" | "telegram" | null {
+  const value = social.trim();
+
+  if (value.startsWith("https://x.com/")) {
+    return "x";
+  }
+
+  if (value.startsWith("https://youtube.com/@")) {
+    return "youtube";
+  }
+
+  if (value.startsWith("discord:")) {
+    return "discord";
+  }
+
+  if (value.startsWith("https://t.me/")) {
+    return "telegram";
+  }
+
+  return null;
+}
+
+function filterPublicSocials(profile: ProfileRecord): string[] {
+  return profile.socials.filter((social) => {
+    const key = getSocialVisibilityKey(social);
+
+    if (!key) {
+      return false;
+    }
+
+    return isPublicField(profile, key);
+  });
+}
+
+function getSanitizedPublicContactMode(profile: ProfileRecord): ContactMode {
+  if (isPublicField(profile, "email") && profile.publicEmail) {
+    return "PUBLIC_CONTACT_ALLOWED";
+  }
+
+  const currentMode = getPublicContactMode(profile);
+
+  if (currentMode === "PRIVATE_CONTACT_AVAILABLE") {
+    return "PRIVATE_CONTACT_AVAILABLE";
+  }
+
+  if (profile.encryptedHiddenPayload) {
+    return "PRIVATE_CONTACT_AVAILABLE";
+  }
+
+  return "NO_CONTACT";
+}
+
+function toPublicProfile(profile: ProfileRecord) {
+  return {
+    publicId: profile.publicId,
+    slug: profile.slug,
+    displayName: isPublicField(profile, "displayName")
+      ? profile.displayName
+      : null,
+    region: isPublicField(profile, "region") ? profile.region : null,
+    country: isPublicField(profile, "country") ? profile.country : null,
+    role: isPublicField(profile, "role") ? profile.role : null,
+    bio: isPublicField(profile, "bio") ? profile.bio : null,
+    avatarUrl: isPublicField(profile, "avatarUrl") ? profile.avatarUrl : null,
+    websiteUrl: isPublicField(profile, "websiteUrl")
+      ? profile.websiteUrl
+      : null,
+    publicEmail: isPublicField(profile, "email") ? profile.publicEmail : null,
+    contactMode: getSanitizedPublicContactMode(profile),
+    socials: filterPublicSocials(profile),
+    requestedVisibility: profile.requestedVisibility,
+    publishState: profile.publishState,
+  };
+}
+
 function getPublishedDirectoryProfiles() {
   return Array.from(profilesByVerificationRequestId.values())
-    .filter((profile) => profile.publishState === "published")
-    .map((profile) => ({
-      ...profile,
-      contactMode: getPublicContactMode(profile),
-    }));
+    .filter(
+      (profile) =>
+        profile.publishState === "published" &&
+        profile.requestedVisibility === "public",
+    )
+    .map(toPublicProfile);
 }
 
 router.get("/nightforce/public-profiles", (_req, res) => {

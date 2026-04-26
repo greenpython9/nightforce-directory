@@ -3,8 +3,8 @@ import { useWallet } from "../hooks/useWallet";
 import { getConnectedMidnightApi, NIGHTFORCE_APP_MODE } from "../services/walletService";
 import { ProfileCard } from "../components/ProfileCard";
 import type { ContactMode, ProfileVisibility, PublicProfile } from "../types";
+import { buildNightforceApiUrl } from "../lib/nightforceApi";
 
-const API_BASE_URL = "http://127.0.0.1:8787";
 const AVATAR_MAX_BYTES = 500 * 1024;
 const AVATAR_ALLOWED_TYPES = new Set([
   "image/jpeg",
@@ -383,7 +383,9 @@ async function updateContactModeSyncMetadata(args: {
   contactModeSyncedValue: ContactMode | null;
 }): Promise<void> {
   const response = await fetch(
-    `${API_BASE_URL}/api/nightforce/profiles/${args.verificationRequestId}/contact-mode-sync`,
+    buildNightforceApiUrl(
+      `/api/nightforce/profiles/${args.verificationRequestId}/contact-mode-sync`,
+    ),
     {
       method: "POST",
       headers: {
@@ -805,7 +807,9 @@ export function MyProfile() {
 
     try {
       const bindingResponse = await fetch(
-        `${API_BASE_URL}/api/nightforce/wallet-bindings/by-wallet/${encodeURIComponent(walletId)}`,
+        buildNightforceApiUrl(
+          `/api/nightforce/wallet-bindings/by-wallet/${encodeURIComponent(walletId)}`,
+        ),
       );
 
       let bindingPayload: unknown = null;
@@ -843,7 +847,9 @@ export function MyProfile() {
       setWalletBindingId(bindingId);
 
       const profileResponse = await fetch(
-        `${API_BASE_URL}/api/nightforce/profiles/${bindingVerificationRequestId}`,
+        buildNightforceApiUrl(
+          `/api/nightforce/profiles/${bindingVerificationRequestId}`,
+        ),
       );
 
       let profilePayload: unknown = null;
@@ -1065,7 +1071,7 @@ export function MyProfile() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await fetch(`${API_BASE_URL}/api/nightforce/uploads/avatar`, {
+      const response = await fetch(buildNightforceApiUrl("/api/nightforce/uploads/avatar"), {
         method: "POST",
         body: formData,
       });
@@ -1120,7 +1126,7 @@ export function MyProfile() {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/nightforce/profiles/${verificationRequestId}`,
+        buildNightforceApiUrl(`/api/nightforce/profiles/${verificationRequestId}`),
       );
 
       let payload: unknown = null;
@@ -1222,7 +1228,7 @@ export function MyProfile() {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/nightforce/profiles/${verificationRequestId}`,
+        buildNightforceApiUrl(`/api/nightforce/profiles/${verificationRequestId}`),
         {
           method: "PUT",
           headers: {
@@ -1499,7 +1505,7 @@ export function MyProfile() {
         : savedEncryptedHiddenPayload;
 
       const response = await fetch(
-        `${API_BASE_URL}/api/nightforce/profiles/${verificationRequestId}`,
+        buildNightforceApiUrl(`/api/nightforce/profiles/${verificationRequestId}`),
         {
           method: "PUT",
           headers: {

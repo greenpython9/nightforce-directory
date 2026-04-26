@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { useWallet } from "../hooks/useWallet";
 import { StatusBadge } from "../components/StatusBadge";
 import { ADMIN_WALLET_ID } from "../services/walletService";
-
-const API_BASE_URL = "http://127.0.0.1:8787";
+import { buildNightforceApiUrl } from "../lib/nightforceApi";
 
 type Tab = "pending" | "approved" | "rejected";
 
@@ -44,7 +43,7 @@ export function AdminReview() {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/nightforce/verification-requests`,
+        buildNightforceApiUrl("/api/nightforce/verification-requests"),
       );
 
       let payload: unknown = null;
@@ -134,7 +133,9 @@ export function AdminReview() {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/nightforce/verification-requests/${selected.id}/${action}`,
+        buildNightforceApiUrl(
+          `/api/nightforce/verification-requests/${selected.id}/${action}`,
+        ),
         {
           method: "POST",
           headers: {

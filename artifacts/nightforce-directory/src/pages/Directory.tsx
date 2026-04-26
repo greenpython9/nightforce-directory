@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ProfileCard } from "../components/ProfileCard";
 import { MOCK_DIRECTORY_PROFILES } from "../data/mockDirectoryProfiles";
 import type { PublicProfile } from "../types";
-
-const API_BASE_URL = "http://127.0.0.1:8787";
+import { buildNightforceApiUrl } from "../lib/nightforceApi";
 
 type DirectoryProfileRecord = {
   publicId: string;
@@ -61,7 +60,9 @@ export function Directory() {
       setError("");
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/nightforce/directory`);
+        const response = await fetch(
+          buildNightforceApiUrl("/api/nightforce/directory"),
+        );
 
         let payload: unknown = null;
 

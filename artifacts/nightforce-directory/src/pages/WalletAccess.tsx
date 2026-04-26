@@ -10,8 +10,7 @@ import {
   type ProfileProofState,
 } from "../services/walletService";
 import { useEffect, useMemo, useState } from "react";
-
-const API_BASE_URL = "http://127.0.0.1:8787";
+import { buildNightforceApiUrl } from "../lib/nightforceApi";
 
 function shortenValue(value: string | null, left = 10, right = 8) {
   if (!value) return "—";
@@ -137,7 +136,7 @@ export function WalletAccess() {
     setBindSuccess(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/nightforce/wallet-bindings`, {
+      const response = await fetch(buildNightforceApiUrl("/api/nightforce/wallet-bindings"), {
         method: "POST",
         headers: {
           "content-type": "application/json",

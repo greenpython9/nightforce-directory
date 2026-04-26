@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from "react";
-
-const API_BASE_URL = "http://127.0.0.1:8787";
+import { buildNightforceApiUrl } from "../lib/nightforceApi";
 
 export function RequestVerification() {
   const [discordHandle, setDiscordHandle] = useState("");
@@ -23,7 +22,7 @@ export function RequestVerification() {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/nightforce/verification-requests`,
+        buildNightforceApiUrl("/api/nightforce/verification-requests"),
         {
           method: "POST",
           headers: {
