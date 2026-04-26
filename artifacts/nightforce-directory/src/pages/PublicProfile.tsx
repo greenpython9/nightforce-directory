@@ -534,35 +534,35 @@ export function PublicProfile() {
         <div className="absolute right-[10%] top-[36%] h-96 w-96 rounded-full bg-emerald-950/10 blur-3xl" />
       </div>
 
-      <main className="relative z-10 mx-auto max-w-[980px] px-4 py-10 sm:px-6 lg:px-8">
+      <main className="relative z-10 mx-auto max-w-[980px] px-3 py-6 sm:px-6 sm:py-10 lg:px-8">
         <button
           type="button"
           onClick={handleBackToDirectory}
-          className="mb-8 mt-2 inline-flex items-center gap-2 text-[11px] font-mono text-zinc-500 transition-colors hover:text-zinc-200"
+          className="mb-5 mt-1 inline-flex items-center gap-2 text-[11px] font-mono text-zinc-500 transition-colors hover:text-zinc-200 sm:mb-8 sm:mt-2"
         >
           <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
           Back to directory
         </button>
 
         <section className="overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(24,24,27,0.96),rgba(9,9,11,0.98))] shadow-[0_24px_80px_rgba(0,0,0,0.3)]">
-          <div className="border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.045),transparent)] px-5 py-5 sm:px-7">
+          <div className="border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.045),transparent)] px-4 py-4 sm:px-7 sm:py-5">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-              <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start">
+              <div className="flex min-w-0 flex-col items-center gap-3 text-center sm:flex-row sm:items-start sm:text-left">
                 {profile.avatarUrl ? (
                   <img
                     src={profile.avatarUrl}
                     alt={`${displayName} avatar`}
-                    className="h-24 w-24 shrink-0 rounded-2xl border border-white/10 bg-zinc-950 object-cover shadow-[0_0_0_4px_rgba(255,255,255,0.03)]"
+                    className="h-20 w-20 shrink-0 rounded-2xl border border-white/10 bg-zinc-950 object-cover shadow-[0_0_0_4px_rgba(255,255,255,0.03)] sm:h-24 sm:w-24"
                   />
                 ) : (
-                  <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl border border-emerald-300/20 bg-[radial-gradient(circle_at_30%_15%,rgba(52,211,153,0.22),transparent_38%),rgba(2,6,23,0.94)] text-xl font-mono text-emerald-200 shadow-xl">
+                  <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border border-emerald-300/20 bg-[radial-gradient(circle_at_30%_15%,rgba(52,211,153,0.22),transparent_38%),rgba(2,6,23,0.94)] text-lg font-mono text-emerald-200 shadow-xl sm:h-24 sm:w-24 sm:text-xl">
                     {getInitials(displayName)}
                   </div>
                 )}
 
                 <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2.5">
-  <h1 className="min-w-0 break-words text-3xl font-bold tracking-tight text-white sm:text-4xl">
+                  <div className="flex flex-wrap items-center justify-center gap-2.5 sm:justify-start">
+  <h1 className="min-w-0 break-words text-2xl font-bold tracking-tight text-white sm:text-4xl">
     {displayName}
   </h1>
 
@@ -593,7 +593,7 @@ export function PublicProfile() {
 </div>
 
 {hasHeroLinks && (
-  <div className="mt-3 flex flex-wrap items-center gap-2">
+  <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
     {formattedSocials.map(({ href, label, text, Icon }) => {
       if (!href) {
         return (
@@ -639,7 +639,7 @@ export function PublicProfile() {
 )}
 
 {profile.bio && (
-  <p className="mt-4 max-w-[620px] text-sm leading-7 text-zinc-300">
+  <p className="mt-4 max-w-[620px] text-sm leading-7 text-zinc-300 sm:text-left">
     {profile.bio}
   </p>
 )}
@@ -647,7 +647,7 @@ export function PublicProfile() {
               </div>
 
               <div
-  className={`rounded-3xl border px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] lg:w-[320px] ${contact.accentClassName}`}
+  className={`w-full rounded-3xl border px-4 py-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:px-5 lg:w-[320px] ${contact.accentClassName}`}
 >
   <div className="flex items-start gap-3">
     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-current/25 bg-black/20">
@@ -682,7 +682,7 @@ export function PublicProfile() {
             </div>
           </div>
 
-          <div className="space-y-4 p-5 sm:p-7">
+          <div className="space-y-4 p-4 sm:p-7">
             <div className="rounded-2xl border border-white/10 bg-black/25 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
@@ -698,7 +698,7 @@ export function PublicProfile() {
               {hasAnyPublicDetails ? (
                 <div className="space-y-3">
                   {profileDetails.length > 0 && (
-                    <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="grid gap-3 md:grid-cols-3">
                       {profileDetails.map(({ label, value, Icon }) => (
                         <div
                           key={label}
