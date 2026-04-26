@@ -298,15 +298,33 @@ export function Directory() {
     { label: "No contact", value: "none" },
   ];
 
+  const directorySummary = hasActiveFilters
+    ? `Showing ${filtered.length} of ${allProfiles.length} verified ambassador${
+        allProfiles.length !== 1 ? "s" : ""
+      }. Filters are applied.`
+    : `${allProfiles.length} verified ambassador${
+        allProfiles.length !== 1 ? "s" : ""
+      } listed. Showing only publicly disclosed information.`;
+
   return (
     <div className="mx-auto max-w-5xl px-3 py-6 sm:px-4 sm:py-8">
-      <h1 className="text-xl font-mono font-bold text-white mb-2">
-        Ambassador Directory
-      </h1>
-      <p className="text-xs font-mono text-zinc-500 mb-6">
-        Showing only publicly disclosed information. {allProfiles.length} verified ambassador
-        {allProfiles.length !== 1 ? "s" : ""} listed.
-      </p>
+      <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-xl font-mono font-bold text-white">
+            Directory
+          </h1>
+          <p className="mt-2 text-xs font-mono leading-6 text-zinc-500">
+            {directorySummary}
+          </p>
+        </div>
+
+        {hasActiveFilters && (
+          <div className="inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 text-[10px] font-mono font-semibold uppercase tracking-[0.16em] text-emerald-100">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
+            Filtered
+          </div>
+        )}
+      </div>
 
       {error && (
         <div className="mb-4 text-xs font-mono text-red-400">{error}</div>
