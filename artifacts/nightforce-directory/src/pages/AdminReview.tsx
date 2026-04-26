@@ -35,6 +35,38 @@ type ReviewConfirmation = {
   requests: VerificationRequestRecord[];
 };
 
+function formatCsvCell(value: unknown): string {
+  let text = value === null || value === undefined ? "" : String(value);
+
+  // Helps prevent spreadsheet formula injection when opened in Excel/Sheets.
+  if (/^[=+\-@\t\r]/.test(text)) {
+    text = `'${text}`;
+  }
+
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function downloadCsvFile(filename: string, rows: string[][]) {
+  const csv = rows
+    .map((row) => row.map(formatCsvCell).join(","))
+    .join("\n");
+
+  const blob = new Blob(["\ufeff", csv], {
+    type: "text/csv;charset=utf-8;",
+  });
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  URL.revokeObjectURL(url);
+}
+
 export function AdminReview() {
   const { walletId } = useWallet();
   const [tab, setTab] = useState<Tab>("pending");
@@ -168,6 +200,10 @@ export function AdminReview() {
     (req) => req.status === "pending",
   );
   const bulkActionDisabled = acting || bulkEligibleRequests.length === 0;
+
+  const selectedExportRequests = requests.filter((req) =>
+    selectedRequestIds.includes(req.id),
+  );
 
   const handleSelect = (req: VerificationRequestRecord) => {
     setSelected(req);
@@ -317,6 +353,60 @@ export function AdminReview() {
     });
   };
 
+  const handleExportCsv = (mode: "visible" | "selected") => {
+    const exportRequests =
+      mode === "selected" ? selectedExportRequests : filtered;
+
+    if (exportRequests.length === 0) {
+      setError(
+        mode === "selected"
+          ? "Select at least one request before exporting."
+          : "No visible requests to export.",
+      );
+      return;
+    }
+
+    setError("");
+
+    const rows = [
+      [
+        "Request ID",
+        "Status",
+        "Discord Handle",
+        "Country / Region",
+        "Wallet Address",
+        "Note",
+        "Admin Notes",
+        "Created At",
+        "Reviewed At",
+        "Updated At",
+      ],
+      ...exportRequests.map((request) => [
+        request.id,
+        request.status,
+        request.discordHandle,
+        request.region,
+        request.midnightWalletAddress ?? "",
+        request.note,
+        request.adminNotes,
+        request.createdAt,
+        request.reviewedAt ?? "",
+        request.updatedAt,
+      ]),
+    ];
+
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/[:.]/g, "-");
+
+    const filename =
+      mode === "selected"
+        ? `nightforce-selected-requests-${timestamp}.csv`
+        : `nightforce-${tab}-visible-requests-${timestamp}.csv`;
+
+    downloadCsvFile(filename, rows);
+  };
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 pb-20 pt-8 sm:pt-10">
       <div className="mb-6">
@@ -414,6 +504,26 @@ export function AdminReview() {
               <span className="text-xs font-mono text-zinc-500">
                 {selectedVisibleCount} selected
               </span>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                disabled={filtered.length === 0}
+                onClick={() => handleExportCsv("visible")}
+                className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-mono font-semibold text-zinc-300 transition-all hover:border-emerald-300/30 hover:bg-emerald-400/10 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Export visible CSV ({filtered.length})
+              </button>
+
+              <button
+                type="button"
+                disabled={selectedExportRequests.length === 0}
+                onClick={() => handleExportCsv("selected")}
+                className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-mono font-semibold text-zinc-300 transition-all hover:border-emerald-300/30 hover:bg-emerald-400/10 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Export selected CSV ({selectedExportRequests.length})
+              </button>
             </div>
 
             {tab === "pending" && (
