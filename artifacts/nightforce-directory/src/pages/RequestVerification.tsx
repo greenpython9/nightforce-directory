@@ -364,52 +364,65 @@ export function RequestVerification() {
   }
 
   return (
-    <div className="max-w-xl mx-auto py-12 px-4">
-      <h1 className="text-xl font-mono font-bold text-white mb-2">Request Verification</h1>
+    <div className="mx-auto w-full max-w-2xl px-4 pb-20 pt-12 sm:pt-14">
+      <div className="mb-6">
+        <div className="mb-2 text-[11px] font-mono uppercase tracking-[0.24em] text-emerald-300/70">
+          Directory Access
+        </div>
+        <h1 className="text-2xl font-mono font-bold tracking-tight text-white">
+          Request Verification
+        </h1>
+        <p className="mt-2 max-w-xl text-sm font-mono leading-6 text-zinc-500">
+          Submit your existing ambassador details and link this request to your connected Midnight wallet.
+        </p>
+      </div>
 
-      <div className="border border-zinc-700 rounded-lg p-4 bg-zinc-900 mb-6 text-xs font-mono text-zinc-400 leading-relaxed">
-        <p className="font-semibold text-zinc-300 mb-1">Important</p>
+      <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.035] p-4 text-xs font-mono leading-relaxed text-zinc-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+        <p className="mb-1 font-semibold text-zinc-200">Important</p>
         <p>This is not an application to become a Nightforce ambassador.</p>
         <p>This is for existing ambassadors who want access to the directory.</p>
       </div>
 
-      <div className="mb-6 rounded-lg border border-emerald-400/20 bg-zinc-900 p-4 text-xs font-mono leading-relaxed text-zinc-400">
-        <p className="mb-1 text-emerald-300">Wallet connected</p>
+      <div className="mb-6 rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.045] p-4 text-xs font-mono leading-relaxed text-zinc-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+        <p className="mb-1 font-semibold text-emerald-300">Wallet connected</p>
         <p>
           Your request will be linked to your currently connected Midnight wallet so this page can
           show your pending, approved, or rejected status when you return.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      <form
+        onSubmit={handleSubmit}
+        className="flex flex-col gap-5 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(24,24,27,0.82),rgba(9,9,11,0.94))] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.035)]"
+      >
         <div>
-          <label className="block text-xs font-mono text-zinc-400 mb-1.5">
-            Discord Handle <span className="text-red-500">*</span>
+          <label className="mb-1.5 block text-[11px] font-mono uppercase tracking-[0.16em] text-zinc-500">
+            Discord Handle <span className="text-emerald-300">*</span>
           </label>
           <input
             type="text"
             value={discordHandle}
             onChange={(e) => setDiscordHandle(e.target.value)}
             placeholder="username#0000"
-            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500"
+            className="w-full rounded-xl border border-white/10 bg-black/35 px-3.5 py-3 text-sm font-mono text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] placeholder:text-zinc-700 transition-all focus:border-emerald-300/35 focus:bg-black/45 focus:outline-none focus:ring-2 focus:ring-emerald-400/10"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-mono text-zinc-400 mb-1.5">
-            Region / Country <span className="text-red-500">*</span>
+          <label className="mb-1.5 block text-[11px] font-mono uppercase tracking-[0.16em] text-zinc-500">
+            Country <span className="text-emerald-300">*</span>
           </label>
           <input
             type="text"
             value={region}
             onChange={(e) => setRegion(e.target.value)}
             placeholder="e.g. Malaysia, Southeast Asia"
-            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500"
+            className="w-full rounded-xl border border-white/10 bg-black/35 px-3.5 py-3 text-sm font-mono text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] placeholder:text-zinc-700 transition-all focus:border-emerald-300/35 focus:bg-black/45 focus:outline-none focus:ring-2 focus:ring-emerald-400/10"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-mono text-zinc-400 mb-1.5">
+          <label className="mb-1.5 block text-[11px] font-mono uppercase tracking-[0.16em] text-zinc-500">
             Optional Note
           </label>
           <textarea
@@ -417,16 +430,20 @@ export function RequestVerification() {
             onChange={(e) => setNote(e.target.value)}
             placeholder="Any additional context for the reviewer..."
             rows={3}
-            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 resize-none"
+            className="w-full resize-none rounded-xl border border-white/10 bg-black/35 px-3.5 py-3 text-sm font-mono text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] placeholder:text-zinc-700 transition-all focus:border-emerald-300/35 focus:bg-black/45 focus:outline-none focus:ring-2 focus:ring-emerald-400/10"
           />
         </div>
 
-        {error && <div className="text-xs font-mono text-red-400">{error}</div>}
+        {error && (
+          <div className="rounded-xl border border-red-900/60 bg-red-950/25 px-3.5 py-3 text-xs font-mono leading-5 text-red-300">
+            {error}
+          </div>
+        )}
 
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-4 py-2.5 text-sm font-mono font-semibold text-emerald-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all hover:border-emerald-300/40 hover:bg-emerald-400/15 hover:text-white hover:shadow-[0_0_18px_rgba(52,211,153,0.18),inset_0_1px_0_rgba(255,255,255,0.04)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-1 rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-4 py-3 text-sm font-mono font-semibold text-emerald-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all hover:border-emerald-300/40 hover:bg-emerald-400/15 hover:text-white hover:shadow-[0_0_22px_rgba(52,211,153,0.18),inset_0_1px_0_rgba(255,255,255,0.04)] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {submitting ? "Submitting..." : "Submit Request"}
         </button>
