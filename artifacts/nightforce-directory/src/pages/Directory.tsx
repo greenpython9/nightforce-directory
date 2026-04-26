@@ -230,7 +230,7 @@ export function Directory() {
     [allProfiles],
   );
 
-  const filtered = useMemo(
+const filtered = useMemo(
     () =>
       allProfiles.filter((p) => {
         if (search.trim()) {
@@ -279,6 +279,25 @@ export function Directory() {
     [allProfiles, search, contactFilter, regionFilter, countryFilter, roleFilter],
   );
 
+  const hasActiveFilters = Boolean(
+    search || contactFilter || regionFilter || countryFilter || roleFilter,
+  );
+
+  const clearFilters = () => {
+    setSearch("");
+    setContactFilter("");
+    setRegionFilter("");
+    setCountryFilter("");
+    setRoleFilter("");
+  };
+
+  const contactOptions: { label: string; value: ContactFilter }[] = [
+    { label: "All", value: "" },
+    { label: "Public", value: "public" },
+    { label: "Private", value: "private" },
+    { label: "No contact", value: "none" },
+  ];
+
   return (
     <div className="max-w-5xl mx-auto py-8 px-4">
       <h1 className="text-xl font-mono font-bold text-white mb-2">
@@ -293,75 +312,209 @@ export function Directory() {
         <div className="mb-4 text-xs font-mono text-red-400">{error}</div>
       )}
 
-      <div className="flex flex-wrap gap-3 mb-6">
+      <div className="mb-6 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(24,24,27,0.92),rgba(9,9,11,0.96))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-600">
+              Directory controls
+            </div>
+            <div className="mt-1 text-sm font-mono font-semibold text-white">
+              Filter verified ambassadors
+            </div>
+          </div>
+
+          <div className="text-xs font-mono text-zinc-500">
+            Showing{" "}
+            <span className="font-semibold text-zinc-300">{filtered.length}</span>{" "}
+            of{" "}
+            <span className="font-semibold text-zinc-300">
+              {allProfiles.length}
+            </span>
+          </div>
+        </div>
+
         <input
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by name, region, country, or role..."
-          className="flex-1 min-w-48 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500"
+          className="mb-4 w-full rounded-xl border border-white/10 bg-black/35 px-3 py-2.5 text-sm font-mono text-white placeholder:text-zinc-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none transition-colors focus:border-emerald-300/40"
         />
-        <select
-          value={contactFilter}
-          onChange={(e) => setContactFilter(e.target.value as ContactFilter)}
-          className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-zinc-300 focus:outline-none focus:border-zinc-500"
-        >
-          <option value="">All Contact</option>
-          <option value="public">Public Contact</option>
-          <option value="private">Private Contact</option>
-          <option value="none">No Contact</option>
-        </select>
 
-        <select
-          value={regionFilter}
-          onChange={(e) => setRegionFilter(e.target.value)}
-          className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-zinc-300 focus:outline-none focus:border-zinc-500"
-        >
-          <option value="">All Regions</option>
-          {regions.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
+        <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
+          <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+            <div className="mb-2 text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-600">
+              Contact
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {contactOptions.map((option) => {
+                const isActive = contactFilter === option.value;
 
-        <select
-          value={countryFilter}
-          onChange={(e) => setCountryFilter(e.target.value)}
-          className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-zinc-300 focus:outline-none focus:border-zinc-500"
-        >
-          <option value="">All Countries</option>
-          {countries.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-        <select
-          value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value)}
-          className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-zinc-300 focus:outline-none focus:border-zinc-500"
-        >
-          <option value="">All Roles</option>
-          {roles.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
-        {(search || contactFilter || regionFilter || countryFilter || roleFilter) && (
-          <button
-            onClick={() => {
-              setSearch("");
-              setContactFilter("");
-              setRegionFilter("");
-              setCountryFilter("");
-              setRoleFilter("");
-            }}
-            className="text-xs font-mono text-zinc-500 hover:text-zinc-300 border border-zinc-800 px-3 py-2 rounded-lg transition-colors"
-          >
-            Clear
-          </button>
+                return (
+                  <button
+                    key={option.label}
+                    type="button"
+                    onClick={() => setContactFilter(option.value)}
+                    className={`rounded-full border px-3 py-1.5 text-[11px] font-mono transition-all ${
+                      isActive
+                        ? "border-emerald-300/35 bg-emerald-400/10 text-emerald-100 shadow-[0_0_18px_rgba(52,211,153,0.12)]"
+                        : "border-white/10 bg-white/[0.03] text-zinc-500 hover:border-white/20 hover:text-zinc-300"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+            <div className="mb-2 text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-600">
+              Region
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setRegionFilter("")}
+                className={`rounded-full border px-3 py-1.5 text-[11px] font-mono transition-all ${
+                  regionFilter === ""
+                    ? "border-emerald-300/35 bg-emerald-400/10 text-emerald-100 shadow-[0_0_18px_rgba(52,211,153,0.12)]"
+                    : "border-white/10 bg-white/[0.03] text-zinc-500 hover:border-white/20 hover:text-zinc-300"
+                }`}
+              >
+                All
+              </button>
+
+              {regions.map((region) => {
+                const isActive = regionFilter === region;
+
+                return (
+                  <button
+                    key={region}
+                    type="button"
+                    onClick={() => setRegionFilter(region)}
+                    className={`rounded-full border px-3 py-1.5 text-[11px] font-mono transition-all ${
+                      isActive
+                        ? "border-emerald-300/35 bg-emerald-400/10 text-emerald-100 shadow-[0_0_18px_rgba(52,211,153,0.12)]"
+                        : "border-white/10 bg-white/[0.03] text-zinc-500 hover:border-white/20 hover:text-zinc-300"
+                    }`}
+                  >
+                    {region}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <label className="block">
+            <span className="mb-2 block text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-600">
+              Country
+            </span>
+            <select
+              value={countryFilter}
+              onChange={(e) => setCountryFilter(e.target.value)}
+              className="w-full rounded-xl border border-white/10 bg-black/35 px-3 py-2.5 text-sm font-mono text-zinc-300 outline-none transition-colors focus:border-emerald-300/40"
+            >
+              <option value="">All Countries</option>
+              {countries.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-600">
+              Role
+            </span>
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="w-full rounded-xl border border-white/10 bg-black/35 px-3 py-2.5 text-sm font-mono text-zinc-300 outline-none transition-colors focus:border-emerald-300/40"
+            >
+              <option value="">All Roles</option>
+              {roles.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        {hasActiveFilters && (
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-white/10 pt-4">
+            <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-600">
+              Active
+            </span>
+
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-mono text-zinc-400 transition-colors hover:border-emerald-300/30 hover:text-emerald-100"
+              >
+                Search: {search} ×
+              </button>
+            )}
+
+            {contactFilter && (
+              <button
+                type="button"
+                onClick={() => setContactFilter("")}
+                className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-mono text-zinc-400 transition-colors hover:border-emerald-300/30 hover:text-emerald-100"
+              >
+                Contact:{" "}
+                {contactFilter === "public"
+                  ? "Public"
+                  : contactFilter === "private"
+                    ? "Private"
+                    : "No contact"}{" "}
+                ×
+              </button>
+            )}
+
+            {regionFilter && (
+              <button
+                type="button"
+                onClick={() => setRegionFilter("")}
+                className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-mono text-zinc-400 transition-colors hover:border-emerald-300/30 hover:text-emerald-100"
+              >
+                Region: {regionFilter} ×
+              </button>
+            )}
+
+            {countryFilter && (
+              <button
+                type="button"
+                onClick={() => setCountryFilter("")}
+                className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-mono text-zinc-400 transition-colors hover:border-emerald-300/30 hover:text-emerald-100"
+              >
+                Country: {countryFilter} ×
+              </button>
+            )}
+
+            {roleFilter && (
+              <button
+                type="button"
+                onClick={() => setRoleFilter("")}
+                className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-mono text-zinc-400 transition-colors hover:border-emerald-300/30 hover:text-emerald-100"
+              >
+                Role: {roleFilter} ×
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="ml-auto rounded-full border border-white/10 px-3 py-1 text-[10px] font-mono text-zinc-500 transition-colors hover:border-white/20 hover:text-zinc-300"
+            >
+              Clear all
+            </button>
+          </div>
         )}
       </div>
 
