@@ -531,7 +531,7 @@ export function PublicProfile() {
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute left-1/2 top-[-260px] h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-zinc-700/10 blur-3xl" />
         <div className="absolute left-[15%] top-[28%] h-80 w-80 rounded-full bg-emerald-950/10 blur-3xl" />
-        <div className="absolute right-[10%] top-[36%] h-96 w-96 rounded-full bg-sky-950/10 blur-3xl" />
+        <div className="absolute right-[10%] top-[36%] h-96 w-96 rounded-full bg-emerald-950/10 blur-3xl" />
       </div>
 
       <main className="relative z-10 mx-auto max-w-[980px] px-4 py-10 sm:px-6 lg:px-8">
@@ -555,7 +555,7 @@ export function PublicProfile() {
                     className="h-24 w-24 shrink-0 rounded-2xl border border-zinc-700 bg-zinc-950 object-cover shadow-xl"
                   />
                 ) : (
-                  <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-950 text-xl font-mono text-sky-300 shadow-xl">
+                  <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl border border-emerald-300/20 bg-[radial-gradient(circle_at_30%_15%,rgba(52,211,153,0.22),transparent_38%),rgba(2,6,23,0.94)] text-xl font-mono text-emerald-200 shadow-xl">
                     {getInitials(displayName)}
                   </div>
                 )}
@@ -600,7 +600,7 @@ export function PublicProfile() {
           <div
             key={`${label}-${text}`}
             title={text}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-zinc-700 bg-zinc-950/80 text-zinc-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-zinc-950/80 text-zinc-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
           >
             <Icon className="h-3.5 w-3.5" aria-hidden="true" />
           </div>
@@ -615,7 +615,7 @@ export function PublicProfile() {
           rel="noreferrer"
           aria-label={label}
           title={text}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-zinc-700 bg-zinc-950/80 text-zinc-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition-colors hover:border-sky-500/70 hover:text-white"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-zinc-950/80 text-zinc-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition-all hover:border-emerald-300/40 hover:bg-emerald-400/10 hover:text-emerald-100 hover:shadow-[0_0_18px_rgba(52,211,153,0.18),inset_0_1px_0_rgba(255,255,255,0.03)]"
         >
           <Icon className="h-3.5 w-3.5" aria-hidden="true" />
         </a>
