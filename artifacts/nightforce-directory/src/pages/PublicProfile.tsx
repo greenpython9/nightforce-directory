@@ -461,8 +461,8 @@ export function PublicProfile() {
 
   const displayName =
     profile?.visibility === "anonymous"
-      ? "Anonymous Ambassador"
-      : profile?.displayName || "Anonymous Ambassador";
+      ? "Anonymous"
+      : profile?.displayName || "Anonymous";
 
   const formattedSocials = useMemo(() => {
     return (profile?.socials ?? [])
@@ -544,15 +544,15 @@ export function PublicProfile() {
           Back to directory
         </button>
 
-        <section className="overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900/80 shadow-2xl">
-          <div className="border-b border-zinc-800 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_32%),linear-gradient(135deg,rgba(255,255,255,0.04),transparent)] px-5 py-5 sm:px-7">
+        <section className="overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(24,24,27,0.96),rgba(9,9,11,0.98))] shadow-[0_24px_80px_rgba(0,0,0,0.3)]">
+          <div className="border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.045),transparent)] px-5 py-5 sm:px-7">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start">
                 {profile.avatarUrl ? (
                   <img
                     src={profile.avatarUrl}
                     alt={`${displayName} avatar`}
-                    className="h-24 w-24 shrink-0 rounded-2xl border border-zinc-700 bg-zinc-950 object-cover shadow-xl"
+                    className="h-24 w-24 shrink-0 rounded-2xl border border-white/10 bg-zinc-950 object-cover shadow-[0_0_0_4px_rgba(255,255,255,0.03)]"
                   />
                 ) : (
                   <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl border border-emerald-300/20 bg-[radial-gradient(circle_at_30%_15%,rgba(52,211,153,0.22),transparent_38%),rgba(2,6,23,0.94)] text-xl font-mono text-emerald-200 shadow-xl">
@@ -586,7 +586,7 @@ export function PublicProfile() {
   </span>
 
   {profile.visibility === "anonymous" && (
-    <span className="rounded-full border border-zinc-700 bg-zinc-950/80 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wide text-zinc-400">
+    <span className="rounded-full border border-white/10 bg-zinc-950/80 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wide text-zinc-400">
       Anonymous
     </span>
   )}
@@ -683,7 +683,7 @@ export function PublicProfile() {
           </div>
 
           <div className="space-y-4 p-5 sm:p-7">
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
+            <div className="rounded-2xl border border-white/10 bg-black/25 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-sm font-mono font-semibold text-white">
@@ -702,7 +702,7 @@ export function PublicProfile() {
                       {profileDetails.map(({ label, value, Icon }) => (
                         <div
                           key={label}
-                          className="rounded-xl border border-zinc-800 bg-zinc-900/70 px-4 py-3"
+                          className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]"
                         >
                           <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wide text-zinc-500">
                             <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
@@ -717,13 +717,13 @@ export function PublicProfile() {
                   )}
 
                   {!hasBio && (
-                    <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-900/40 p-4 text-[11px] font-mono leading-5 text-zinc-600">
+                    <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-4 text-[11px] font-mono leading-5 text-zinc-600">
                       Bio is hidden or not provided.
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-900/40 p-5">
+                <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-5">
                   <div className="text-sm font-mono text-zinc-400">
                     Limited public details
                   </div>
@@ -756,7 +756,7 @@ export function PublicProfile() {
                 </div>
               </div>
 
-              <div className="min-h-[108px] rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3.5">
+              <div className="min-h-[108px] rounded-2xl border border-white/10 bg-black/25 p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
                 <div className="flex items-start gap-3">
                   <Info
                     className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500"
