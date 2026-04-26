@@ -310,17 +310,44 @@ export function RequestVerification() {
 
   if (existingRequest?.status === "pending" || submitted) {
     return (
-      <div className="mx-auto max-w-xl px-4 py-16">
-        <div className="rounded-2xl border border-yellow-800/70 bg-zinc-900 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
-          <div className="mb-2 text-sm font-mono font-semibold text-yellow-400">
-            ⏳ Pending Review
+      <div className="mx-auto w-full max-w-2xl px-4 pb-20 pt-12 sm:pt-14">
+        <div className="rounded-3xl border border-yellow-500/20 bg-[linear-gradient(180deg,rgba(24,24,27,0.86),rgba(9,9,11,0.96))] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.04)]">
+          <div className="mb-4 inline-flex rounded-full border border-yellow-400/20 bg-yellow-400/10 px-3 py-1 text-[11px] font-mono font-semibold uppercase tracking-[0.18em] text-yellow-300">
+            Pending Review
           </div>
-          <p className="mb-3 text-sm font-mono leading-6 text-zinc-400">
-            Your verification request has been submitted and is now under admin review.
+
+          <h1 className="text-2xl font-mono font-bold tracking-tight text-white">
+            Your verification request is in review.
+          </h1>
+
+          <p className="mt-3 max-w-xl text-sm font-mono leading-6 text-zinc-400">
+            Your request has been submitted and is waiting for admin approval. When it is approved,
+            this same connected Midnight wallet will be able to continue the profile setup flow.
           </p>
-          <p className="text-xs font-mono leading-relaxed text-zinc-500">
-            Wallet: {walletId}
-          </p>
+
+          <div className="mt-6 rounded-2xl border border-white/10 bg-black/30 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+            <div className="mb-1 text-[11px] font-mono uppercase tracking-[0.16em] text-zinc-500">
+              Connected Wallet
+            </div>
+            <div className="break-all text-xs font-mono leading-5 text-zinc-300">
+              {walletId}
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <Link
+              href="/directory"
+              className="inline-flex justify-center rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-mono font-semibold text-zinc-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all hover:border-emerald-300/30 hover:bg-emerald-400/10 hover:text-emerald-100 hover:shadow-[0_0_18px_rgba(52,211,153,0.14),inset_0_1px_0_rgba(255,255,255,0.04)]"
+            >
+              Browse Directory
+            </Link>
+            <Link
+              href="/wallet"
+              className="inline-flex justify-center rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-4 py-3 text-sm font-mono font-semibold text-emerald-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all hover:border-emerald-300/40 hover:bg-emerald-400/15 hover:text-white hover:shadow-[0_0_18px_rgba(52,211,153,0.18),inset_0_1px_0_rgba(255,255,255,0.04)]"
+            >
+              Wallet / Profile
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -328,20 +355,44 @@ export function RequestVerification() {
 
   if (existingRequest?.status === "approved") {
     return (
-      <div className="mx-auto max-w-xl px-4 py-16">
-        <div className="rounded-2xl border border-emerald-400/20 bg-zinc-900 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
-          <div className="mb-2 text-sm font-mono font-semibold text-emerald-300">
+      <div className="mx-auto w-full max-w-2xl px-4 pb-20 pt-12 sm:pt-14">
+        <div className="rounded-3xl border border-emerald-400/20 bg-[linear-gradient(180deg,rgba(24,24,27,0.86),rgba(9,9,11,0.96))] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.24),0_0_40px_rgba(52,211,153,0.08),inset_0_1px_0_rgba(255,255,255,0.04)]">
+          <div className="mb-4 inline-flex rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-[11px] font-mono font-semibold uppercase tracking-[0.18em] text-emerald-300">
             Approved
           </div>
-          <p className="mb-4 text-sm font-mono leading-6 text-zinc-400">
-            This Midnight wallet has an approved verification request.
+
+          <h1 className="text-2xl font-mono font-bold tracking-tight text-white">
+            Verification approved.
+          </h1>
+
+          <p className="mt-3 max-w-xl text-sm font-mono leading-6 text-zinc-400">
+            This Midnight wallet has an approved verification request. You can now continue to
+            Wallet / Profile to bind or manage your profile.
           </p>
-          <Link
-            href="/wallet"
-            className="inline-flex rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-4 py-2.5 text-sm font-mono font-semibold text-emerald-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all hover:border-emerald-300/40 hover:bg-emerald-400/15 hover:text-white hover:shadow-[0_0_18px_rgba(52,211,153,0.18),inset_0_1px_0_rgba(255,255,255,0.04)]"
-          >
-            Continue to Wallet / Profile
-          </Link>
+
+          <div className="mt-6 rounded-2xl border border-emerald-400/15 bg-emerald-400/[0.045] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+            <div className="mb-1 text-[11px] font-mono uppercase tracking-[0.16em] text-emerald-300/80">
+              Next Step
+            </div>
+            <div className="text-sm font-mono leading-6 text-zinc-300">
+              Continue to Wallet / Profile and complete the wallet-bound profile flow.
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <Link
+              href="/wallet"
+              className="inline-flex justify-center rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-4 py-3 text-sm font-mono font-semibold text-emerald-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all hover:border-emerald-300/40 hover:bg-emerald-400/15 hover:text-white hover:shadow-[0_0_22px_rgba(52,211,153,0.18),inset_0_1px_0_rgba(255,255,255,0.04)]"
+            >
+              Continue to Wallet / Profile
+            </Link>
+            <Link
+              href="/directory"
+              className="inline-flex justify-center rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-mono font-semibold text-zinc-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all hover:border-emerald-300/30 hover:bg-emerald-400/10 hover:text-emerald-100 hover:shadow-[0_0_18px_rgba(52,211,153,0.14),inset_0_1px_0_rgba(255,255,255,0.04)]"
+            >
+              Browse Directory
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -349,15 +400,44 @@ export function RequestVerification() {
 
   if (existingRequest?.status === "rejected") {
     return (
-      <div className="mx-auto max-w-xl px-4 py-16">
-        <div className="rounded-2xl border border-red-900/60 bg-red-950/30 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
-          <div className="mb-2 text-sm font-mono font-semibold text-red-300">
+      <div className="mx-auto w-full max-w-2xl px-4 pb-20 pt-12 sm:pt-14">
+        <div className="rounded-3xl border border-red-900/60 bg-[linear-gradient(180deg,rgba(69,10,10,0.24),rgba(9,9,11,0.96))] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.035)]">
+          <div className="mb-4 inline-flex rounded-full border border-red-500/25 bg-red-500/10 px-3 py-1 text-[11px] font-mono font-semibold uppercase tracking-[0.18em] text-red-300">
             Verification Rejected
           </div>
-          <p className="text-sm font-mono leading-6 text-red-200/80">
-            This wallet already has a rejected verification request. Contact the team if you
-            believe this should be reviewed again.
+
+          <h1 className="text-2xl font-mono font-bold tracking-tight text-white">
+            This request was not approved.
+          </h1>
+
+          <p className="mt-3 max-w-xl text-sm font-mono leading-6 text-red-100/75">
+            This connected wallet already has a rejected verification request. If you believe this
+            should be reviewed again, contact the team instead of submitting a duplicate request.
           </p>
+
+          <div className="mt-6 rounded-2xl border border-white/10 bg-black/30 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+            <div className="mb-1 text-[11px] font-mono uppercase tracking-[0.16em] text-zinc-500">
+              Connected Wallet
+            </div>
+            <div className="break-all text-xs font-mono leading-5 text-zinc-300">
+              {walletId}
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <Link
+              href="/contact"
+              className="inline-flex justify-center rounded-xl border border-red-400/25 bg-red-400/10 px-4 py-3 text-sm font-mono font-semibold text-red-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all hover:border-red-300/40 hover:bg-red-400/15 hover:text-white"
+            >
+              Contact Team
+            </Link>
+            <Link
+              href="/wallet"
+              className="inline-flex justify-center rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-mono font-semibold text-zinc-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all hover:border-emerald-300/30 hover:bg-emerald-400/10 hover:text-emerald-100 hover:shadow-[0_0_18px_rgba(52,211,153,0.14),inset_0_1px_0_rgba(255,255,255,0.04)]"
+            >
+              Wallet / Profile
+            </Link>
+          </div>
         </div>
       </div>
     );
