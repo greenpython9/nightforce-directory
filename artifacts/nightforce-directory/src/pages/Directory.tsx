@@ -525,12 +525,34 @@ export function Directory() {
           </div>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16">
-          <div className="text-sm font-mono text-zinc-600">
-            {allProfiles.length === 0
-              ? "No verified ambassadors in the directory yet."
-              : "No profiles match your search."}
+        <div className="rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(24,24,27,0.9),rgba(9,9,11,0.96))] px-4 py-12 text-center shadow-[0_18px_60px_rgba(0,0,0,0.2)]">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-black/35 text-zinc-500">
+            <span aria-hidden="true" className="text-lg">
+              ∅
+            </span>
           </div>
+
+          <div className="text-sm font-mono font-semibold text-white">
+            {allProfiles.length === 0
+              ? "No verified ambassadors yet"
+              : "No matching ambassadors found"}
+          </div>
+
+          <p className="mx-auto mt-2 max-w-md text-xs font-mono leading-6 text-zinc-500">
+            {allProfiles.length === 0
+              ? "Verified public profiles will appear here once ambassadors publish to the directory."
+              : "Try clearing filters or broadening your search to see more profiles."}
+          </p>
+
+          {allProfiles.length > 0 && hasActiveFilters && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="mt-5 inline-flex items-center justify-center rounded-full border border-emerald-300/25 bg-emerald-400/10 px-4 py-2 text-xs font-mono font-semibold text-emerald-100 outline-none transition-all hover:border-emerald-300/40 hover:bg-emerald-400/15 focus-visible:ring-1 focus-visible:ring-emerald-300/30"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
