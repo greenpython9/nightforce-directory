@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useWallet } from "../hooks/useWallet";
 import { StatusBadge } from "../components/StatusBadge";
 import { ADMIN_WALLET_ID } from "../services/walletService";
@@ -11,6 +11,7 @@ type VerificationRequestRecord = {
   discordHandle: string;
   region: string;
   note: string;
+  midnightWalletAddress?: string | null;
   status: "pending" | "approved" | "rejected";
   adminNotes: string;
   createdAt: string;
@@ -30,8 +31,10 @@ export function AdminReview() {
   const { walletId } = useWallet();
   const [tab, setTab] = useState<Tab>("pending");
   const [search, setSearch] = useState("");
+  const [countryFilter, setCountryFilter] = useState("all");
   const [requests, setRequests] = useState<VerificationRequestRecord[]>([]);
   const [selected, setSelected] = useState<VerificationRequestRecord | null>(null);
+  const [selectedRequestIds, setSelectedRequestIds] = useState<string[]>([]);
   const [adminNotes, setAdminNotes] = useState("");
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
@@ -68,6 +71,9 @@ export function AdminReview() {
 
       const data = payload as VerificationRequestListResponse;
       setRequests(data.requests);
+      setSelectedRequestIds((current) =>
+        current.filter((id) => data.requests.some((req) => req.id === id)),
+      );
 
       if (selectedId) {
         const nextSelected =
@@ -108,21 +114,62 @@ export function AdminReview() {
     );
   }
 
+  const countryOptions = useMemo(() => {
+    const values = requests
+      .filter((req) => req.status === tab)
+      .map((req) => req.region.trim())
+      .filter(Boolean);
+
+    return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
+  }, [requests, tab]);
+
   const filtered = requests.filter((r) => {
     if (r.status !== tab) return false;
+
+    if (countryFilter !== "all" && r.region !== countryFilter) {
+      return false;
+    }
+
     if (!search.trim()) return true;
 
     const q = search.toLowerCase();
+
     return (
       r.discordHandle.toLowerCase().includes(q) ||
       r.region.toLowerCase().includes(q) ||
-      r.id.toLowerCase().includes(q)
+      r.id.toLowerCase().includes(q) ||
+      (r.midnightWalletAddress ?? "").toLowerCase().includes(q)
     );
   });
+
+  const filteredIds = filtered.map((req) => req.id);
+  const selectedVisibleCount = selectedRequestIds.filter((id) =>
+    filteredIds.includes(id),
+  ).length;
+  const allVisibleSelected =
+    filtered.length > 0 && selectedVisibleCount === filtered.length;
 
   const handleSelect = (req: VerificationRequestRecord) => {
     setSelected(req);
     setAdminNotes(req.adminNotes);
+  };
+
+  const toggleRequestSelection = (requestId: string) => {
+    setSelectedRequestIds((current) =>
+      current.includes(requestId)
+        ? current.filter((id) => id !== requestId)
+        : [...current, requestId],
+    );
+  };
+
+  const toggleSelectAllVisible = () => {
+    setSelectedRequestIds((current) => {
+      if (allVisibleSelected) {
+        return current.filter((id) => !filteredIds.includes(id));
+      }
+
+      return Array.from(new Set([...current, ...filteredIds]));
+    });
   };
 
   const handleReview = async (action: "approve" | "reject") => {
@@ -213,6 +260,8 @@ export function AdminReview() {
               onClick={() => {
                 setTab(t.key);
                 setSelected(null);
+                setSelectedRequestIds([]);
+                setCountryFilter("all");
                 setAdminNotes("");
               }}
               className={`px-4 py-2 text-xs font-mono border-b-2 transition-colors ${
@@ -233,13 +282,57 @@ export function AdminReview() {
 
       <div className="flex gap-6">
         <div className="flex-1 min-w-0">
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by Discord handle, region, or request ID..."
-            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 mb-4"
-          />
+          <div className="mb-4 grid gap-3">
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by Discord, country/region, wallet, or request ID..."
+              className="w-full rounded-xl border border-white/10 bg-black/35 px-3.5 py-3 text-sm font-mono text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] placeholder:text-zinc-700 transition-all focus:border-emerald-300/35 focus:bg-black/45 focus:outline-none focus:ring-2 focus:ring-emerald-400/10"
+            />
+
+            <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+              <select
+                value={countryFilter}
+                onChange={(e) => setCountryFilter(e.target.value)}
+                className="rounded-xl border border-white/10 bg-black/35 px-3.5 py-3 text-sm font-mono text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition-all focus:border-emerald-300/35 focus:bg-black/45 focus:outline-none focus:ring-2 focus:ring-emerald-400/10"
+              >
+                <option value="all">All Countries / Regions</option>
+                {countryOptions.map((country) => (
+                  <option key={country} value={country}>
+                    {country}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch("");
+                  setCountryFilter("all");
+                }}
+                className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-mono font-semibold text-zinc-300 transition-all hover:border-emerald-300/30 hover:bg-emerald-400/10 hover:text-emerald-100"
+              >
+                Clear
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5">
+              <label className="flex items-center gap-2 text-xs font-mono text-zinc-400">
+                <input
+                  type="checkbox"
+                  checked={allVisibleSelected}
+                  onChange={toggleSelectAllVisible}
+                  className="h-4 w-4 accent-emerald-400"
+                />
+                Select all visible
+              </label>
+
+              <span className="text-xs font-mono text-zinc-500">
+                {selectedVisibleCount} selected
+              </span>
+            </div>
+          </div>
 
           {loading ? (
             <div className="text-xs font-mono text-zinc-500 py-8 text-center">
@@ -252,15 +345,27 @@ export function AdminReview() {
           ) : (
             <div className="flex flex-col gap-2">
               {filtered.map((req) => (
-                <button
+                <div
                   key={req.id}
-                  onClick={() => handleSelect(req)}
-                  className={`w-full text-left border rounded-lg p-3 transition-colors ${
+                  className={`flex gap-3 rounded-xl border p-3 transition-colors ${
                     selected?.id === req.id
-                      ? "border-zinc-500 bg-zinc-800"
-                      : "border-zinc-800 bg-zinc-900 hover:border-zinc-700"
+                      ? "border-emerald-400/30 bg-emerald-400/[0.05]"
+                      : "border-white/10 bg-white/[0.03] hover:border-white/20"
                   }`}
                 >
+                  <input
+                    type="checkbox"
+                    checked={selectedRequestIds.includes(req.id)}
+                    onChange={() => toggleRequestSelection(req.id)}
+                    className="mt-1 h-4 w-4 flex-shrink-0 accent-emerald-400"
+                    aria-label={`Select request from ${req.discordHandle}`}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => handleSelect(req)}
+                    className="min-w-0 flex-1 text-left"
+                  >
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <span className="text-sm font-mono text-white">
                       {req.discordHandle}
@@ -273,7 +378,14 @@ export function AdminReview() {
                   <div className="text-xs font-mono text-zinc-600 mt-1">
                     {formatDate(req.createdAt)}
                   </div>
-                </button>
+
+                  {req.midnightWalletAddress && (
+                    <div className="mt-1 truncate text-[11px] font-mono text-zinc-600">
+                      Wallet: {req.midnightWalletAddress}
+                    </div>
+                  )}
+                  </button>
+                </div>
               ))}
             </div>
           )}
@@ -295,8 +407,10 @@ export function AdminReview() {
                   <span className="text-zinc-300 break-all">{selected.id}</span>
                 </div>
                 <div>
-                  <span className="text-zinc-600">Region: </span>
-                  <span className="text-zinc-300">{selected.region}</span>
+                  <span className="text-zinc-600">Wallet: </span>
+                  <span className="text-zinc-300 break-all">
+                    {selected.midnightWalletAddress ?? "—"}
+                  </span>
                 </div>
                 <div>
                   <span className="text-zinc-600">Submitted: </span>
