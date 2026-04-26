@@ -25,6 +25,59 @@ type DirectoryResponse = {
   profiles: DirectoryProfileRecord[];
 };
 
+type ContactFilter = "" | "public" | "private" | "none";
+
+function getInitialUrlParams() {
+  return new URLSearchParams(window.location.search);
+}
+
+function getInitialSearch(): string {
+  const params = getInitialUrlParams();
+  const q = params.get("q") ?? "";
+  const normalized = q.trim().toLowerCase();
+
+  if (
+    normalized === "public contact" ||
+    normalized === "private contact" ||
+    normalized === "apac" ||
+    normalized === "emea"
+  ) {
+    return "";
+  }
+
+  return q;
+}
+
+function getInitialContactFilter(): ContactFilter {
+  const params = getInitialUrlParams();
+  const contact = params.get("contact");
+
+  if (contact === "public" || contact === "private" || contact === "none") {
+    return contact;
+  }
+
+  const legacyQ = (params.get("q") ?? "").trim().toLowerCase();
+
+  if (legacyQ === "public contact") return "public";
+  if (legacyQ === "private contact") return "private";
+
+  return "";
+}
+
+function getInitialRegionFilter(): string {
+  const params = getInitialUrlParams();
+  const region = params.get("region");
+
+  if (region) return region;
+
+  const legacyQ = (params.get("q") ?? "").trim();
+
+  if (legacyQ.toLowerCase() === "apac") return "APAC";
+  if (legacyQ.toLowerCase() === "emea") return "EMEA";
+
+  return "";
+}
+
 function toPublicProfile(profile: DirectoryProfileRecord): PublicProfile {
   return {
     publicId: profile.publicId,
@@ -44,10 +97,30 @@ function toPublicProfile(profile: DirectoryProfileRecord): PublicProfile {
   };
 }
 
+function getContactSearchLabel(value: PublicProfile["contactMode"]): string {
+  switch (value) {
+    case "PUBLIC_CONTACT_ALLOWED":
+      return "public contact";
+    case "PRIVATE_CONTACT_AVAILABLE":
+      return "private contact";
+    case "NO_CONTACT":
+      return "no contact unavailable";
+    default:
+      return "";
+  }
+}
+
 export function Directory() {
-  const [search, setSearch] = useState("");
-  const [countryFilter, setCountryFilter] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
+  const [search, setSearch] = useState(getInitialSearch);
+  const [contactFilter, setContactFilter] =
+    useState<ContactFilter>(getInitialContactFilter);
+  const [regionFilter, setRegionFilter] = useState(getInitialRegionFilter);
+  const [countryFilter, setCountryFilter] = useState(
+    () => getInitialUrlParams().get("country") ?? "",
+  );
+  const [roleFilter, setRoleFilter] = useState(
+    () => getInitialUrlParams().get("role") ?? "",
+  );
   const [allProfiles, setAllProfiles] = useState<PublicProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -114,10 +187,37 @@ export function Directory() {
     };
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams();
+
+    if (search.trim()) params.set("q", search.trim());
+    if (contactFilter) params.set("contact", contactFilter);
+    if (regionFilter) params.set("region", regionFilter);
+    if (countryFilter) params.set("country", countryFilter);
+    if (roleFilter) params.set("role", roleFilter);
+
+    const queryString = params.toString();
+    const nextUrl = queryString
+      ? `${window.location.pathname}?${queryString}`
+      : window.location.pathname;
+
+    window.history.replaceState(null, "", nextUrl);
+  }, [search, contactFilter, regionFilter, countryFilter, roleFilter]);
+
   const countries = useMemo(
     () =>
       Array.from(
         new Set(allProfiles.map((p) => p.country).filter((c): c is string => !!c)),
+      ).sort(),
+    [allProfiles],
+  );
+
+  const regions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          allProfiles.map((p) => p.region).filter((r): r is string => !!r),
+        ),
       ).sort(),
     [allProfiles],
   );
@@ -134,23 +234,49 @@ export function Directory() {
     () =>
       allProfiles.filter((p) => {
         if (search.trim()) {
-          const q = search.toLowerCase();
+          const q = search.trim().toLowerCase();
           const nameMatch = p.displayName?.toLowerCase().includes(q) ?? false;
           const regionMatch = p.region?.toLowerCase().includes(q) ?? false;
           const countryMatch = p.country?.toLowerCase().includes(q) ?? false;
           const roleMatch = p.role?.toLowerCase().includes(q) ?? false;
+          const contactMatch = getContactSearchLabel(p.contactMode).includes(q);
 
-          if (!nameMatch && !regionMatch && !countryMatch && !roleMatch) {
+          if (
+            !nameMatch &&
+            !regionMatch &&
+            !countryMatch &&
+            !roleMatch &&
+            !contactMatch
+          ) {
             return false;
           }
         }
 
+        if (
+          contactFilter === "public" &&
+          p.contactMode !== "PUBLIC_CONTACT_ALLOWED"
+        ) {
+          return false;
+        }
+
+        if (
+          contactFilter === "private" &&
+          p.contactMode !== "PRIVATE_CONTACT_AVAILABLE"
+        ) {
+          return false;
+        }
+
+        if (contactFilter === "none" && p.contactMode !== "NO_CONTACT") {
+          return false;
+        }
+
+        if (regionFilter && p.region !== regionFilter) return false;
         if (countryFilter && p.country !== countryFilter) return false;
         if (roleFilter && p.role !== roleFilter) return false;
 
         return true;
       }),
-    [allProfiles, search, countryFilter, roleFilter],
+    [allProfiles, search, contactFilter, regionFilter, countryFilter, roleFilter],
   );
 
   return (
@@ -176,6 +302,30 @@ export function Directory() {
           className="flex-1 min-w-48 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500"
         />
         <select
+          value={contactFilter}
+          onChange={(e) => setContactFilter(e.target.value as ContactFilter)}
+          className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-zinc-300 focus:outline-none focus:border-zinc-500"
+        >
+          <option value="">All Contact</option>
+          <option value="public">Public Contact</option>
+          <option value="private">Private Contact</option>
+          <option value="none">No Contact</option>
+        </select>
+
+        <select
+          value={regionFilter}
+          onChange={(e) => setRegionFilter(e.target.value)}
+          className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-zinc-300 focus:outline-none focus:border-zinc-500"
+        >
+          <option value="">All Regions</option>
+          {regions.map((r) => (
+            <option key={r} value={r}>
+              {r}
+            </option>
+          ))}
+        </select>
+
+        <select
           value={countryFilter}
           onChange={(e) => setCountryFilter(e.target.value)}
           className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-zinc-300 focus:outline-none focus:border-zinc-500"
@@ -199,10 +349,12 @@ export function Directory() {
             </option>
           ))}
         </select>
-        {(search || countryFilter || roleFilter) && (
+        {(search || contactFilter || regionFilter || countryFilter || roleFilter) && (
           <button
             onClick={() => {
               setSearch("");
+              setContactFilter("");
+              setRegionFilter("");
               setCountryFilter("");
               setRoleFilter("");
             }}

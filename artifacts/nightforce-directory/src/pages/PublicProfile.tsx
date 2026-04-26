@@ -569,7 +569,7 @@ export function PublicProfile() {
   <span
     title="Verified profile"
     aria-label="Verified profile"
-    className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-sky-400 text-white shadow-[0_0_8px_rgba(56,189,248,0.35)]"
+    className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-400 text-white shadow-[0_0_16px_rgba(52,211,153,0.42)] ring-1 ring-emerald-200/40"
   >
     <svg
       aria-hidden="true"

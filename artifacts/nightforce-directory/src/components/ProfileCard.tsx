@@ -171,6 +171,7 @@ export function ProfileCard({
       : profile.displayName || "Anonymous";
 
   const location = [profile.country, profile.region].filter(Boolean).join(" · ");
+  const roleText = profile.role?.trim();
 
   const socialLinks = (profile.socials ?? [])
     .map(getSocialLink)
@@ -178,29 +179,53 @@ export function ProfileCard({
     .slice(0, 4);
 
   const resolvedViewHref = viewHref ?? `/profile/${profile.publicId}`;
+
+  const accessLabel = formatContactMode(profile.contactMode);
+  const accessDetail =
+    profile.contactMode === "PUBLIC_CONTACT_ALLOWED"
+      ? "Open contact"
+      : profile.contactMode === "PRIVATE_CONTACT_AVAILABLE"
+        ? "Private"
+        : "No contact";
+
+  const accessToneClassName =
+    profile.contactMode === "PUBLIC_CONTACT_ALLOWED"
+      ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-200"
+      : profile.contactMode === "PRIVATE_CONTACT_AVAILABLE"
+        ? "border-sky-400/25 bg-sky-400/10 text-sky-200"
+        : "border-zinc-700/70 bg-zinc-900/80 text-zinc-400";
+
+  const accessDotClassName =
+    profile.contactMode === "PUBLIC_CONTACT_ALLOWED"
+      ? "bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,0.7)]"
+      : profile.contactMode === "PRIVATE_CONTACT_AVAILABLE"
+        ? "bg-sky-300 shadow-[0_0_10px_rgba(125,211,252,0.65)]"
+        : "bg-zinc-500";
+
   const viewClassName =
-    "text-[10px] font-mono text-zinc-600 transition-colors hover:text-white";
+    "inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-zinc-400 transition-all hover:text-emerald-200 hover:[text-shadow:0_0_14px_rgba(52,211,153,0.5)]";
 
   return (
     <div
-      className={`group flex min-h-[255px] flex-col rounded-2xl border border-zinc-900 bg-zinc-900 p-5 transition-colors hover:border-zinc-500 ${className}`}
+      className={`group relative flex min-h-[255px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(24,24,27,0.98),rgba(9,9,11,0.98))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.22)] transition-all duration-200 hover:-translate-y-0.5 hover:border-white/20 ${className}`}
     >
-      <div className="flex items-start gap-3">
+
+      <div className="relative z-10 flex min-h-[72px] items-start gap-3">
         {profile.avatarUrl ? (
           <img
             src={profile.avatarUrl}
             alt={`${displayName} avatar`}
-            className="h-14 w-14 shrink-0 rounded-full border border-zinc-700 bg-zinc-950 object-cover"
+            className="h-14 w-14 shrink-0 rounded-2xl border border-white/10 bg-zinc-950 object-cover shadow-[0_0_0_4px_rgba(255,255,255,0.03)]"
           />
         ) : (
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-zinc-700 bg-zinc-950 text-[11px] font-mono text-sky-300">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-emerald-300/20 bg-[radial-gradient(circle_at_30%_15%,rgba(52,211,153,0.26),transparent_38%),rgba(2,6,23,0.94)] text-[11px] font-mono font-semibold tracking-[0.18em] text-emerald-200 shadow-[0_0_0_4px_rgba(255,255,255,0.03)]">
             {getInitials(displayName)}
           </div>
         )}
 
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 pt-0.5">
           <div className="flex min-w-0 items-center gap-1.5">
-            <span className="truncate text-[12px] font-mono font-semibold text-white">
+            <span className="truncate text-[13px] font-mono font-semibold tracking-[-0.02em] text-white">
               {displayName}
             </span>
 
@@ -208,7 +233,7 @@ export function ProfileCard({
               <span
                 title="Verified profile"
                 aria-label="Verified profile"
-                className="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-sky-400 text-white shadow-[0_0_8px_rgba(56,189,248,0.35)]"
+                className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-400 text-white shadow-[0_0_14px_rgba(52,211,153,0.42)] ring-1 ring-emerald-200/40"
               >
                 <svg
                   aria-hidden="true"
@@ -226,29 +251,50 @@ export function ProfileCard({
             )}
           </div>
 
-          <div className="mt-1 truncate text-[11px] font-mono text-zinc-400">
-            {profile.role || "Nightforce ambassador"}
-          </div>
+          {roleText ? (
+            <>
+              <div className="mt-1 truncate text-[11px] font-mono text-zinc-400">
+                {roleText}
+              </div>
 
-          {location && (
-            <div className="mt-1 truncate text-[11px] font-mono text-zinc-500">
-              {location}
+              <div className="mt-2 flex min-w-0 items-center">
+                <span className="min-w-0 truncate rounded-full border border-white/10 bg-zinc-950/60 px-2 py-0.5 text-[9px] font-mono text-zinc-500">
+                  {location || "Global directory"}
+                </span>
+              </div>
+            </>
+          ) : (
+            <div className="mt-1 flex min-w-0 items-center">
+              <span className="min-w-0 truncate rounded-full border border-white/10 bg-zinc-950/60 px-2 py-0.5 text-[9px] font-mono text-zinc-500">
+                {location || "Global directory"}
+              </span>
             </div>
           )}
         </div>
       </div>
 
-      <div className="mt-4 rounded-xl border border-zinc-900 bg-zinc-950 px-3 py-2">
-        <div className="text-[10px] font-mono text-zinc-600">
-          Access
-        </div>
-        <div className="mt-1 text-[11px] font-mono text-sky-300">
-          {formatContactMode(profile.contactMode)}
+      <div className="relative z-10 mt-4 rounded-2xl border border-white/10 bg-black/25 px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[9px] font-mono uppercase tracking-[0.22em] text-zinc-600">
+              Access
+            </div>
+            <div className="mt-1 truncate text-[12px] font-mono font-semibold text-white">
+              {accessLabel}
+            </div>
+          </div>
+
+          <div
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-1 text-[9px] font-mono font-semibold ${accessToneClassName}`}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${accessDotClassName}`} />
+            {accessDetail}
+          </div>
         </div>
       </div>
 
       {socialLinks.length > 0 && (
-        <div className="mt-3 flex items-center gap-2">
+        <div className="relative z-10 mt-3 flex items-center gap-2">
           {socialLinks.map(({ href, label, Icon }) => (
             <a
               key={`${label}-${href}`}
@@ -257,7 +303,7 @@ export function ProfileCard({
               rel="noreferrer"
               aria-label={label}
               title={label}
-              className="flex h-7 w-7 items-center justify-center rounded-full border border-zinc-800 bg-zinc-950 text-zinc-500 transition-colors hover:border-zinc-600 hover:text-white"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-zinc-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-all hover:border-emerald-300/40 hover:bg-emerald-400/10 hover:text-emerald-100 hover:shadow-[0_0_18px_rgba(52,211,153,0.18),inset_0_1px_0_rgba(255,255,255,0.05)]"
             >
               <Icon className="h-3.5 w-3.5" aria-hidden="true" />
             </a>
@@ -265,7 +311,7 @@ export function ProfileCard({
         </div>
       )}
 
-      <div className="mt-auto flex items-center justify-end border-t border-zinc-900 pt-3">
+      <div className="relative z-10 mt-auto flex items-center justify-end pt-3">
         {viewTarget === "_blank" ? (
           <a
             href={resolvedViewHref}

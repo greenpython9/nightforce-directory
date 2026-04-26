@@ -2761,7 +2761,7 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
         <ProfileCard
           profile={livePublic}
           viewHref={`/profile/${PROFILE_PREVIEW_PUBLIC_ID}`}
-          viewLabel="Open full preview →"
+          viewLabel="Full preview →"
           viewTarget="_blank"
           onViewClick={saveFullProfilePreview}
         />

@@ -41,18 +41,10 @@ const quickLinks = [
 ];
 
 const categories = [
-  "Ambassadors",
-  "Countries",
-  "Regions",
   "Public Contact",
   "Private Contact",
-  "Midnight",
-  "Builders",
-  "Community",
   "APAC",
   "EMEA",
-  "Global",
-  "Verified",
 ];
 
 const midnightUpdates = [
@@ -340,7 +332,7 @@ export function Landing() {
             )}
 
             {loadingProfiles ? (
-              <div className="flex gap-3 overflow-x-auto pb-3 [scrollbar-width:thin]">
+              <div className="-mx-3 flex gap-3 overflow-x-auto px-3 pb-7 pt-4 [scrollbar-width:thin]">
                 {Array.from({ length: 10 }).map((_, index) => (
                   <div
                     key={index}
@@ -364,7 +356,7 @@ export function Landing() {
                 </p>
               </div>
             ) : (
-              <div className="flex gap-3 overflow-x-auto pb-3 [scrollbar-width:thin]">
+              <div className="-mx-3 flex gap-3 overflow-x-auto px-3 pb-7 pt-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:h-0 [&::-webkit-scrollbar]:w-0">
                 {featuredProfiles.map((profile) => (
                   <ProfileCard
                     key={profile.publicId}
@@ -517,8 +509,12 @@ export function Landing() {
           </section>
 
           <section id="about" className="mt-14 text-center">
-            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-xl">
-              ✦
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-zinc-700 bg-zinc-950">
+              <img
+                src="/logo-mark.svg"
+                alt="Nightforce Directory"
+                className="h-12 w-12 object-contain"
+              />
             </div>
 
             <h2 className="mx-auto max-w-[780px] text-2xl font-bold tracking-tight text-white md:text-3xl">
