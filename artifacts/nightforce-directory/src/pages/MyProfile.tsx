@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useWallet } from "../hooks/useWallet";
 import { getConnectedMidnightApi, NIGHTFORCE_APP_MODE } from "../services/walletService";
 import { ProfileCard } from "../components/ProfileCard";
@@ -512,23 +512,131 @@ async function encryptHiddenEmail(
 }
 
 const DEFAULT_PROFILE_VISIBILITY: ProfileVisibility = "public";
+const PROFILE_PREVIEW_PUBLIC_ID = "__nightforce_preview__";
+const PROFILE_PREVIEW_STORAGE_KEY = "nightforce:public-profile-preview:v1";
 
-function normalizeUsername(value: string): string {
-  return value.trim().replace(/^@+/, "");
-}
-
-function hasText(value: string): boolean {
-  return value.trim().length > 0;
-}
-
-function isValidEmail(value: string): boolean {
-  const normalized = value.trim();
-
-  if (normalized.length === 0) {
-    return true;
+function writeFullProfilePreviewToStorage(profile: PublicProfile | null): void {
+  if (!profile) {
+    window.localStorage.removeItem(PROFILE_PREVIEW_STORAGE_KEY);
+    return;
   }
 
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized);
+  window.localStorage.setItem(
+    PROFILE_PREVIEW_STORAGE_KEY,
+    JSON.stringify({
+      version: 1,
+      savedAt: new Date().toISOString(),
+      profile,
+    }),
+  );
+}
+
+const PROFILE_WRITE_SETTLE_MS = 900;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+type SocialPlatform = "x" | "youtube" | "discord" | "telegram";
+
+function normalizeSocialUrlInput(value: string): string {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return "";
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  return `https://${trimmed}`;
+}
+
+function parseHttpUrl(value: string): URL | null {
+  const normalized = normalizeSocialUrlInput(value);
+
+  if (!normalized) {
+    return null;
+  }
+
+  try {
+    const url = new URL(normalized);
+
+    if (url.protocol !== "https:" && url.protocol !== "http:") {
+      return null;
+    }
+
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+function getNormalizedHost(url: URL): string {
+  return url.hostname.toLowerCase().replace(/^www\./, "");
+}
+
+function isAllowedSocialUrl(value: string, platform: SocialPlatform): boolean {
+  const url = parseHttpUrl(value);
+
+  if (!url) {
+    return false;
+  }
+
+  const host = getNormalizedHost(url);
+  const path = url.pathname.replace(/^\/+/, "");
+
+  if (!path) {
+    return false;
+  }
+
+  if (platform === "x") {
+    return host === "x.com" || host === "twitter.com";
+  }
+
+  if (platform === "youtube") {
+    return (
+      host === "youtube.com" &&
+      (path.startsWith("@") ||
+        path.startsWith("channel/") ||
+        path.startsWith("c/") ||
+        path.startsWith("user/"))
+    );
+  }
+
+  if (platform === "discord") {
+    return (
+      host === "discord.gg" ||
+      (host === "discord.com" && path.startsWith("invite/"))
+    );
+  }
+
+  if (platform === "telegram") {
+    return host === "t.me" || host === "telegram.me";
+  }
+
+  return false;
+}
+
+function normalizeAllowedSocialUrl(
+  value: string,
+  platform: SocialPlatform,
+): string | null {
+  if (!isAllowedSocialUrl(value, platform)) {
+    return null;
+  }
+
+  return parseHttpUrl(value)?.toString() ?? null;
+}
+
+function getSocialPlatform(value: string): SocialPlatform | null {
+  if (isAllowedSocialUrl(value, "x")) return "x";
+  if (isAllowedSocialUrl(value, "youtube")) return "youtube";
+  if (isAllowedSocialUrl(value, "discord")) return "discord";
+  if (isAllowedSocialUrl(value, "telegram")) return "telegram";
+
+  return null;
 }
 
 function parseSocials(
@@ -546,26 +654,28 @@ function parseSocials(
 
   for (const raw of socials ?? []) {
     const value = raw.trim();
+
     if (!value) continue;
 
-    if (value.startsWith("https://x.com/")) {
-      xUsername = value.replace("https://x.com/", "").trim();
+    const platform = getSocialPlatform(value);
+
+    if (platform === "x") {
+      xUsername = normalizeSocialUrlInput(value);
       continue;
     }
 
-    if (value.startsWith("https://youtube.com/@")) {
-      youtubeHandle = value.replace("https://youtube.com/@", "").trim();
+    if (platform === "youtube") {
+      youtubeHandle = normalizeSocialUrlInput(value);
       continue;
     }
 
-    if (value.startsWith("discord:")) {
-      discordUsername = value.replace("discord:", "").trim();
+    if (platform === "discord") {
+      discordUsername = normalizeSocialUrlInput(value);
       continue;
     }
 
-    if (value.startsWith("https://t.me/")) {
-      telegramUsername = value.replace("https://t.me/", "").trim();
-      continue;
+    if (platform === "telegram") {
+      telegramUsername = normalizeSocialUrlInput(value);
     }
   }
 
@@ -577,6 +687,20 @@ function parseSocials(
   };
 }
 
+function hasText(value: string): boolean {
+  return value.trim().length > 0;
+}
+
+function isValidEmail(value: string): boolean {
+  const normalized = value.trim();
+
+  if (normalized.length === 0) {
+    return true;
+  }
+
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized);
+}
+
 function buildSocialsArray(values: {
   xUsername: string;
   youtubeHandle: string;
@@ -585,26 +709,15 @@ function buildSocialsArray(values: {
 }): string[] {
   const socials: string[] = [];
 
-  const xUsername = normalizeUsername(values.xUsername);
-  const youtubeHandle = normalizeUsername(values.youtubeHandle);
-  const discordUsername = normalizeUsername(values.discordUsername);
-  const telegramUsername = normalizeUsername(values.telegramUsername);
+  const xUrl = normalizeAllowedSocialUrl(values.xUsername, "x");
+  const youtubeUrl = normalizeAllowedSocialUrl(values.youtubeHandle, "youtube");
+  const discordUrl = normalizeAllowedSocialUrl(values.discordUsername, "discord");
+  const telegramUrl = normalizeAllowedSocialUrl(values.telegramUsername, "telegram");
 
-  if (xUsername) {
-    socials.push(`https://x.com/${xUsername}`);
-  }
-
-  if (youtubeHandle) {
-    socials.push(`https://youtube.com/@${youtubeHandle}`);
-  }
-
-  if (discordUsername) {
-    socials.push(`discord:${discordUsername}`);
-  }
-
-  if (telegramUsername) {
-    socials.push(`https://t.me/${telegramUsername}`);
-  }
+  if (xUrl) socials.push(xUrl);
+  if (youtubeUrl) socials.push(youtubeUrl);
+  if (discordUrl) socials.push(discordUrl);
+  if (telegramUrl) socials.push(telegramUrl);
 
   return socials;
 }
@@ -673,10 +786,10 @@ function buildEditorFingerprint(input: ProfileEditorFingerprintInput): string {
     avatarUrl: input.avatarUrl.trim(),
     websiteUrl: input.websiteUrl.trim(),
     email: input.email.trim(),
-    xUsername: normalizeUsername(input.xUsername),
-    youtubeHandle: normalizeUsername(input.youtubeHandle),
-    discordUsername: normalizeUsername(input.discordUsername),
-    telegramUsername: normalizeUsername(input.telegramUsername),
+    xUsername: input.xUsername.trim(),
+    youtubeHandle: input.youtubeHandle.trim(),
+    discordUsername: input.discordUsername.trim(),
+    telegramUsername: input.telegramUsername.trim(),
     profileVisibility: input.profileVisibility,
     showAvatarUrl: input.showAvatarUrl,
     showDisplayName: input.showDisplayName,
@@ -704,6 +817,7 @@ export function MyProfile() {
   } = useWallet();
 
   const canVerifyContactModeSync = NIGHTFORCE_APP_MODE === "preprod-write";
+  const publishInFlightRef = useRef(false);
 
   const [verificationRequestId, setVerificationRequestId] = useState<string | null>(null);
   const [walletBindingId, setWalletBindingId] = useState<string | null>(null);
@@ -716,6 +830,7 @@ export function MyProfile() {
   const [avatarUrl, setAvatarUrl] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [email, setEmail] = useState("");
+  const [savedPublicEmail, setSavedPublicEmail] = useState<string | null>(null);
   const [xUsername, setXUsername] = useState("");
   const [youtubeHandle, setYouTubeHandle] = useState("");
   const [discordUsername, setDiscordUsername] = useState("");
@@ -737,6 +852,7 @@ export function MyProfile() {
   const [loading, setLoading] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [publishSettling, setPublishSettling] = useState(false);
   const [removingEmail, setRemovingEmail] = useState(false);
   const [lastPublishedFingerprint, setLastPublishedFingerprint] = useState<string | null>(null);
   const [contactModeContractAddress, setContactModeContractAddress] =
@@ -768,6 +884,7 @@ export function MyProfile() {
     setAvatarUrl("");
     setWebsiteUrl("");
     setEmail("");
+    setSavedPublicEmail(null);
     setXUsername("");
     setYouTubeHandle("");
     setDiscordUsername("");
@@ -792,9 +909,10 @@ export function MyProfile() {
     setSavedContactMode(null);
     setContactModeCompareResult(null);
     setContactModeCompareError("");
+    setPublishSettling(false);
   }, []);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (options?: { preserveSaveMsg?: boolean }) => {
     if (!walletId || verificationStatus !== "approved" || connectionMode !== "midnight") {
       setVerificationRequestId(null);
       setWalletBindingId(null);
@@ -803,7 +921,10 @@ export function MyProfile() {
 
     setLoading(true);
     setError("");
-    setSaveMsg("");
+
+    if (!options?.preserveSaveMsg) {
+      setSaveMsg("");
+    }
 
     try {
       const bindingResponse = await fetch(
@@ -893,6 +1014,7 @@ export function MyProfile() {
       setWebsiteUrl(profile.websiteUrl ?? "");
 
       const nextEmail = profile.publicEmail ?? "";
+      setSavedPublicEmail(profile.publicEmail ?? null);
       const nextEncryptedHiddenPayload = parseEncryptedHiddenPayload(
         profile.encryptedHiddenPayload,
       );
@@ -989,6 +1111,26 @@ export function MyProfile() {
     void load();
   }, [load]);
 
+  const settleAfterProfileWrite = useCallback(
+  async (message: string) => {
+    setPublishSettling(true);
+    setSaveMsg("Refreshing saved profile state...");
+
+    try {
+      await Promise.all([
+        load({ preserveSaveMsg: true }),
+        sleep(PROFILE_WRITE_SETTLE_MS),
+      ]);
+
+      setSaveMsg(message);
+      window.setTimeout(() => setSaveMsg(""), 2500);
+    } finally {
+      setPublishSettling(false);
+    }
+  },
+  [load],
+);
+
   const hasPublicId = hasText(publicId);
   const hasAvatarUrlValue = hasText(avatarUrl);
   const hasDisplayNameValue = hasText(displayName);
@@ -1003,6 +1145,21 @@ export function MyProfile() {
   const hasYouTubeValue = hasText(youtubeHandle);
   const hasDiscordValue = hasText(discordUsername);
   const hasTelegramValue = hasText(telegramUsername);
+
+  const invalidSocialFields = [
+    hasXValue && !isAllowedSocialUrl(xUsername, "x") ? "X URL" : null,
+    hasYouTubeValue && !isAllowedSocialUrl(youtubeHandle, "youtube")
+      ? "YouTube URL"
+      : null,
+    hasDiscordValue && !isAllowedSocialUrl(discordUsername, "discord")
+      ? "Discord invite URL"
+      : null,
+    hasTelegramValue && !isAllowedSocialUrl(telegramUsername, "telegram")
+      ? "Telegram URL"
+      : null,
+  ].filter((value): value is string => value !== null);
+
+  const socialUrlsAreValid = invalidSocialFields.length === 0;
 
   const missingRequiredFields = [
     !hasPublicId ? "Public ID" : null,
@@ -1045,12 +1202,107 @@ export function MyProfile() {
     !loading &&
     !avatarUploading &&
     !publishing &&
+    !publishSettling &&
     !removingEmail &&
     !!verificationRequestId &&
     !!walletBindingId &&
     missingRequiredFields.length === 0 &&
     emailIsValid &&
+    socialUrlsAreValid &&
     hasChangesToPublish;
+
+  const nextContactModeForImpact = derivePreviewContactMode({
+  hasEmailValue,
+  showEmail,
+  hasSavedEncryptedEmail: hasSavedShieldedEmail,
+});
+
+const privateContactSignatureExpected =
+  hasChangesToPublish &&
+  hasEmailValue &&
+  !showEmail &&
+  (!savedEncryptedHiddenPayload ||
+    savedContactMode !== "PRIVATE_CONTACT_AVAILABLE" ||
+    email.trim() !== (savedPublicEmail ?? ""));
+
+const contactModeTransactionExpected =
+  hasChangesToPublish &&
+  (!contactModeContractAddress ||
+    savedContactMode !== nextContactModeForImpact);
+
+const publishImpact = !hasChangesToPublish
+  ? {
+      title: "No unpublished changes",
+      expectation: "Nothing to publish yet.",
+      tone: "neutral",
+    }
+  : privateContactSignatureExpected && contactModeTransactionExpected
+    ? {
+        title: "Private contact + Contact Mode update",
+        expectation: "Expect a wallet signature and a Midnight tx approval.",
+        tone: "strong",
+      }
+    : privateContactSignatureExpected
+      ? {
+          title: "Private contact encryption",
+          expectation: "Expect a wallet signature. No transaction should be needed.",
+          tone: "signature",
+        }
+      : contactModeTransactionExpected
+        ? {
+            title: "Contact Mode update",
+            expectation: "Expect a Midnight tx approval.",
+            tone: "transaction",
+          }
+        : {
+            title: "Profile update only",
+            expectation: "No Midnight wallet prompt expected.",
+            tone: "profile",
+          };
+
+const publishImpactCardClass =
+  publishImpact.tone === "strong"
+    ? "border-emerald-800 bg-emerald-950/25"
+    : publishImpact.tone === "transaction"
+      ? "border-sky-800 bg-sky-950/20"
+      : publishImpact.tone === "signature"
+        ? "border-amber-800 bg-amber-950/20"
+        : "border-zinc-800 bg-zinc-900";
+
+const publishImpactGuideItems = [
+  {
+    title: "Profile update only",
+    badge: "No wallet prompt",
+    desc: "Profile fields, disclosure toggles, socials, website, bio, and profile visibility.",
+  },
+  {
+    title: "Private contact encryption",
+    badge: "Wallet signature",
+    desc: "Saving or replacing a private email while keeping Show email publicly OFF.",
+  },
+  {
+    title: "Contact Mode update",
+    badge: "Midnight tx",
+    desc: "Changing between Public, Private, and Unavailable contact modes.",
+  },
+  {
+    title: "Private contact + Contact Mode",
+    badge: "Signature + tx",
+    desc: "Making an email private when Contact Mode also needs to change.",
+  },
+];
+
+const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
+  setProfileVisibility(nextVisibility);
+
+  if (nextVisibility === "public") {
+    setShowDisplayName(true);
+  }
+
+  if (nextVisibility === "anonymous") {
+    setShowDisplayName(false);
+  }
+};
 
   const uploadAvatarFile = async (file: File) => {
     if (!AVATAR_ALLOWED_TYPES.has(file.type)) {
@@ -1335,6 +1587,7 @@ export function MyProfile() {
       }
 
       setEmail("");
+      setSavedPublicEmail(null);
       setShowEmail(false);
       setSavedEncryptedHiddenPayload(null);
       setHasSavedShieldedEmail(false);
@@ -1368,12 +1621,11 @@ export function MyProfile() {
           showTelegram,
         }),
       );
-      setSaveMsg(
+      await settleAfterProfileWrite(
         syncPending
           ? "Saved private email removed. Contact-mode sync pending."
           : "Saved private email removed.",
       );
-      setTimeout(() => setSaveMsg(""), 2500);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to remove saved private email.",
@@ -1441,7 +1693,7 @@ export function MyProfile() {
   }
 
   const publishChanges = async () => {
-    if (publishing) {
+    if (publishInFlightRef.current || publishing || publishSettling) {
       return;
     }
 
@@ -1462,8 +1714,8 @@ export function MyProfile() {
       return;
     }
 
-    if (!emailIsValid) {
-      setError("Please enter a valid email address.");
+    if (!socialUrlsAreValid) {
+      setError(`Please enter valid social URLs for: ${invalidSocialFields.join(", ")}`);
       return;
     }
 
@@ -1472,8 +1724,9 @@ export function MyProfile() {
       return;
     }
 
+    publishInFlightRef.current = true;
     setError("");
-    setSaveMsg("Waiting for wallet approval...");
+    setSaveMsg("Publishing changes...");
     setPublishing(true);
 
     const requestedVisibility = profileVisibility === "hidden" ? "hidden" : "public";
@@ -1500,9 +1753,25 @@ export function MyProfile() {
 
     try {
       const trimmedEmail = email.trim();
-      const encryptedHiddenPayload = hasEmailValue
-        ? await encryptHiddenEmail(trimmedEmail, verificationRequestId)
-        : savedEncryptedHiddenPayload;
+      const nextSavedPublicEmail = showEmail && hasEmailValue ? trimmedEmail : null;
+
+      let encryptedHiddenPayload: EncryptedHiddenPayload | null =
+        savedEncryptedHiddenPayload;
+
+      const shouldEncryptHiddenEmail =
+        hasEmailValue &&
+        !showEmail &&
+        (!savedEncryptedHiddenPayload ||
+        savedContactMode !== "PRIVATE_CONTACT_AVAILABLE" ||
+        trimmedEmail !== (savedPublicEmail ?? ""));
+
+      if (shouldEncryptHiddenEmail) {
+        setSaveMsg("Waiting for wallet approval...");
+        encryptedHiddenPayload = await encryptHiddenEmail(
+          trimmedEmail,
+          verificationRequestId,
+        );
+      }
 
       const response = await fetch(
         buildNightforceApiUrl(`/api/nightforce/profiles/${verificationRequestId}`),
@@ -1558,15 +1827,15 @@ export function MyProfile() {
       }
 
       const data = payload as ProfileResponse;
-      const nextSavedPublicEmail = showEmail && hasEmailValue ? trimmedEmail : null;
       const nextSavedEncryptedHiddenPayload = encryptedHiddenPayload ?? null;
       const existingContactModeAddress =
         data.profile.contactModeContractAddress ?? contactModeContractAddress ?? null;
 
       setPublicId(data.profile.publicId ?? "");
+      setSavedPublicEmail(nextSavedPublicEmail);
       setSavedEncryptedHiddenPayload(nextSavedEncryptedHiddenPayload);
       setHasSavedShieldedEmail(Boolean(nextSavedEncryptedHiddenPayload));
-      setLastPublishedFingerprint(currentEditorFingerprint);
+      setSaveMsg("Profile saved. Syncing profile state...");
 
       if (existingContactModeAddress) {
         const nextMode = deriveContactModeForSync({
@@ -1586,10 +1855,11 @@ export function MyProfile() {
         if (previousMode === nextMode) {
           setContactModeContractAddress(existingContactModeAddress);
           setSavedContactMode(nextMode);
-          setSaveMsg("Changes published.");
-          setTimeout(() => setSaveMsg(""), 2500);
+          await settleAfterProfileWrite("Changes published.");
           return;
         }
+
+        let existingContractPublishMessage = "Changes published.";
 
         try {
           const updateResult = await updateContactMode(
@@ -1609,7 +1879,6 @@ export function MyProfile() {
 
           setContactModeContractAddress(updateResult.contractAddress);
           setSavedContactMode(nextMode);
-          setSaveMsg("Changes published.");
         } catch (syncError) {
           const syncMessage =
             syncError instanceof Error
@@ -1631,12 +1900,15 @@ export function MyProfile() {
           }
 
           setContactModeContractAddress(existingContactModeAddress);
-          setSaveMsg("Changes published. Contact-mode sync pending.");
+          existingContractPublishMessage =
+            "Changes published. Contact-mode sync pending.";
         }
 
-        setTimeout(() => setSaveMsg(""), 2500);
+        await settleAfterProfileWrite(existingContractPublishMessage);
         return;
       }
+
+      let deployPublishMessage = "Changes published.";
 
       try {
         const initialMode = deriveContactModeForSync({
@@ -1657,7 +1929,6 @@ export function MyProfile() {
 
         setContactModeContractAddress(deployResult.contractAddress);
         setSavedContactMode(initialMode);
-        setSaveMsg("Changes published.");
       } catch (syncError) {
         const syncMessage =
           syncError instanceof Error
@@ -1678,10 +1949,10 @@ export function MyProfile() {
         }
 
         setContactModeContractAddress(null);
-        setSaveMsg("Changes published. Contact-mode sync pending.");
+        deployPublishMessage = "Changes published. Contact-mode sync pending.";
       }
 
-      setTimeout(() => setSaveMsg(""), 2500);
+      await settleAfterProfileWrite(deployPublishMessage);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to publish profile.";
@@ -1696,6 +1967,7 @@ export function MyProfile() {
 
       setSaveMsg("");
     } finally {
+      publishInFlightRef.current = false;
       setPublishing(false);
     }
   };
@@ -1732,6 +2004,14 @@ export function MyProfile() {
         isVerified: true,
         };
 
+  const saveFullProfilePreview = () => {
+    writeFullProfilePreviewToStorage(livePublic);
+  };
+
+  useEffect(() => {
+    writeFullProfilePreviewToStorage(livePublic);
+  }, [livePublic]);
+
   const visibilitySummaryItems = [
     {
       label: "Directory",
@@ -1763,9 +2043,15 @@ export function MyProfile() {
     {
       label: "Show display name",
       value: showDisplayName,
-      set: setShowDisplayName,
-      disabled: !hasDisplayNameValue,
+      set: (nextValue: boolean) => {
+        setShowDisplayName(nextValue);
+
+      if (profileVisibility !== "hidden") {
+        setProfileVisibility(nextValue ? "public" : "anonymous");
+      }
     },
+    disabled: !hasDisplayNameValue,
+  },
     {
       label: "Show region",
       value: showRegion,
@@ -1829,15 +2115,15 @@ export function MyProfile() {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
+    <div className="max-w-[1180px] mx-auto py-8 px-4">
       <h1 className="text-xl font-mono font-bold text-white mb-6">My Profile</h1>
 
       {error && (
         <div className="mb-4 text-xs font-mono text-red-400">{error}</div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 flex flex-col gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,650px)_minmax(0,500px)] lg:items-start">
+        <div className="flex flex-col gap-6">
           <div className="border border-zinc-800 rounded-lg p-4 bg-zinc-900">
             <div className="text-xs font-mono text-zinc-500 mb-1">Connected Wallet</div>
             <div className="font-mono text-white text-sm break-all">{walletId}</div>
@@ -1951,6 +2237,7 @@ export function MyProfile() {
             )}
           </div>
 
+
           <div className="border border-zinc-800 rounded-lg p-4 bg-zinc-900">
             <h2 className="text-sm font-mono font-semibold text-white mb-4">
               Profile Details
@@ -2008,7 +2295,7 @@ export function MyProfile() {
                     type="text"
                     value={publicId}
                     onChange={(e) => setPublicId(e.target.value)}
-                    placeholder="e.g. casper-test-profile"
+                    placeholder="e.g. john-doe"
                     className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500"
                   />
                 </div>
@@ -2076,7 +2363,7 @@ export function MyProfile() {
                     type="text"
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
-                    placeholder="e.g. Community Builder"
+                    placeholder="e.g. Nightforce Recruit"
                     className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500"
                   />
                 </div>
@@ -2088,7 +2375,7 @@ export function MyProfile() {
                   <textarea
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
-                    placeholder="Brief description of your ambassador work..."
+                    placeholder="Write your bio"
                     rows={3}
                     className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 resize-none"
                   />
@@ -2163,55 +2450,61 @@ export function MyProfile() {
 
                 <div>
                   <label className="block text-xs font-mono text-zinc-500 mb-1.5">
-                    X Username
+                    X URL
                   </label>
                   <input
                     type="text"
                     value={xUsername}
                     onChange={(e) => setXUsername(e.target.value)}
-                    placeholder="@yourhandle"
+                    placeholder="https://x.com/yourhandle"
                     className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-mono text-zinc-500 mb-1.5">
-                    YouTube Handle
+                    YouTube URL
                   </label>
                   <input
                     type="text"
                     value={youtubeHandle}
                     onChange={(e) => setYouTubeHandle(e.target.value)}
-                    placeholder="@yourchannel"
+                    placeholder="https://youtube.com/@yourchannel"
                     className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-mono text-zinc-500 mb-1.5">
-                    Discord Username
+                    Discord invite URL
                   </label>
                   <input
                     type="text"
                     value={discordUsername}
                     onChange={(e) => setDiscordUsername(e.target.value)}
-                    placeholder="yourname"
+                    placeholder="https://discord.gg/yourinvite"
                     className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-mono text-zinc-500 mb-1.5">
-                    Telegram Username
+                    Telegram URL
                   </label>
                   <input
                     type="text"
                     value={telegramUsername}
                     onChange={(e) => setTelegramUsername(e.target.value)}
-                    placeholder="@yourname"
+                    placeholder="https://t.me/yourchannel"
                     className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500"
                   />
                 </div>
+
+                {invalidSocialFields.length > 0 && (
+                  <p className="text-[11px] font-mono text-red-400 sm:col-span-2">
+                    Please use real platform URLs only: X, YouTube, Discord invite, or Telegram.
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -2272,61 +2565,95 @@ export function MyProfile() {
             </div>
           </div>
 
-          <div className="border border-zinc-800 rounded-lg p-4 bg-zinc-900">
-            <h2 className="text-sm font-mono font-semibold text-white mb-4">
-              Profile Visibility
-            </h2>
+<div className="border border-zinc-800 rounded-lg p-4 bg-zinc-900">
+  <div className="flex items-start justify-between gap-3 mb-4">
+    <div>
+      <h2 className="text-sm font-mono font-semibold text-white">
+        Profile Visibility
+      </h2>
+      <p className="mt-1 text-[11px] font-mono leading-relaxed text-zinc-600">
+        Public and Anonymous are tied to display-name visibility. Hidden is a
+        manual override and does not erase your disclosure choices.
+      </p>
+    </div>
 
-            <div className="flex flex-col gap-2 mb-5">
-              {(
-                [
-                  {
-                    value: "public",
-                    label: "Public profile",
-                    desc: "Name and disclosed fields are visible",
-                  },
-                  {
-                    value: "anonymous",
-                    label: "Anonymous public profile",
-                    desc: "Profile appears but display name is hidden",
-                  },
-                  {
-                    value: "hidden",
-                    label: "Hidden from public pages",
-                    desc: "Profile does not appear anywhere publicly",
-                  },
-                ] as {
-                  value: ProfileVisibility;
-                  label: string;
-                  desc: string;
-                }[]
-              ).map((opt) => (
-                <label
-                  key={opt.value}
-                  className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
-                    profileVisibility === opt.value
-                      ? "border-zinc-500 bg-zinc-800"
-                      : "border-zinc-800 hover:border-zinc-700"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="visibility"
-                    value={opt.value}
-                    checked={profileVisibility === opt.value}
-                    onChange={() => setProfileVisibility(opt.value)}
-                    className="mt-0.5 accent-white"
-                  />
-                  <div>
-                    <div className="text-sm font-mono text-white">{opt.label}</div>
-                    <div className="text-xs font-mono text-zinc-500 mt-0.5">
-                      {opt.desc}
-                    </div>
-                  </div>
-                </label>
-              ))}
-            </div>
-          </div>
+    <span className="rounded-full border border-zinc-800 bg-zinc-950 px-2.5 py-1 text-[10px] font-mono text-zinc-400">
+      {profileVisibility === "hidden"
+        ? "Hidden"
+        : showDisplayName
+          ? "Public"
+          : "Anonymous"}
+    </span>
+  </div>
+
+  <div className="flex flex-col gap-2">
+    {(
+      [
+        {
+          value: "public",
+          label: "Public profile",
+          desc: "Profile is visible and display name is shown.",
+        },
+        {
+          value: "anonymous",
+          label: "Anonymous public profile",
+          desc: "Profile is visible, but display name is hidden.",
+        },
+        {
+          value: "hidden",
+          label: "Hidden from public pages",
+          desc: "Profile is unavailable publicly and removed from directory-style surfaces.",
+        },
+      ] as {
+        value: ProfileVisibility;
+        label: string;
+        desc: string;
+      }[]
+    ).map((opt) => (
+      <button
+        key={opt.value}
+        type="button"
+        onClick={() => applyProfileVisibility(opt.value)}
+        className={`flex items-start gap-3 rounded-lg border p-3 text-left transition-colors ${
+          profileVisibility === opt.value
+            ? "border-zinc-500 bg-zinc-800"
+            : "border-zinc-800 hover:border-zinc-700"
+        }`}
+      >
+        <span
+          className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+            profileVisibility === opt.value
+              ? "border-white"
+              : "border-zinc-600"
+          }`}
+        >
+          {profileVisibility === opt.value && (
+            <span className="h-2 w-2 rounded-full bg-white" />
+          )}
+        </span>
+
+        <span>
+          <span className="block text-sm font-mono text-white">
+            {opt.label}
+          </span>
+          <span className="mt-0.5 block text-xs font-mono leading-relaxed text-zinc-500">
+            {opt.desc}
+          </span>
+        </span>
+      </button>
+    ))}
+  </div>
+
+  <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950/50 p-3">
+    <div className="text-[10px] font-mono uppercase tracking-wide text-zinc-600">
+      Automatic behavior
+    </div>
+    <p className="mt-1 text-[11px] font-mono leading-relaxed text-zinc-500">
+      Turning Show display name ON selects Public. Turning it OFF selects
+      Anonymous. Hidden is only selected when you choose it here.
+    </p>
+  </div>
+</div>
 
           <div className="border border-zinc-800 rounded-lg p-4 bg-zinc-900">
             <h2 className="text-sm font-mono font-semibold text-white mb-4">
@@ -2367,7 +2694,13 @@ export function MyProfile() {
               disabled={!canPublish}
               className="font-mono text-sm bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-600 px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? "Loading..." : publishing ? "Waiting for wallet..." : "Publish Changes"}
+              {loading
+                ? "Loading..."
+                : publishSettling
+                  ? "Refreshing..."
+                  : publishing
+                    ? "Publishing..."
+                    : "Publish Changes"}
             </button>
             {saveMsg && (
               <span className="text-xs font-mono text-emerald-400">
@@ -2377,22 +2710,71 @@ export function MyProfile() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-4">
-          <div className="border border-zinc-800 rounded-lg p-4 bg-zinc-900">
-            <h2 className="text-sm font-mono font-semibold text-white mb-4">
-              Live Public Preview
-            </h2>
-            {livePublic && livePublic.visibility !== "hidden" ? (
-              <ProfileCard profile={livePublic} />
-            ) : (
-              <div className="border border-zinc-800 rounded-lg p-4 text-center">
-                <div className="text-xs font-mono text-zinc-600">
-                  Profile is hidden from public pages
-                </div>
+<div className="lg:sticky lg:top-24 lg:self-start">
+  <div className="flex flex-col gap-4">
+    <div className={`border rounded-lg p-4 ${publishImpactCardClass}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-[10px] font-mono uppercase tracking-wide text-zinc-500">
+            Current publish impact
+          </div>
+          <div className="mt-1 text-sm font-mono font-semibold text-white">
+            {publishImpact.title}
+          </div>
+          <p className="mt-2 text-[11px] font-mono leading-relaxed text-zinc-400">
+            {publishImpact.expectation}
+          </p>
+        </div>
+
+        <div className="rounded-full border border-zinc-700 bg-zinc-950 px-2.5 py-1 text-[10px] font-mono text-zinc-400">
+          {hasChangesToPublish ? "Unsaved changes" : "Clean"}
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        {publishImpactGuideItems.map((item) => (
+          <div
+            key={item.title}
+            className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-3"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="text-[11px] font-mono font-semibold text-zinc-200">
+                {item.title}
               </div>
-            )}
+              <span className="shrink-0 rounded-full border border-zinc-800 px-2 py-0.5 text-[9px] font-mono text-zinc-500">
+                {item.badge}
+              </span>
+            </div>
+            <p className="mt-2 text-[10px] font-mono leading-relaxed text-zinc-600">
+              {item.desc}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div className="border border-zinc-800 rounded-lg p-4 bg-zinc-900 lg:w-[320px]">
+      <h2 className="text-sm font-mono font-semibold text-white mb-4">
+        Public Card Preview
+      </h2>
+      {livePublic && livePublic.visibility !== "hidden" ? (
+        <ProfileCard
+          profile={livePublic}
+          viewHref={`/profile/${PROFILE_PREVIEW_PUBLIC_ID}`}
+          viewLabel="Open full preview →"
+          viewTarget="_blank"
+          onViewClick={saveFullProfilePreview}
+        />
+      ) : (
+        <div className="border border-zinc-800 rounded-lg p-4 text-center">
+          <div className="text-xs font-mono text-zinc-600">
+            Profile is hidden from public pages
           </div>
         </div>
+      )}
+    </div>
+  </div>
+</div>
       </div>
     </div>
   );

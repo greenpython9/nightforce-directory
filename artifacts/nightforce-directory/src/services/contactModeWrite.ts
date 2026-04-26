@@ -195,6 +195,73 @@ function fromContractModeValue(value: unknown): ContactModeWriteValue {
   return "NO_CONTACT";
 }
 
+const CONTACT_MODE_CONFIRMATION_ATTEMPTS = 18;
+const CONTACT_MODE_CONFIRMATION_DELAY_MS = 5_000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function readContactModeFromPublicDataProvider(
+  publicDataProvider: {
+    queryContractState: (contractAddress: string) => Promise<{ data: unknown } | null>;
+  },
+  contractAddress: string,
+): Promise<{
+  contactMode: ContactModeWriteValue;
+  rawValue: number | string;
+} | null> {
+  const state = await publicDataProvider.queryContractState(contractAddress);
+
+  if (!state) {
+    return null;
+  }
+
+  const ledgerState = (ContactModeContract as any).ledger(state.data);
+  const rawValue = ledgerState.contactMode;
+
+  return {
+    contactMode: fromContractModeValue(rawValue),
+    rawValue:
+      typeof rawValue === "number" || typeof rawValue === "string"
+        ? rawValue
+        : String(rawValue),
+  };
+}
+
+async function waitForContactModeConfirmation(args: {
+  publicDataProvider: {
+    queryContractState: (contractAddress: string) => Promise<{ data: unknown } | null>;
+  };
+  contractAddress: string;
+  expectedMode: ContactModeWriteValue;
+}): Promise<void> {
+  let lastSeenMode: ContactModeWriteValue | "NO_STATE" = "NO_STATE";
+
+  for (let attempt = 1; attempt <= CONTACT_MODE_CONFIRMATION_ATTEMPTS; attempt += 1) {
+    const result = await readContactModeFromPublicDataProvider(
+      args.publicDataProvider,
+      args.contractAddress,
+    );
+
+    if (result) {
+      lastSeenMode = result.contactMode;
+
+      if (result.contactMode === args.expectedMode) {
+        return;
+      }
+    }
+
+    if (attempt < CONTACT_MODE_CONFIRMATION_ATTEMPTS) {
+      await sleep(CONTACT_MODE_CONFIRMATION_DELAY_MS);
+    }
+  }
+
+  throw new Error(
+    `Contact-mode transaction was submitted, but the indexer still reports ${lastSeenMode} instead of ${args.expectedMode}. Wait a minute, then try Verify Sync again.`,
+  );
+}
+
 export async function deployContactModePublic(
   initialMode: ContactModeWriteValue,
 ): Promise<{
@@ -306,12 +373,14 @@ export async function deployContactModePublic(
     CONTACT_MODE_PRIVATE_STATE_ID,
   );
 
+  const publicDataProvider = indexerPublicDataProvider(
+    configuration.indexerUri,
+    configuration.indexerWsUri,
+  );
+
   const providers: any = {
     privateStateProvider,
-    publicDataProvider: indexerPublicDataProvider(
-      configuration.indexerUri,
-      configuration.indexerWsUri,
-    ),
+    publicDataProvider,
     zkConfigProvider,
     proofProvider,
     walletProvider,
@@ -328,6 +397,12 @@ export async function deployContactModePublic(
   if (typeof privateStateProvider.setContractAddress === "function") {
     privateStateProvider.setContractAddress(contractAddress);
   }
+
+  await waitForContactModeConfirmation({
+    publicDataProvider,
+    contractAddress,
+    expectedMode: initialMode,
+  });
 
   return {
     contractAddress,
@@ -456,12 +531,14 @@ export async function updateContactModePublic(
     privateStateProvider.setContractAddress(contractAddress);
   }
 
+  const publicDataProvider = indexerPublicDataProvider(
+    configuration.indexerUri,
+    configuration.indexerWsUri,
+  );
+
   const providers: any = {
     privateStateProvider,
-    publicDataProvider: indexerPublicDataProvider(
-      configuration.indexerUri,
-      configuration.indexerWsUri,
-    ),
+    publicDataProvider,
     zkConfigProvider,
     proofProvider,
     walletProvider,
@@ -476,6 +553,12 @@ export async function updateContactModePublic(
   });
 
   await contract.callTx.setContactMode(toContractModeValue(nextMode));
+
+  await waitForContactModeConfirmation({
+    publicDataProvider,
+    contractAddress,
+    expectedMode: nextMode,
+  });
 
   return {
     contractAddress,

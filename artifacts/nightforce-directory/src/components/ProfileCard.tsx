@@ -29,6 +29,10 @@ export type ProfileCardProfile = {
 interface ProfileCardProps {
   profile: ProfileCardProfile;
   className?: string;
+  viewHref?: string;
+  viewLabel?: string;
+  viewTarget?: "_self" | "_blank";
+  onViewClick?: () => void;
 }
 
 function formatContactMode(value: ProfileCardProfile["contactMode"]): string {
@@ -92,39 +96,50 @@ function normalizeSocialHref(value: string): string {
   return `https://${trimmed}`;
 }
 
+function parseSocialUrl(value: string): URL | null {
+  try {
+    return new URL(normalizeSocialHref(value));
+  } catch {
+    return null;
+  }
+}
+
+function getNormalizedHost(url: URL): string {
+  return url.hostname.toLowerCase().replace(/^www\./, "");
+}
+
 function getSocialLink(value: string): SocialLink | null {
-  const href = normalizeSocialHref(value);
+  const url = parseSocialUrl(value);
 
-  if (!href) return null;
+  if (!url) return null;
 
-  const lower = href.toLowerCase();
+  const href = url.toString();
+  const host = getNormalizedHost(url);
+  const path = url.pathname.replace(/^\/+/, "");
 
-  if (lower.includes("github.com")) {
-    return { href, label: "GitHub", Icon: Github };
-  }
-
-  if (lower.includes("linkedin.com")) {
-    return { href, label: "LinkedIn", Icon: Linkedin };
-  }
-
-  if (lower.includes("twitter.com") || lower.includes("x.com")) {
+  if ((host === "x.com" || host === "twitter.com") && path) {
     return { href, label: "X", Icon: XIcon };
   }
 
-  if (lower.includes("telegram") || lower.includes("t.me")) {
-    return { href, label: "Telegram", Icon: Send };
+  if (
+    host === "youtube.com" &&
+    (path.startsWith("@") ||
+      path.startsWith("channel/") ||
+      path.startsWith("c/") ||
+      path.startsWith("user/"))
+  ) {
+    return { href, label: "YouTube", Icon: Youtube };
   }
 
-  if (lower.includes("discord")) {
+  if (
+    host === "discord.gg" ||
+    (host === "discord.com" && path.startsWith("invite/"))
+  ) {
     return { href, label: "Discord", Icon: DiscordIcon };
   }
 
-  if (lower.includes("instagram.com")) {
-    return { href, label: "Instagram", Icon: Instagram };
-  }
-
-  if (lower.includes("youtube.com") || lower.includes("youtu.be")) {
-    return { href, label: "YouTube", Icon: Youtube };
+  if ((host === "t.me" || host === "telegram.me") && path) {
+    return { href, label: "Telegram", Icon: Send };
   }
 
   return null;
@@ -142,7 +157,14 @@ function getInitials(name: string): string {
   );
 }
 
-export function ProfileCard({ profile, className = "" }: ProfileCardProps) {
+export function ProfileCard({
+  profile,
+  className = "",
+  viewHref,
+  viewLabel = "View →",
+  viewTarget = "_self",
+  onViewClick,
+}: ProfileCardProps) {
   const displayName =
     profile.visibility === "anonymous"
       ? "Anonymous"
@@ -154,6 +176,10 @@ export function ProfileCard({ profile, className = "" }: ProfileCardProps) {
     .map(getSocialLink)
     .filter((link): link is SocialLink => Boolean(link))
     .slice(0, 4);
+
+  const resolvedViewHref = viewHref ?? `/profile/${profile.publicId}`;
+  const viewClassName =
+    "text-[10px] font-mono text-zinc-600 transition-colors hover:text-white";
 
   return (
     <div
@@ -240,12 +266,21 @@ export function ProfileCard({ profile, className = "" }: ProfileCardProps) {
       )}
 
       <div className="mt-auto flex items-center justify-end border-t border-zinc-900 pt-3">
-        <Link
-          href={`/profile/${profile.publicId}`}
-          className="text-[10px] font-mono text-zinc-600 transition-colors hover:text-white"
-        >
-          View →
-        </Link>
+        {viewTarget === "_blank" ? (
+          <a
+            href={resolvedViewHref}
+            target="_blank"
+            rel="noreferrer"
+            onClick={onViewClick}
+            className={viewClassName}
+          >
+            {viewLabel}
+          </a>
+        ) : (
+          <Link href={resolvedViewHref} className={viewClassName}>
+            {viewLabel}
+          </Link>
+        )}
       </div>
     </div>
   );

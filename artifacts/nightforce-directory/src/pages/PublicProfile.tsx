@@ -53,6 +53,9 @@ type PublicProfileResponse = {
   profile: BackendPublicProfile;
 };
 
+const PROFILE_PREVIEW_PUBLIC_ID = "__nightforce_preview__";
+const PROFILE_PREVIEW_STORAGE_KEY = "nightforce:public-profile-preview:v1";
+
 type SocialIconComponent = ComponentType<SVGProps<SVGSVGElement>>;
 
 type SocialLink = {
@@ -104,6 +107,28 @@ function resolveContactMode(
   }
 
   return "NO_CONTACT";
+}
+
+function readPreviewProfileFromStorage(): PublicProfileType | null {
+  try {
+    const raw = window.localStorage.getItem(PROFILE_PREVIEW_STORAGE_KEY);
+
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw) as {
+      profile?: Partial<PublicProfileType>;
+    };
+
+    if (!parsed.profile || typeof parsed.profile.publicId !== "string") {
+      return null;
+    }
+
+    return parsed.profile as PublicProfileType;
+  } catch {
+    return null;
+  }
 }
 
 function toPublicProfile(profile: BackendPublicProfile): PublicProfileType {
@@ -159,74 +184,68 @@ function formatWebsiteLabel(value: string): string {
   }
 }
 
-function formatSocial(social: string): SocialLink {
+function formatSocial(social: string): SocialLink | null {
   const value = social.trim();
 
-  if (value.startsWith("https://x.com/")) {
-    const username = value.replace("https://x.com/", "").trim();
+  try {
+    const url = new URL(normalizeExternalHref(value));
+    const href = url.toString();
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    const path = url.pathname.replace(/^\/+/, "");
 
-    return {
-      label: "X",
-      href: value,
-      text: username ? `@${username}` : "X profile",
-      Icon: XIcon,
-    };
+    if ((host === "x.com" || host === "twitter.com") && path) {
+      const username = path.split("/")[0] ?? "";
+
+      return {
+        label: "X",
+        href,
+        text: username ? `@${username}` : "X profile",
+        Icon: XIcon,
+      };
+    }
+
+    if (
+      host === "youtube.com" &&
+      (path.startsWith("@") ||
+        path.startsWith("channel/") ||
+        path.startsWith("c/") ||
+        path.startsWith("user/"))
+    ) {
+      return {
+        label: "YouTube",
+        href,
+        text: path.startsWith("@") ? path.split("/")[0] ?? "YouTube" : "YouTube",
+        Icon: Youtube,
+      };
+    }
+
+    if (
+      host === "discord.gg" ||
+      (host === "discord.com" && path.startsWith("invite/"))
+    ) {
+      return {
+        label: "Discord",
+        href,
+        text: "Discord",
+        Icon: DiscordIcon,
+      };
+    }
+
+    if ((host === "t.me" || host === "telegram.me") && path) {
+      const username = path.split("/")[0] ?? "";
+
+      return {
+        label: "Telegram",
+        href,
+        text: username ? `@${username.replace(/^\+/, "")}` : "Telegram",
+        Icon: Send,
+      };
+    }
+
+    return null;
+  } catch {
+    return null;
   }
-
-  if (value.startsWith("https://youtube.com/@")) {
-    const handle = value.replace("https://youtube.com/@", "").trim();
-
-    return {
-      label: "YouTube",
-      href: value,
-      text: handle ? `@${handle}` : "YouTube",
-      Icon: Youtube,
-    };
-  }
-
-  if (value.startsWith("discord:")) {
-    const username = value.replace("discord:", "").trim();
-
-    return {
-      label: "Discord",
-      href: null,
-      text: username || "Discord",
-      Icon: DiscordIcon,
-    };
-  }
-
-  if (value.startsWith("https://t.me/")) {
-    const username = value.replace("https://t.me/", "").trim();
-
-    return {
-      label: "Telegram",
-      href: value,
-      text: username ? `@${username}` : "Telegram",
-      Icon: Send,
-    };
-  }
-
-  const href = normalizeExternalHref(value);
-  const lower = href.toLowerCase();
-
-  if (lower.includes("github.com")) {
-    return { label: "GitHub", href, text: "GitHub", Icon: Github };
-  }
-
-  if (lower.includes("linkedin.com")) {
-    return { label: "LinkedIn", href, text: "LinkedIn", Icon: Linkedin };
-  }
-
-  if (lower.includes("instagram.com")) {
-    return { label: "Instagram", href, text: "Instagram", Icon: Instagram };
-  }
-
-  return {
-    label: "Link",
-    href,
-    text: formatWebsiteLabel(value),
-    Icon: ExternalLink,
-  };
 }
 
 function getContactContent(profile: PublicProfileType): {
@@ -323,6 +342,18 @@ export function PublicProfile() {
         return;
       }
 
+      if (publicId === PROFILE_PREVIEW_PUBLIC_ID) {
+        const previewProfile = readPreviewProfileFromStorage();
+
+        if (!cancelled) {
+          setProfile(previewProfile);
+          setNotFound(!previewProfile);
+          setLoading(false);
+        }
+
+        return;
+      }
+
       setLoading(true);
       setError("");
       setNotFound(false);
@@ -390,6 +421,35 @@ export function PublicProfile() {
     };
   }, [publicId]);
 
+  useEffect(() => {
+  if (publicId !== PROFILE_PREVIEW_PUBLIC_ID) {
+    return;
+  }
+
+  const refreshPreviewProfile = () => {
+    const previewProfile = readPreviewProfileFromStorage();
+
+    setProfile(previewProfile);
+    setNotFound(!previewProfile);
+    setError("");
+    setLoading(false);
+  };
+
+  const handlePreviewStorageChange = (event: StorageEvent) => {
+    if (event.key === PROFILE_PREVIEW_STORAGE_KEY) {
+      refreshPreviewProfile();
+    }
+  };
+
+  window.addEventListener("storage", handlePreviewStorageChange);
+  window.addEventListener("focus", refreshPreviewProfile);
+
+  return () => {
+    window.removeEventListener("storage", handlePreviewStorageChange);
+    window.removeEventListener("focus", refreshPreviewProfile);
+  };
+}, [publicId]);
+
   function handleBackToDirectory() {
     if (window.history.length > 1) {
       window.history.back();
@@ -405,7 +465,9 @@ export function PublicProfile() {
       : profile?.displayName || "Anonymous Ambassador";
 
   const formattedSocials = useMemo(() => {
-    return (profile?.socials ?? []).map(formatSocial);
+    return (profile?.socials ?? [])
+      .map(formatSocial)
+      .filter((social): social is SocialLink => Boolean(social));
   }, [profile?.socials]);
 
   if (loading) {

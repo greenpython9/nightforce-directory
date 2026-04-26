@@ -545,23 +545,44 @@ function getSocialVisibilityKey(
 ): "x" | "youtube" | "discord" | "telegram" | null {
   const value = social.trim();
 
-  if (value.startsWith("https://x.com/")) {
-    return "x";
+  if (!value) {
+    return null;
   }
 
-  if (value.startsWith("https://youtube.com/@")) {
-    return "youtube";
-  }
+  try {
+    const url = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`);
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    const path = url.pathname.replace(/^\/+/, "");
 
-  if (value.startsWith("discord:")) {
-    return "discord";
-  }
+    if ((host === "x.com" || host === "twitter.com") && path) {
+      return "x";
+    }
 
-  if (value.startsWith("https://t.me/")) {
-    return "telegram";
-  }
+    if (
+      host === "youtube.com" &&
+      (path.startsWith("@") ||
+        path.startsWith("channel/") ||
+        path.startsWith("c/") ||
+        path.startsWith("user/"))
+    ) {
+      return "youtube";
+    }
 
-  return null;
+    if (
+      host === "discord.gg" ||
+      (host === "discord.com" && path.startsWith("invite/"))
+    ) {
+      return "discord";
+    }
+
+    if ((host === "t.me" || host === "telegram.me") && path) {
+      return "telegram";
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 function filterPublicSocials(profile: typeof profilesTable.$inferSelect): string[] {
