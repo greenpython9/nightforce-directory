@@ -230,7 +230,7 @@ export function Directory() {
     [allProfiles],
   );
 
-const filtered = useMemo(
+  const filtered = useMemo(
     () =>
       allProfiles.filter((p) => {
         if (search.trim()) {
@@ -312,8 +312,8 @@ const filtered = useMemo(
         <div className="mb-4 text-xs font-mono text-red-400">{error}</div>
       )}
 
-      <div className="mb-6 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(24,24,27,0.92),rgba(9,9,11,0.96))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
-        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <div className="mb-6 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(24,24,27,0.92),rgba(9,9,11,0.96))] p-3 shadow-[0_18px_60px_rgba(0,0,0,0.22)] sm:p-4">
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-zinc-600">
               Directory controls
@@ -338,10 +338,10 @@ const filtered = useMemo(
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by name, region, country, or role..."
-          className="mb-4 w-full rounded-xl border border-white/10 bg-black/35 px-3 py-2.5 text-sm font-mono text-white placeholder:text-zinc-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none transition-colors focus:border-emerald-300/40"
+          className="mb-3 w-full rounded-xl border border-white/10 bg-black/35 px-3 py-2.5 text-sm font-mono text-white placeholder:text-zinc-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] outline-none transition-colors focus:border-emerald-300/40 focus-visible:ring-1 focus-visible:ring-emerald-300/25"
         />
 
-        <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
+        <div className="grid gap-3 lg:grid-cols-[1fr_1fr]">
           <div className="rounded-xl border border-white/10 bg-black/20 p-3">
             <div className="mb-2 text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-600">
               Contact
@@ -355,7 +355,7 @@ const filtered = useMemo(
                     key={option.label}
                     type="button"
                     onClick={() => setContactFilter(option.value)}
-                    className={`rounded-full border px-3 py-1.5 text-[11px] font-mono transition-all ${
+                    className={`rounded-full border px-3 py-1.5 text-[11px] font-mono outline-none transition-all focus-visible:ring-1 focus-visible:ring-emerald-300/30 ${
                       isActive
                         ? "border-emerald-300/35 bg-emerald-400/10 text-emerald-100 shadow-[0_0_18px_rgba(52,211,153,0.12)]"
                         : "border-white/10 bg-white/[0.03] text-zinc-500 hover:border-white/20 hover:text-zinc-300"
@@ -376,7 +376,7 @@ const filtered = useMemo(
               <button
                 type="button"
                 onClick={() => setRegionFilter("")}
-                className={`rounded-full border px-3 py-1.5 text-[11px] font-mono transition-all ${
+                className={`rounded-full border px-3 py-1.5 text-[11px] font-mono outline-none transition-all focus-visible:ring-1 focus-visible:ring-emerald-300/30 ${
                   regionFilter === ""
                     ? "border-emerald-300/35 bg-emerald-400/10 text-emerald-100 shadow-[0_0_18px_rgba(52,211,153,0.12)]"
                     : "border-white/10 bg-white/[0.03] text-zinc-500 hover:border-white/20 hover:text-zinc-300"
@@ -393,7 +393,7 @@ const filtered = useMemo(
                     key={region}
                     type="button"
                     onClick={() => setRegionFilter(region)}
-                    className={`rounded-full border px-3 py-1.5 text-[11px] font-mono transition-all ${
+                    className={`rounded-full border px-3 py-1.5 text-[11px] font-mono outline-none transition-all focus-visible:ring-1 focus-visible:ring-emerald-300/30 ${
                       isActive
                         ? "border-emerald-300/35 bg-emerald-400/10 text-emerald-100 shadow-[0_0_18px_rgba(52,211,153,0.12)]"
                         : "border-white/10 bg-white/[0.03] text-zinc-500 hover:border-white/20 hover:text-zinc-300"
@@ -407,7 +407,7 @@ const filtered = useMemo(
           </div>
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
           <label className="block">
             <span className="mb-2 block text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-600">
               Country
@@ -415,7 +415,7 @@ const filtered = useMemo(
             <select
               value={countryFilter}
               onChange={(e) => setCountryFilter(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-black/35 px-3 py-2.5 text-sm font-mono text-zinc-300 outline-none transition-colors focus:border-emerald-300/40"
+              className="w-full rounded-xl border border-white/10 bg-black/35 px-3 py-2.5 text-sm font-mono text-zinc-300 outline-none transition-colors focus:border-emerald-300/40 focus-visible:ring-1 focus-visible:ring-emerald-300/25"
             >
               <option value="">All Countries</option>
               {countries.map((c) => (
@@ -433,7 +433,7 @@ const filtered = useMemo(
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-black/35 px-3 py-2.5 text-sm font-mono text-zinc-300 outline-none transition-colors focus:border-emerald-300/40"
+              className="w-full rounded-xl border border-white/10 bg-black/35 px-3 py-2.5 text-sm font-mono text-zinc-300 outline-none transition-colors focus:border-emerald-300/40 focus-visible:ring-1 focus-visible:ring-emerald-300/25"
             >
               <option value="">All Roles</option>
               {roles.map((r) => (
@@ -446,7 +446,7 @@ const filtered = useMemo(
         </div>
 
         {hasActiveFilters && (
-          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-white/10 pt-4">
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-white/10 pt-3">
             <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-600">
               Active
             </span>
@@ -455,7 +455,7 @@ const filtered = useMemo(
               <button
                 type="button"
                 onClick={() => setSearch("")}
-                className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-mono text-zinc-400 transition-colors hover:border-emerald-300/30 hover:text-emerald-100"
+                className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-mono text-zinc-400 outline-none transition-colors hover:border-emerald-300/30 hover:text-emerald-100 focus-visible:ring-1 focus-visible:ring-emerald-300/25"
               >
                 Search: {search} ×
               </button>
@@ -465,7 +465,7 @@ const filtered = useMemo(
               <button
                 type="button"
                 onClick={() => setContactFilter("")}
-                className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-mono text-zinc-400 transition-colors hover:border-emerald-300/30 hover:text-emerald-100"
+                className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-mono text-zinc-400 outline-none transition-colors hover:border-emerald-300/30 hover:text-emerald-100 focus-visible:ring-1 focus-visible:ring-emerald-300/25"
               >
                 Contact:{" "}
                 {contactFilter === "public"
@@ -481,7 +481,7 @@ const filtered = useMemo(
               <button
                 type="button"
                 onClick={() => setRegionFilter("")}
-                className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-mono text-zinc-400 transition-colors hover:border-emerald-300/30 hover:text-emerald-100"
+                className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-mono text-zinc-400 outline-none transition-colors hover:border-emerald-300/30 hover:text-emerald-100 focus-visible:ring-1 focus-visible:ring-emerald-300/25"
               >
                 Region: {regionFilter} ×
               </button>
@@ -491,7 +491,7 @@ const filtered = useMemo(
               <button
                 type="button"
                 onClick={() => setCountryFilter("")}
-                className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-mono text-zinc-400 transition-colors hover:border-emerald-300/30 hover:text-emerald-100"
+                className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-mono text-zinc-400 outline-none transition-colors hover:border-emerald-300/30 hover:text-emerald-100 focus-visible:ring-1 focus-visible:ring-emerald-300/25"
               >
                 Country: {countryFilter} ×
               </button>
@@ -501,7 +501,7 @@ const filtered = useMemo(
               <button
                 type="button"
                 onClick={() => setRoleFilter("")}
-                className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-mono text-zinc-400 transition-colors hover:border-emerald-300/30 hover:text-emerald-100"
+                className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] font-mono text-zinc-400 outline-none transition-colors hover:border-emerald-300/30 hover:text-emerald-100 focus-visible:ring-1 focus-visible:ring-emerald-300/25"
               >
                 Role: {roleFilter} ×
               </button>
@@ -510,7 +510,7 @@ const filtered = useMemo(
             <button
               type="button"
               onClick={clearFilters}
-              className="ml-auto rounded-full border border-white/10 px-3 py-1 text-[10px] font-mono text-zinc-500 transition-colors hover:border-white/20 hover:text-zinc-300"
+              className="ml-auto rounded-full border border-white/10 px-3 py-1 text-[10px] font-mono text-zinc-500 outline-none transition-colors hover:border-white/20 hover:text-zinc-300 focus-visible:ring-1 focus-visible:ring-emerald-300/25"
             >
               Clear all
             </button>
