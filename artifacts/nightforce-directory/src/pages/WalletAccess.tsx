@@ -18,6 +18,50 @@ function shortenValue(value: string | null, left = 10, right = 8) {
   return `${value.slice(0, left)}...${value.slice(-right)}`;
 }
 
+type VerificationRequestStatus = "pending" | "approved" | "rejected";
+
+type LinkedVerificationRequest = {
+  id: string;
+  status: VerificationRequestStatus;
+  midnightWalletAddress?: string | null;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isVerificationRequestStatus(
+  value: unknown,
+): value is VerificationRequestStatus {
+  return value === "pending" || value === "approved" || value === "rejected";
+}
+
+function getLinkedVerificationRequestFromPayload(
+  payload: unknown,
+): LinkedVerificationRequest | null {
+  if (!isRecord(payload) || !isRecord(payload.request)) {
+    return null;
+  }
+
+  const request = payload.request;
+
+  if (
+    typeof request.id !== "string" ||
+    !isVerificationRequestStatus(request.status)
+  ) {
+    return null;
+  }
+
+  return {
+    id: request.id,
+    status: request.status,
+    midnightWalletAddress:
+      typeof request.midnightWalletAddress === "string"
+        ? request.midnightWalletAddress
+        : null,
+  };
+}
+
 export function WalletAccess() {
   const {
     walletId,
@@ -47,6 +91,11 @@ export function WalletAccess() {
   const [bindError, setBindError] = useState<string | null>(null);
   const [bindSuccess, setBindSuccess] = useState<string | null>(null);
   const [isBinding, setIsBinding] = useState(false);
+  const [linkedVerificationRequest, setLinkedVerificationRequest] =
+    useState<LinkedVerificationRequest | null>(null);
+  const [isLinkedRequestLoading, setIsLinkedRequestLoading] = useState(false);
+  const [linkedRequestError, setLinkedRequestError] = useState<string | null>(null);
+  const [copyRequestMessage, setCopyRequestMessage] = useState<string | null>(null);
 
   async function reloadProfileProofState() {
     setIsProfileProofLoading(true);
@@ -66,6 +115,93 @@ export function WalletAccess() {
       setIsProfileProofLoading(false);
     }
   }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadLinkedVerificationRequest() {
+      setLinkedRequestError(null);
+      setCopyRequestMessage(null);
+
+      if (connectionMode !== "midnight" || !walletId) {
+        setLinkedVerificationRequest(null);
+        setIsLinkedRequestLoading(false);
+        return;
+      }
+
+      setIsLinkedRequestLoading(true);
+
+      try {
+        const response = await fetch(
+          buildNightforceApiUrl(
+            `/api/nightforce/verification-requests/by-wallet/${encodeURIComponent(walletId)}`,
+          ),
+        );
+
+        let payload: unknown = null;
+
+        try {
+          payload = await response.json();
+        } catch {
+          payload = null;
+        }
+
+        if (response.status === 404) {
+          if (!cancelled) {
+            setLinkedVerificationRequest(null);
+          }
+
+          return;
+        }
+
+        if (!response.ok) {
+          const message =
+            isRecord(payload) &&
+            typeof payload.error === "string" &&
+            payload.error.trim()
+              ? payload.error
+              : "Failed to load linked verification request.";
+
+          throw new Error(message);
+        }
+
+        const request = getLinkedVerificationRequestFromPayload(payload);
+
+        if (!request) {
+          throw new Error("Linked verification request response was invalid.");
+        }
+
+        if (!cancelled) {
+          setLinkedVerificationRequest(request);
+
+          if (request.status === "approved") {
+            setRequestIdToBind((current) =>
+              current.trim() ? current : request.id,
+            );
+          }
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setLinkedVerificationRequest(null);
+          setLinkedRequestError(
+            error instanceof Error
+              ? error.message
+              : "Failed to load linked verification request.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLinkedRequestLoading(false);
+        }
+      }
+    }
+
+    void loadLinkedVerificationRequest();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [connectionMode, walletId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -119,6 +255,19 @@ export function WalletAccess() {
     }
     return walletId;
   }, [connectionMode, midnightSnapshot, walletId]);
+
+  const handleCopyRequestId = async () => {
+    if (!linkedVerificationRequest?.id) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(linkedVerificationRequest.id);
+      setCopyRequestMessage("Request ID copied.");
+    } catch {
+      setCopyRequestMessage("Copy failed. Select and copy the ID manually.");
+    }
+  };
 
   const handleBindWallet = async () => {
     if (!walletId) {
@@ -308,10 +457,70 @@ export function WalletAccess() {
                       <div className="mb-2 text-xs font-mono font-semibold text-emerald-300">
                         Bind Approved Request to This Midnight Wallet
                       </div>
-                      <p className="text-[11px] font-mono text-zinc-500 leading-relaxed mb-3">
-                        After admin approval, paste your approved verification request ID here to
-                        bind it to the currently connected Midnight wallet.
+                      <p className="mb-3 text-[11px] font-mono leading-relaxed text-zinc-500">
+                        After admin approval, your approved request ID can be detected from this
+                        connected Midnight wallet and used for binding.
                       </p>
+
+                      {isLinkedRequestLoading && (
+                        <div className="mb-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[11px] font-mono text-zinc-400">
+                          Checking for a wallet-linked verification request...
+                        </div>
+                      )}
+
+                      {linkedRequestError && (
+                        <div className="mb-3 rounded-xl border border-red-900/60 bg-red-950/25 px-3 py-2.5 text-[11px] font-mono leading-5 text-red-300">
+                          {linkedRequestError}
+                        </div>
+                      )}
+
+                      {linkedVerificationRequest?.status === "pending" && (
+                        <div className="mb-3 rounded-xl border border-yellow-500/20 bg-yellow-400/10 px-3 py-2.5 text-[11px] font-mono leading-5 text-yellow-200">
+                          Your verification request is pending admin review. Once approved, the
+                          request ID will appear here automatically.
+                        </div>
+                      )}
+
+                      {linkedVerificationRequest?.status === "approved" && (
+                        <div className="mb-3 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.06] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+                          <div className="mb-1 text-[11px] font-mono font-semibold text-emerald-300">
+                            Approved request found
+                          </div>
+                          <div className="mb-3 break-all rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-[11px] font-mono leading-5 text-zinc-300">
+                            {linkedVerificationRequest.id}
+                          </div>
+                          <div className="flex flex-col gap-2 sm:flex-row">
+                            <button
+                              type="button"
+                              onClick={() => void handleCopyRequestId()}
+                              className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] font-mono font-semibold text-zinc-300 transition-all hover:border-emerald-300/30 hover:bg-emerald-400/10 hover:text-emerald-100"
+                            >
+                              Copy Request ID
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setRequestIdToBind(linkedVerificationRequest.id)
+                              }
+                              className="rounded-lg border border-emerald-300/25 bg-emerald-400/10 px-3 py-2 text-[11px] font-mono font-semibold text-emerald-100 transition-all hover:border-emerald-300/40 hover:bg-emerald-400/15 hover:text-white"
+                            >
+                              Use This ID
+                            </button>
+                          </div>
+                          {copyRequestMessage && (
+                            <div className="mt-2 text-[11px] font-mono text-zinc-400">
+                              {copyRequestMessage}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {linkedVerificationRequest?.status === "rejected" && (
+                        <div className="mb-3 rounded-xl border border-red-900/60 bg-red-950/25 px-3 py-2.5 text-[11px] font-mono leading-5 text-red-300">
+                          This wallet has a rejected verification request. Contact the team if you
+                          believe this should be reviewed again.
+                        </div>
+                      )}
 
                       <input
                         type="text"

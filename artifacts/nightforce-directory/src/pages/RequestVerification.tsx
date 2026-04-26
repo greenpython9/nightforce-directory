@@ -265,7 +265,7 @@ export function RequestVerification() {
           </div>
           <p className="mb-4 text-sm font-mono leading-6 text-zinc-400">
             Connect your Midnight wallet before submitting a verification request. This lets
-            Nightforce Directory remember your request status when you come back later.
+            nightforce.cc remember your request status when you come back later.
           </p>
           <Link
             href="/wallet"
