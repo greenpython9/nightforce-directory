@@ -106,7 +106,7 @@ export function NavBar() {
           ) : (
             <Link
               href="/wallet"
-              className="text-xs font-mono bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 px-3 py-1.5 rounded transition-colors"
+              className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-mono font-semibold text-zinc-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all hover:border-emerald-300/30 hover:bg-emerald-400/10 hover:text-emerald-100 hover:shadow-[0_0_18px_rgba(52,211,153,0.14),inset_0_1px_0_rgba(255,255,255,0.04)]"
             >
               Wallet / Profile
             </Link>

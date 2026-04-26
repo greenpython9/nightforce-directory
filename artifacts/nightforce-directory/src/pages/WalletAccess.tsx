@@ -180,19 +180,25 @@ export function WalletAccess() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center px-4">
-      <div className="max-w-lg w-full">
-        <div className="mb-10 text-center">
-          <h1 className="text-3xl font-mono font-bold text-white tracking-wider mb-3">
+    <div className="relative min-h-screen overflow-hidden bg-zinc-950">
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute left-1/2 top-[-260px] h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-zinc-700/10 blur-3xl" />
+        <div className="absolute left-[15%] top-[28%] h-80 w-80 rounded-full bg-emerald-950/10 blur-3xl" />
+        <div className="absolute right-[10%] top-[36%] h-96 w-96 rounded-full bg-zinc-800/10 blur-3xl" />
+    </div>
+
+    <div className="relative z-10 mx-auto flex w-full max-w-lg flex-col px-4 pb-16 pt-28 sm:pt-32">
+        <div className="mb-7 text-center">
+          <h1 className="mb-3 text-3xl font-mono font-bold tracking-wider text-white">
             nightforce.cc
           </h1>
-          <p className="text-sm font-mono text-zinc-400">
+          <p className="text-sm font-mono leading-6 text-zinc-500/90">
             Unofficial directory for existing Nightforce ambassadors
           </p>
         </div>
 
         {walletError && (
-          <div className="border border-red-900 bg-red-950/40 rounded-lg p-4 mb-4">
+          <div className="mb-4 rounded-2xl border border-red-900/60 bg-red-950/30 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
             <div className="text-xs font-mono text-red-300">{walletError}</div>
           </div>
         )}
@@ -299,7 +305,7 @@ export function WalletAccess() {
                 {connectionMode === "midnight" &&
                   verificationStatus !== "approved" && (
                     <div className="mt-4 border-t border-zinc-800 pt-4">
-                      <div className="text-xs font-mono text-cyan-300 mb-2">
+                      <div className="mb-2 text-xs font-mono font-semibold text-emerald-300">
                         Bind Approved Request to This Midnight Wallet
                       </div>
                       <p className="text-[11px] font-mono text-zinc-500 leading-relaxed mb-3">
@@ -373,21 +379,21 @@ export function WalletAccess() {
             )}
           </div>
         ) : (
-          <div className="mb-8 space-y-3">
+          <div className="mb-8 space-y-3 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(24,24,27,0.92),rgba(9,9,11,0.96))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
             <div className="relative">
               <button
                 onClick={() => {
                   setShowMockPicker((prev) => !prev);
                 }}
                 disabled={isWalletLoading}
-                className="w-full font-mono text-sm bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 px-4 py-3 rounded-lg transition-colors disabled:opacity-50"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-mono font-semibold text-zinc-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all hover:border-emerald-300/30 hover:bg-emerald-400/10 hover:text-emerald-100 hover:shadow-[0_0_18px_rgba(52,211,153,0.16),inset_0_1px_0_rgba(255,255,255,0.04)] disabled:opacity-50"
               >
                 {isWalletLoading ? "Working..." : "Connect Mock Wallet"}
               </button>
 
               {showMockPicker && (
-                <div className="absolute left-0 right-0 top-full mt-1 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl z-50">
-                  <div className="px-3 py-2 border-b border-zinc-800">
+                <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-white/10 bg-zinc-950 shadow-2xl">
+                  <div className="border-b border-white/10 px-3 py-2">
                     <span className="text-xs font-mono text-zinc-500">
                       Select mock wallet
                     </span>
@@ -399,7 +405,7 @@ export function WalletAccess() {
                         await connect(wId);
                         setShowMockPicker(false);
                       }}
-                      className="w-full text-left px-3 py-2.5 text-sm font-mono text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors flex items-center justify-between"
+                      className="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm font-mono text-zinc-300 transition-colors hover:bg-emerald-400/10 hover:text-emerald-100"
                     >
                       <span>{wId}</span>
                       {wId === ADMIN_WALLET_ID && (
@@ -423,7 +429,7 @@ export function WalletAccess() {
                   await connectMidnight(providerId);
                 }}
                 disabled={isWalletLoading || availableMidnightWallets.length === 0}
-                className="w-full font-mono text-sm bg-zinc-900 hover:bg-zinc-800 text-cyan-300 border border-cyan-900 px-4 py-3 rounded-lg transition-colors disabled:opacity-50"
+                className="w-full rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-4 py-3 text-sm font-mono font-semibold text-emerald-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all hover:border-emerald-300/40 hover:bg-emerald-400/15 hover:text-white hover:shadow-[0_0_22px_rgba(52,211,153,0.18),inset_0_1px_0_rgba(255,255,255,0.04)] disabled:opacity-50"
               >
                 {isWalletLoading
                   ? "Working..."
@@ -433,8 +439,8 @@ export function WalletAccess() {
               </button>
             )}
 
-            <div className="border border-cyan-950 bg-cyan-950/20 rounded-lg p-4">
-              <div className="text-xs font-mono text-cyan-300 mb-1">
+            <div className="mt-3 rounded-xl border border-emerald-400/15 bg-emerald-400/[0.05] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+              <div className="mb-1 text-xs font-mono font-semibold text-emerald-300">
                 {MIDNIGHT_CONNECT_ENABLED
                   ? midnightModeLabel
                   : "Midnight local browser wallet write is not available yet"}
@@ -444,7 +450,7 @@ export function WalletAccess() {
               </div>
             </div>
 
-            <p className="text-[11px] font-mono text-zinc-600 px-1">
+            <p className="mt-3 px-1 text-[11px] font-mono leading-5 text-zinc-600">
               {isPreprodWriteMode
                 ? "Mock wallet stays available for the existing proof-of-life UI flow. Preprod mode is the next path for real app-side write."
                 : "Mock wallet keeps the existing proof-of-life UI flow. Local Midnight contract state is shown below through the API bridge while app-side write remains blocked."}
@@ -452,8 +458,8 @@ export function WalletAccess() {
           </div>
         )}
 
-        <div className="border border-cyan-950 bg-cyan-950/20 rounded-lg px-4 py-3 mb-6">
-          <div className="text-xs font-mono text-cyan-300 mb-2">
+        <div className="mb-6 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+          <div className="text-xs font-mono text-emerald-300 mb-2">
             {isPreprodWriteMode
               ? "Profile Proof State (Current Source)"
               : "Profile Proof State"}
@@ -515,14 +521,14 @@ export function WalletAccess() {
         <div className="flex flex-col gap-3">
           <Link
             href="/directory"
-            className="block text-center font-mono text-sm text-zinc-300 border border-zinc-700 px-4 py-3 rounded-lg hover:border-zinc-500 hover:text-white transition-colors"
+            className="block rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-center text-sm font-mono font-semibold text-zinc-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all hover:border-emerald-300/30 hover:bg-emerald-400/10 hover:text-emerald-100 hover:shadow-[0_0_18px_rgba(52,211,153,0.14),inset_0_1px_0_rgba(255,255,255,0.04)]"
           >
             Browse Directory
           </Link>
 
           <Link
             href="/request-verification"
-            className="block text-center font-mono text-sm text-zinc-300 border border-zinc-700 px-4 py-3 rounded-lg hover:border-zinc-500 hover:text-white transition-colors"
+            className="block rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-center text-sm font-mono font-semibold text-zinc-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all hover:border-emerald-300/30 hover:bg-emerald-400/10 hover:text-emerald-100 hover:shadow-[0_0_18px_rgba(52,211,153,0.14),inset_0_1px_0_rgba(255,255,255,0.04)]"
           >
             Request Verification
           </Link>
@@ -530,7 +536,7 @@ export function WalletAccess() {
           {verificationStatus === "approved" && connectionMode === "midnight" && (
             <Link
               href="/my-profile"
-              className="block text-center font-mono text-sm text-emerald-400 border border-emerald-800 px-4 py-3 rounded-lg hover:border-emerald-600 transition-colors"
+              className="block rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-4 py-3 text-center text-sm font-mono font-semibold text-emerald-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all hover:border-emerald-300/40 hover:bg-emerald-400/15 hover:text-white hover:shadow-[0_0_18px_rgba(52,211,153,0.18),inset_0_1px_0_rgba(255,255,255,0.04)]"
             >
               My Profile
             </Link>
