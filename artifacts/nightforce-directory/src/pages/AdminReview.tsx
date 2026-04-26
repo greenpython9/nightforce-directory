@@ -50,6 +50,7 @@ export function AdminReview() {
   const [reviewConfirmation, setReviewConfirmation] =
     useState<ReviewConfirmation | null>(null);
   const [bulkAdminNotes, setBulkAdminNotes] = useState("");
+  const [copyMessage, setCopyMessage] = useState("");
 
   const reload = async (selectedId?: string | null) => {
     setLoading(true);
@@ -191,6 +192,21 @@ export function AdminReview() {
     });
   };
 
+  const handleCopy = async (label: string, value: string | null | undefined) => {
+    if (!value) return;
+
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopyMessage(`${label} copied.`);
+    } catch {
+      setCopyMessage(`Copy failed. Select and copy the ${label.toLowerCase()} manually.`);
+    }
+
+    window.setTimeout(() => {
+      setCopyMessage("");
+    }, 1800);
+  };
+
   const openReviewConfirmation = (
     action: ReviewAction,
     mode: "single" | "bulk",
@@ -302,12 +318,21 @@ export function AdminReview() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto py-8 px-4">
-      <h1 className="text-xl font-mono font-bold text-white mb-6">
-        Admin Review
-      </h1>
+    <div className="mx-auto w-full max-w-6xl px-4 pb-20 pt-8 sm:pt-10">
+      <div className="mb-6">
+        <div className="mb-2 text-[11px] font-mono uppercase tracking-[0.24em] text-emerald-300/70">
+          Admin Console
+        </div>
+        <h1 className="text-2xl font-mono font-bold tracking-tight text-white">
+          Verification Review
+        </h1>
+        <p className="mt-2 max-w-2xl text-sm font-mono leading-6 text-zinc-500">
+          Review ambassador verification requests, filter by country or region, and approve or
+          reject requests in bulk.
+        </p>
+      </div>
 
-      <div className="flex gap-1 mb-6 border-b border-zinc-800">
+      <div className="mb-6 flex flex-wrap gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-1.5">
         {tabs.map((t) => {
           const count = requests.filter((r) => r.status === t.key).length;
           return (
@@ -320,10 +345,10 @@ export function AdminReview() {
                 setCountryFilter("all");
                 setAdminNotes("");
               }}
-              className={`px-4 py-2 text-xs font-mono border-b-2 transition-colors ${
+              className={`rounded-xl px-4 py-2 text-xs font-mono font-semibold transition-all ${
                 tab === t.key
-                  ? "border-white text-white"
-                  : "border-transparent text-zinc-500 hover:text-zinc-300"
+                  ? "border border-emerald-300/25 bg-emerald-400/10 text-emerald-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                  : "border border-transparent text-zinc-500 hover:border-white/10 hover:bg-white/[0.04] hover:text-zinc-300"
               }`}
             >
               {t.label} ({count})
@@ -333,10 +358,12 @@ export function AdminReview() {
       </div>
 
       {error && (
-        <div className="mb-4 text-xs font-mono text-red-400">{error}</div>
+        <div className="mb-4 rounded-xl border border-red-900/60 bg-red-950/25 px-3.5 py-3 text-xs font-mono leading-5 text-red-300">
+          {error}
+        </div>
       )}
 
-      <div className="flex gap-6">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="flex-1 min-w-0">
           <div className="mb-4 grid gap-3">
             <input
@@ -438,10 +465,10 @@ export function AdminReview() {
               {filtered.map((req) => (
                 <div
                   key={req.id}
-                  className={`flex gap-3 rounded-xl border p-3 transition-colors ${
+                  className={`flex gap-3 rounded-2xl border p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] transition-all ${
                     selected?.id === req.id
-                      ? "border-emerald-400/30 bg-emerald-400/[0.05]"
-                      : "border-white/10 bg-white/[0.03] hover:border-white/20"
+                      ? "border-emerald-400/30 bg-emerald-400/[0.06] shadow-[0_0_18px_rgba(52,211,153,0.08),inset_0_1px_0_rgba(255,255,255,0.035)]"
+                      : "border-white/10 bg-white/[0.03] hover:border-emerald-300/20 hover:bg-white/[0.045]"
                   }`}
                 >
                   <input
@@ -483,8 +510,8 @@ export function AdminReview() {
         </div>
 
         {selected ? (
-          <div className="w-80 flex-shrink-0">
-            <div className="border border-zinc-800 rounded-lg p-4 bg-zinc-900 flex flex-col gap-4">
+          <div className="h-fit lg:sticky lg:top-20">
+            <div className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(24,24,27,0.84),rgba(9,9,11,0.96))] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.035)]">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-mono font-semibold text-white">
                   {selected.discordHandle}
@@ -493,16 +520,47 @@ export function AdminReview() {
               </div>
 
               <div className="flex flex-col gap-2 text-xs font-mono">
-                <div>
-                  <span className="text-zinc-600">Request ID: </span>
-                  <span className="text-zinc-300 break-all">{selected.id}</span>
+                <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
+                  <div className="mb-1 text-[11px] font-mono uppercase tracking-[0.16em] text-zinc-500">
+                    Request ID
+                  </div>
+                  <div className="break-all text-xs font-mono leading-5 text-zinc-300">
+                    {selected.id}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void handleCopy("Request ID", selected.id)}
+                    className="mt-2 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[11px] font-mono font-semibold text-zinc-300 transition-all hover:border-emerald-300/30 hover:bg-emerald-400/10 hover:text-emerald-100"
+                  >
+                    Copy Request ID
+                  </button>
                 </div>
-                <div>
-                  <span className="text-zinc-600">Wallet: </span>
-                  <span className="text-zinc-300 break-all">
+
+                <div className="rounded-2xl border border-white/10 bg-black/30 p-3">
+                  <div className="mb-1 text-[11px] font-mono uppercase tracking-[0.16em] text-zinc-500">
+                    Wallet
+                  </div>
+                  <div className="break-all text-xs font-mono leading-5 text-zinc-300">
                     {selected.midnightWalletAddress ?? "—"}
-                  </span>
+                  </div>
+                  {selected.midnightWalletAddress && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void handleCopy("Wallet address", selected.midnightWalletAddress)
+                      }
+                      className="mt-2 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[11px] font-mono font-semibold text-zinc-300 transition-all hover:border-emerald-300/30 hover:bg-emerald-400/10 hover:text-emerald-100"
+                    >
+                      Copy Wallet
+                    </button>
+                  )}
                 </div>
+
+                {copyMessage && (
+                  <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/[0.06] px-3 py-2 text-[11px] font-mono text-emerald-200">
+                    {copyMessage}
+                  </div>
+                )}
                 <div>
                   <span className="text-zinc-600">Submitted: </span>
                   <span className="text-zinc-300">
@@ -526,14 +584,14 @@ export function AdminReview() {
               </div>
 
               <div>
-                <label className="block text-xs font-mono text-zinc-500 mb-1.5">
+                <label className="mb-1.5 block text-[11px] font-mono uppercase tracking-[0.16em] text-zinc-500">
                   Admin Notes
                 </label>
                 <textarea
                   value={adminNotes}
                   onChange={(e) => setAdminNotes(e.target.value)}
                   rows={3}
-                  className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-xs font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 resize-none"
+                  className="w-full resize-none rounded-xl border border-white/10 bg-black/35 px-3.5 py-3 text-xs font-mono text-white placeholder:text-zinc-700 transition-all focus:border-emerald-300/35 focus:bg-black/45 focus:outline-none focus:ring-2 focus:ring-emerald-400/10"
                 />
               </div>
 
@@ -544,7 +602,7 @@ export function AdminReview() {
                       openReviewConfirmation("approve", "single", [selected])
                     }
                     disabled={acting}
-                    className="flex-1 font-mono text-xs bg-emerald-950 hover:bg-emerald-900 text-emerald-400 border border-emerald-800 px-3 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-3 py-2.5 text-xs font-mono font-semibold text-emerald-100 transition-all hover:border-emerald-300/40 hover:bg-emerald-400/15 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {acting ? "Working..." : "Approve"}
                   </button>
@@ -553,7 +611,7 @@ export function AdminReview() {
                       openReviewConfirmation("reject", "single", [selected])
                     }
                     disabled={acting}
-                    className="flex-1 font-mono text-xs bg-red-950 hover:bg-red-900 text-red-400 border border-red-800 px-3 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 rounded-xl border border-red-400/25 bg-red-400/10 px-3 py-2.5 text-xs font-mono font-semibold text-red-100 transition-all hover:border-red-300/40 hover:bg-red-400/15 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {acting ? "Working..." : "Reject"}
                   </button>
@@ -562,9 +620,9 @@ export function AdminReview() {
             </div>
           </div>
         ) : (
-          <div className="w-80 flex-shrink-0 border border-zinc-800 rounded-lg p-4 bg-zinc-900 flex items-center justify-center">
-            <span className="text-xs font-mono text-zinc-600">
-              Select a request to review
+          <div className="flex min-h-48 items-center justify-center rounded-3xl border border-white/10 bg-white/[0.03] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] lg:sticky lg:top-20">
+            <span className="text-center text-xs font-mono leading-5 text-zinc-600">
+              Select a request to review details, copy wallet information, or take admin action.
             </span>
           </div>
         )}
