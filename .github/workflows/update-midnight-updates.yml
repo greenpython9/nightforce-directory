@@ -1,0 +1,53 @@
+name: Update Midnight updates feed
+
+on:
+  schedule:
+    - cron: "17 */12 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-midnight-updates:
+    name: Update Midnight updates JSON
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Refresh Midnight updates JSON
+        run: pnpm --filter @workspace/nightforce-directory run update:midnight-updates
+
+      - name: Typecheck directory app
+        run: pnpm --filter @workspace/nightforce-directory run typecheck
+
+      - name: Commit updated Midnight feed
+        run: |
+          if git diff --quiet -- artifacts/nightforce-directory/public/midnight-updates.json; then
+            echo "No Midnight updates changes to commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add artifacts/nightforce-directory/public/midnight-updates.json
+          git commit -m "Update Midnight updates feed"
+          git push
