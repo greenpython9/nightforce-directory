@@ -299,7 +299,7 @@ export function Directory() {
   ];
 
   return (
-    <div className="max-w-5xl mx-auto py-8 px-4">
+    <div className="mx-auto max-w-5xl px-3 py-6 sm:px-4 sm:py-8">
       <h1 className="text-xl font-mono font-bold text-white mb-2">
         Ambassador Directory
       </h1>
@@ -346,7 +346,7 @@ export function Directory() {
             <div className="mb-2 text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-600">
               Contact
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
               {contactOptions.map((option) => {
                 const isActive = contactFilter === option.value;
 
@@ -355,7 +355,7 @@ export function Directory() {
                     key={option.label}
                     type="button"
                     onClick={() => setContactFilter(option.value)}
-                    className={`rounded-full border px-3 py-1.5 text-[11px] font-mono outline-none transition-all focus-visible:ring-1 focus-visible:ring-emerald-300/30 ${
+                    className={`inline-flex justify-center rounded-full border px-3 py-1.5 text-[11px] font-mono outline-none transition-all focus-visible:ring-1 focus-visible:ring-emerald-300/30 ${
                       isActive
                         ? "border-emerald-300/35 bg-emerald-400/10 text-emerald-100 shadow-[0_0_18px_rgba(52,211,153,0.12)]"
                         : "border-white/10 bg-white/[0.03] text-zinc-500 hover:border-white/20 hover:text-zinc-300"
@@ -372,11 +372,11 @@ export function Directory() {
             <div className="mb-2 text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-600">
               Region
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
               <button
                 type="button"
                 onClick={() => setRegionFilter("")}
-                className={`rounded-full border px-3 py-1.5 text-[11px] font-mono outline-none transition-all focus-visible:ring-1 focus-visible:ring-emerald-300/30 ${
+                className={`inline-flex justify-center rounded-full border px-3 py-1.5 text-[11px] font-mono outline-none transition-all focus-visible:ring-1 focus-visible:ring-emerald-300/30 ${
                   regionFilter === ""
                     ? "border-emerald-300/35 bg-emerald-400/10 text-emerald-100 shadow-[0_0_18px_rgba(52,211,153,0.12)]"
                     : "border-white/10 bg-white/[0.03] text-zinc-500 hover:border-white/20 hover:text-zinc-300"
@@ -393,7 +393,7 @@ export function Directory() {
                     key={region}
                     type="button"
                     onClick={() => setRegionFilter(region)}
-                    className={`rounded-full border px-3 py-1.5 text-[11px] font-mono outline-none transition-all focus-visible:ring-1 focus-visible:ring-emerald-300/30 ${
+                    className={`inline-flex justify-center rounded-full border px-3 py-1.5 text-[11px] font-mono outline-none transition-all focus-visible:ring-1 focus-visible:ring-emerald-300/30 ${
                       isActive
                         ? "border-emerald-300/35 bg-emerald-400/10 text-emerald-100 shadow-[0_0_18px_rgba(52,211,153,0.12)]"
                         : "border-white/10 bg-white/[0.03] text-zinc-500 hover:border-white/20 hover:text-zinc-300"
@@ -510,7 +510,7 @@ export function Directory() {
             <button
               type="button"
               onClick={clearFilters}
-              className="ml-auto rounded-full border border-white/10 px-3 py-1 text-[10px] font-mono text-zinc-500 outline-none transition-colors hover:border-white/20 hover:text-zinc-300 focus-visible:ring-1 focus-visible:ring-emerald-300/25"
+              className="inline-flex w-full justify-center rounded-full border border-white/10 px-3 py-1 text-[10px] font-mono text-zinc-500 outline-none transition-colors hover:border-white/20 hover:text-zinc-300 focus-visible:ring-1 focus-visible:ring-emerald-300/25 sm:ml-auto sm:w-auto"
             >
               Clear all
             </button>
@@ -533,7 +533,7 @@ export function Directory() {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
           {filtered.map((profile) => (
             <ProfileCard key={profile.publicId} profile={profile} />
           ))}
