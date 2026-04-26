@@ -41,10 +41,10 @@ const quickLinks = [
 ];
 
 const categories = [
-  "Public Contact",
-  "Private Contact",
-  "APAC",
-  "EMEA",
+  { label: "Public Contact", href: "/directory?contact=public" },
+  { label: "Private Contact", href: "/directory?contact=private" },
+  { label: "APAC", href: "/directory?region=APAC" },
+  { label: "EMEA", href: "/directory?region=EMEA" },
 ];
 
 const midnightUpdates = [
@@ -558,11 +558,11 @@ export function Landing() {
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               {categories.map((category) => (
                 <Link
-                  key={category}
-                  href={`/directory?q=${encodeURIComponent(category)}`}
+                  key={category.href}
+                  href={category.href}
                   className="rounded-md border border-zinc-900 bg-zinc-900 px-3 py-1.5 text-[10px] font-mono text-zinc-500 hover:border-zinc-500 hover:text-zinc-300"
                 >
-                  {category}
+                  {category.label}
                 </Link>
               ))}
             </div>
