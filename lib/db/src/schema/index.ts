@@ -46,6 +46,7 @@ export const verificationRequestsTable = sqliteTable("verification_requests", {
   discordHandle: text("discord_handle").notNull(),
   region: text("region").notNull(),
   note: text("note").notNull().$defaultFn(() => ""),
+  midnightWalletAddress: text("midnight_wallet_address").unique(),
   status: text("status")
     .$type<VerificationStatus>()
     .notNull()

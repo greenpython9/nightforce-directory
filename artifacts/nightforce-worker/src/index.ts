@@ -50,6 +50,7 @@ const createVerificationRequestInputSchema = z.object({
   discordHandle: z.string().trim().min(1),
   region: z.string().trim().min(1),
   note: z.string().trim().optional(),
+  midnightWalletAddress: z.string().trim().min(1).optional(),
 });
 
 const reviewVerificationRequestInputSchema = z.object({
@@ -785,12 +786,30 @@ export default {
 
         const input = createVerificationRequestInputSchema.parse(rawBody);
 
+        if (input.midnightWalletAddress) {
+          const [existingRequest] = await db
+            .select()
+            .from(verificationRequestsTable)
+            .where(
+              eq(
+                verificationRequestsTable.midnightWalletAddress,
+                input.midnightWalletAddress,
+              ),
+            )
+            .limit(1);
+
+          if (existingRequest) {
+            return json({ request: existingRequest });
+          }
+        }
+
         const [created] = await db
           .insert(verificationRequestsTable)
           .values({
             discordHandle: input.discordHandle,
             region: input.region,
             note: input.note ?? "",
+            midnightWalletAddress: input.midnightWalletAddress ?? null,
             status: "pending",
             adminNotes: "",
           })
@@ -882,6 +901,51 @@ export default {
         );
       }
     }
+
+
+    if (
+      parts.length === 5 &&
+      parts[0] === "api" &&
+      parts[1] === "nightforce" &&
+      parts[2] === "verification-requests" &&
+      parts[3] === "by-wallet" &&
+      request.method === "GET"
+    ) {
+      try {
+        const walletAddress = z.string().trim().min(1).parse(parts[4]);
+
+        const [requestRecord] = await db
+          .select()
+          .from(verificationRequestsTable)
+          .where(eq(verificationRequestsTable.midnightWalletAddress, walletAddress))
+          .limit(1);
+
+        if (!requestRecord) {
+          return json({ error: "Verification request not found" }, 404);
+        }
+
+        return json({ request: requestRecord });
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          return json(
+            {
+              error: "Invalid wallet address",
+              details: error.flatten(),
+            },
+            400,
+          );
+        }
+
+        return json(
+          {
+            error: "Failed to get verification request by wallet",
+            details: getErrorMessage(error),
+          },
+          500,
+        );
+      }
+    }
+
 
     if (
       parts.length === 4 &&

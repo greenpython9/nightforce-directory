@@ -9,6 +9,7 @@ type VerificationStatus = "pending" | "approved" | "rejected";
 
 type VerificationRequestRecord = JsonRecord & {
   id: string;
+  midnightWalletAddress: string | null;
   status: VerificationStatus;
   createdAt: string;
   updatedAt: string;
@@ -100,13 +101,38 @@ function getWalletAddressFromBody(body: JsonRecord): string | null {
   );
 }
 
+function findVerificationRequestByWallet(
+  walletAddress: string,
+): VerificationRequestRecord | null {
+  for (const request of verificationRequests.values()) {
+    if (request.midnightWalletAddress === walletAddress) {
+      return request;
+    }
+  }
+
+  return null;
+}
+
 router.post("/nightforce/verification-requests", (req, res) => {
   const body = asRecord(req.body);
   const timestamp = nowIso();
+  const midnightWalletAddress = getWalletAddressFromBody(body);
+
+  if (midnightWalletAddress) {
+    const existingRequest = findVerificationRequestByWallet(midnightWalletAddress);
+
+    if (existingRequest) {
+      res.json({
+        request: existingRequest,
+      });
+      return;
+    }
+  }
 
   const request: VerificationRequestRecord = {
     ...body,
     id: randomUUID(),
+    midnightWalletAddress,
     status: "pending",
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -126,6 +152,30 @@ router.get("/nightforce/verification-requests", (_req, res) => {
     requests: Array.from(verificationRequests.values()).sort((a, b) =>
       b.createdAt.localeCompare(a.createdAt),
     ),
+  });
+});
+
+router.get("/nightforce/verification-requests/by-wallet/:walletAddress", (req, res) => {
+  const walletAddress = asString(req.params.walletAddress);
+
+  if (!walletAddress) {
+    res.status(400).json({
+      error: "walletAddress is required.",
+    });
+    return;
+  }
+
+  const request = findVerificationRequestByWallet(walletAddress);
+
+  if (!request) {
+    res.status(404).json({
+      error: "Verification request not found.",
+    });
+    return;
+  }
+
+  res.json({
+    request,
   });
 });
 
