@@ -1,0 +1,72 @@
+{
+  "updatedAt": "2026-04-27T00:00:00.000Z",
+  "source": "https://midnight.network/blog",
+  "posts": [
+    {
+      "author": "Midnight",
+      "source": "Official Blog",
+      "date": "Mar 31, 2026",
+      "title": "State of the Network - March 2026",
+      "excerpt": "The Midnight network is officially live. This update covers the genesis block, federated node operators, ecosystem progress, and developer resources.",
+      "href": "https://midnight.network/blog/state-of-the-network-march-2026",
+      "tag": "Network Updates",
+      "visual": "pulse",
+      "imageUrl": "https://midnight.network/_next/image?q=75&url=https%3A%2F%2Fcdn.sanity.io%2Fimages%2F330xhmya%2Fproduction%2F74d7348c5da8570d4657d5e55bb965d9d1eea723-2160x2160.jpg&w=1080"
+    },
+    {
+      "author": "Midnight",
+      "source": "Official Blog",
+      "date": "Mar 29, 2026",
+      "title": "Midnight network is live",
+      "excerpt": "The launch initiates the genesis block, establishing state continuity and permanence for Midnight's programmable privacy network.",
+      "href": "https://midnight.network/blog/midnight-network-is-live",
+      "tag": "Mainnet",
+      "visual": "launch",
+      "imageUrl": "https://midnight.network/_next/image?q=75&url=https%3A%2F%2Fcdn.sanity.io%2Fimages%2F330xhmya%2Fproduction%2F74d7348c5da8570d4657d5e55bb965d9d1eea723-2160x2160.jpg&w=1080"
+    },
+    {
+      "author": "Midnight",
+      "source": "Official Blog",
+      "date": "Mar 25, 2026",
+      "title": "Monument tokenises retail deposits with Midnight",
+      "excerpt": "Monument Bank is set to become the first UK bank to tokenise retail customer deposits on a public blockchain through Midnight.",
+      "href": "https://midnight.network/blog/monument-becomes-the-first-bank-to-securely-tokenise-retail-deposits-midnight-partnership",
+      "tag": "Ecosystem Partners",
+      "visual": "bank",
+      "imageUrl": "https://midnight.network/_next/image?q=75&url=https%3A%2F%2Fcdn.sanity.io%2Fimages%2F330xhmya%2Fproduction%2Ff154e064e6629cca4eca0391fc8211f81c716a25-2160x2160.jpg&w=1080"
+    },
+    {
+      "author": "Midnight",
+      "source": "Official Blog",
+      "date": "Mar 09, 2026",
+      "title": "Getting mainnet ready: A developer’s guide",
+      "excerpt": "A practical guide for developers preparing DApps for Midnight mainnet, including Preprod migration, Academy resources, and DUST generation.",
+      "href": "https://midnight.network/blog/getting-mainnet-ready-a-developer-s-guide",
+      "tag": "Developers",
+      "visual": "docs",
+      "imageUrl": "https://midnight.network/_next/image?q=75&url=https%3A%2F%2Fcdn.sanity.io%2Fimages%2F330xhmya%2Fproduction%2F3e14cf1840214c160c00a9c6def387c64a1d9fc7-2160x2160.jpg&w=640"
+    },
+    {
+      "author": "Midnight",
+      "source": "Official Blog",
+      "date": "Jun 25, 2025",
+      "title": "The tokenomics powering Midnight network",
+      "excerpt": "An overview of NIGHT, DUST, resource generation, ecosystem incentives, and the dual-component tokenomics behind Midnight.",
+      "href": "https://midnight.network/blog/the-tokenomics-powering-midnight-network",
+      "tag": "Tokenomics",
+      "visual": "token",
+      "imageUrl": "https://midnight.network/_next/image?q=75&url=https%3A%2F%2Fcdn.sanity.io%2Fimages%2F330xhmya%2Fproduction%2F9b4964213c3da33ed550efb144d47de900ec4284-1080x1080.png&w=640"
+    },
+    {
+      "author": "Midnight",
+      "source": "Official Blog",
+      "date": "Dec 04, 2025",
+      "title": "Guide to the NIGHT token launch and Redemption",
+      "excerpt": "A guide covering NIGHT launch phases, redemption, thawing schedules, and how the token distribution roadmap unfolds.",
+      "href": "https://midnight.network/blog/guide-to-the-night-token-launch-and-redemption",
+      "tag": "NIGHT",
+      "visual": "directory",
+      "imageUrl": "https://midnight.network/_next/image?q=75&url=https%3A%2F%2Fcdn.sanity.io%2Fimages%2F330xhmya%2Fproduction%2F890c1515269142d8ef0df2449eabe586db3e5863-2250x2250.png&w=640"
+    }
+  ]
+}

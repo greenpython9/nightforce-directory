@@ -31,6 +31,24 @@ type DirectoryResponse = {
   profiles: DirectoryProfileRecord[];
 };
 
+type MidnightUpdate = {
+  author: string;
+  source: string;
+  date: string;
+  title: string;
+  excerpt: string;
+  href: string;
+  tag: string;
+  imageUrl: string;
+  visual?: string;
+};
+
+type MidnightUpdatesPayload = {
+  updatedAt?: string;
+  source?: string;
+  posts?: unknown[];
+};
+
 const quickLinks = [
   { label: "Browse", href: "/directory" },
   { label: "Globe", href: "#globe" },
@@ -47,7 +65,7 @@ const categories = [
   { label: "EMEA", href: "/directory?region=EMEA" },
 ];
 
-const midnightUpdates = [
+const fallbackMidnightUpdates: MidnightUpdate[] = [
   {
     author: "Midnight",
     source: "Official Blog",
@@ -129,6 +147,42 @@ const midnightUpdates = [
 ];
 
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isValidMidnightUpdate(value: unknown): value is MidnightUpdate {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.author === "string" &&
+    typeof value.source === "string" &&
+    typeof value.date === "string" &&
+    typeof value.title === "string" &&
+    typeof value.excerpt === "string" &&
+    typeof value.href === "string" &&
+    typeof value.tag === "string" &&
+    typeof value.imageUrl === "string"
+  );
+}
+
+function getMidnightUpdatesFromPayload(payload: unknown): MidnightUpdate[] {
+  if (!isRecord(payload)) {
+    return [];
+  }
+
+  const parsed = payload as MidnightUpdatesPayload;
+
+  if (!Array.isArray(parsed.posts)) {
+    return [];
+  }
+
+  return parsed.posts.filter(isValidMidnightUpdate).slice(0, 12);
+}
+
+
 function getStatValue(loading: boolean, value: number): string {
   if (loading) return "…";
   return value.toLocaleString();
@@ -141,6 +195,9 @@ export function Landing() {
   const [profiles, setProfiles] = useState<DirectoryProfileRecord[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [directoryError, setDirectoryError] = useState("");
+  const [midnightUpdates, setMidnightUpdates] = useState<MidnightUpdate[]>(
+    fallbackMidnightUpdates,
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -192,6 +249,39 @@ export function Landing() {
     }
 
     void loadDirectoryPreview();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadMidnightUpdates() {
+      try {
+        const response = await fetch("/midnight-updates.json", {
+          cache: "no-cache",
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const payload: unknown = await response.json();
+        const posts = getMidnightUpdatesFromPayload(payload);
+
+        if (!cancelled && posts.length > 0) {
+          setMidnightUpdates(posts);
+        }
+      } catch {
+        if (!cancelled) {
+          setMidnightUpdates(fallbackMidnightUpdates);
+        }
+      }
+    }
+
+    void loadMidnightUpdates();
 
     return () => {
       cancelled = true;
