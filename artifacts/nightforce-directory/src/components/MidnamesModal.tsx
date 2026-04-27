@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactElement } from "react";
+import { createPortal } from "react-dom";
 import { DomainProfileWidget } from "@midnames/sdk/react/DomainProfileWidget";
 import { HolographicCard } from "@midnames/sdk/react/HolographicCard";
 import "@midnames/sdk/styles.css";
@@ -28,6 +29,7 @@ export function MidnamesModal({
   onClose,
 }: MidnamesModalProps): ReactElement | null {
   const [widgetError, setWidgetError] = useState<string | null>(null);
+  const [activeMode, setActiveMode] = useState<MidnamesModalMode>(mode);
 
   const usableDomain = useMemo(() => getUsableNightDomain(domain), [domain]);
   const provider = useMemo(() => getMidnamesProvider(), []);
@@ -38,6 +40,10 @@ export function MidnamesModal({
     }
 
     setWidgetError(null);
+    setActiveMode(mode);
+
+    const previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -48,24 +54,25 @@ export function MidnamesModal({
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
+      document.body.style.overflow = previousBodyOverflow;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open, onClose]);
+  }, [mode, open, onClose]);
 
   if (!MIDNAMES_ENABLED || !open || !usableDomain) {
     return null;
   }
 
-  return (
+  const modal = (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 px-4 py-6 backdrop-blur-sm"
+      className="fixed inset-0 isolate z-[100] flex items-center justify-center bg-black/75 px-4 py-6 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-label={`${usableDomain} Midnames profile`}
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-2xl overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 shadow-2xl"
+        className={activeMode === "full" ? "relative w-full max-w-5xl overflow-visible rounded-2xl border border-white/10 bg-zinc-950 shadow-2xl" : "relative w-full max-w-3xl overflow-visible rounded-2xl border border-white/10 bg-zinc-950 shadow-2xl"}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-4">
@@ -83,17 +90,35 @@ export function MidnamesModal({
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-mono text-zinc-400 transition hover:border-white/20 hover:text-white"
-            aria-label="Close Midnames profile"
-          >
-            Close
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            {activeMode === "full" && mode === "card" && (
+              <button
+                type="button"
+                onClick={() => setActiveMode("card")}
+                className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-mono text-zinc-400 transition hover:border-white/20 hover:text-white"
+              >
+                Card
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-mono text-zinc-400 transition hover:border-white/20 hover:text-white"
+              aria-label="Close Midnames profile"
+            >
+              Close
+            </button>
+          </div>
         </div>
 
-        <div className="max-h-[78vh] overflow-y-auto px-5 py-5">
+        <div
+          className={
+            activeMode === "card"
+              ? "overflow-visible px-5 py-10 sm:px-8 sm:py-14"
+              : "max-h-[78vh] overflow-y-auto px-5 py-5"
+          }
+        >
           {widgetError && (
             <div className="mb-4 rounded-xl border border-red-900/60 bg-red-950/30 px-4 py-3 text-sm font-mono text-red-200">
               Could not load this .night profile right now.
@@ -101,8 +126,8 @@ export function MidnamesModal({
           )}
 
           <div className="mx-auto w-full">
-            {mode === "card" ? (
-              <div className="mx-auto flex max-w-sm justify-center">
+            {activeMode === "card" ? (
+              <div className="mx-auto flex min-h-[560px] max-w-md items-center justify-center overflow-visible">
                 <HolographicCard
                   domain={usableDomain}
                   publicDataProvider={provider}
@@ -110,6 +135,7 @@ export function MidnamesModal({
                   contactText="View profile"
                   onContactClick={() => {
                     setWidgetError(null);
+                    setActiveMode("full");
                   }}
                   onError={(error) => {
                     console.error("Midnames card error:", error);
@@ -118,21 +144,46 @@ export function MidnamesModal({
                 />
               </div>
             ) : (
-              <DomainProfileWidget
-                fullDomain={usableDomain}
-                publicDataProvider={provider}
-                variant="full"
-                theme="dark"
-                customFields={["github", "website", "x", "twitter"]}
-                onError={(error) => {
-                  console.error("Midnames profile error:", error);
-                  setWidgetError(error.message);
-                }}
-              />
+              <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start">
+                <div className="overflow-visible rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.14),transparent_52%),rgba(255,255,255,0.025)] px-4 py-6">
+                  <div className="mx-auto flex min-h-[440px] max-w-sm items-center justify-center overflow-visible">
+                    <HolographicCard
+                      domain={usableDomain}
+                      publicDataProvider={provider}
+                      enableMobileTilt={false}
+                      contactText="Expand card"
+                      onContactClick={() => {
+                        setWidgetError(null);
+                        setActiveMode("card");
+                      }}
+                      onError={(error) => {
+                        console.error("Midnames full-preview card error:", error);
+                        setWidgetError(error.message);
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="min-w-0">
+                  <DomainProfileWidget
+                    fullDomain={usableDomain}
+                    publicDataProvider={provider}
+                    variant="full"
+                    theme="dark"
+                    customFields={["github", "website", "x", "twitter"]}
+                    onError={(error) => {
+                      console.error("Midnames profile error:", error);
+                      setWidgetError(error.message);
+                    }}
+                  />
+                </div>
+              </div>
             )}
           </div>
         </div>
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }
