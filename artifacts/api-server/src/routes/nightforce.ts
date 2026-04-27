@@ -782,6 +782,7 @@ type FieldVisibilityKey =
   | "role"
   | "bio"
   | "websiteUrl"
+  | "nightDomain"
   | "email"
   | "x"
   | "youtube"
@@ -882,7 +883,9 @@ function toPublicProfile(profile: ProfileRecord) {
     websiteUrl: isPublicField(profile, "websiteUrl")
       ? profile.websiteUrl
       : null,
-    nightDomain: profile.nightDomain,
+    nightDomain: isPublicField(profile, "nightDomain")
+      ? profile.nightDomain
+      : null,
     publicEmail: isPublicField(profile, "email") ? profile.publicEmail : null,
     contactMode: getSanitizedPublicContactMode(profile),
     socials: filterPublicSocials(profile),

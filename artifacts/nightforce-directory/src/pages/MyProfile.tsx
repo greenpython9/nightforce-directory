@@ -293,6 +293,7 @@ type FieldVisibility = {
   role: "public" | "hidden";
   bio: "public" | "hidden";
   websiteUrl: "public" | "hidden";
+  nightDomain?: "public" | "hidden";
   email?: "public" | "hidden";
   x?: "public" | "hidden";
   youtube?: "public" | "hidden";
@@ -948,6 +949,7 @@ type ProfileEditorFingerprintInput = {
   showRole: boolean;
   showBio: boolean;
   showWebsiteUrl: boolean;
+  showNightDomain: boolean;
   showEmail: boolean;
   showX: boolean;
   showYouTube: boolean;
@@ -979,6 +981,7 @@ function buildEditorFingerprint(input: ProfileEditorFingerprintInput): string {
     showRole: input.showRole,
     showBio: input.showBio,
     showWebsiteUrl: input.showWebsiteUrl,
+    showNightDomain: input.showNightDomain,
     showEmail: input.showEmail,
     showX: input.showX,
     showYouTube: input.showYouTube,
@@ -1026,6 +1029,7 @@ export function MyProfile() {
   const [showRole, setShowRole] = useState(true);
   const [showBio, setShowBio] = useState(true);
   const [showWebsiteUrl, setShowWebsiteUrl] = useState(true);
+  const [showNightDomain, setShowNightDomain] = useState(true);
   const [showEmail, setShowEmail] = useState(false);
   const [showX, setShowX] = useState(true);
   const [showYouTube, setShowYouTube] = useState(true);
@@ -1081,6 +1085,7 @@ export function MyProfile() {
     setShowRole(true);
     setShowBio(true);
     setShowWebsiteUrl(true);
+    setShowNightDomain(true);
     setShowEmail(false);
     setShowX(true);
     setShowYouTube(true);
@@ -1233,6 +1238,10 @@ export function MyProfile() {
       const nextShowRole = profile.fieldVisibility.role === "public";
       const nextShowBio = profile.fieldVisibility.bio === "public";
       const nextShowWebsiteUrl = profile.fieldVisibility.websiteUrl === "public";
+      const nextShowNightDomain = resolveSocialVisibility(
+        profile.fieldVisibility.nightDomain,
+        true,
+      );
       const nextShowEmail = resolveSocialVisibility(profile.fieldVisibility.email, false);
       const nextShowX = resolveSocialVisibility(profile.fieldVisibility.x, true);
       const nextShowYouTube = resolveSocialVisibility(profile.fieldVisibility.youtube, true);
@@ -1247,6 +1256,7 @@ export function MyProfile() {
       setShowRole(nextShowRole);
       setShowBio(nextShowBio);
       setShowWebsiteUrl(nextShowWebsiteUrl);
+      setShowNightDomain(nextShowNightDomain);
       setShowEmail(nextShowEmail);
       setShowX(nextShowX);
       setShowYouTube(nextShowYouTube);
@@ -1277,6 +1287,7 @@ export function MyProfile() {
           showRole: nextShowRole,
           showBio: nextShowBio,
           showWebsiteUrl: nextShowWebsiteUrl,
+          showNightDomain: nextShowNightDomain,
           showEmail: nextShowEmail,
           showX: nextShowX,
           showYouTube: nextShowYouTube,
@@ -1401,6 +1412,7 @@ export function MyProfile() {
     showRole,
     showBio,
     showWebsiteUrl,
+    showNightDomain,
     showEmail,
     showX,
     showYouTube,
@@ -1696,6 +1708,10 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
       role: showRole && hasRoleValue ? "public" : "hidden",
       bio: showBio && hasBioValue ? "public" : "hidden",
       websiteUrl: showWebsiteUrl && hasWebsiteUrlValue ? "public" as const : "hidden" as const,
+      nightDomain:
+        showNightDomain && hasNightDomainValue && nightDomainIsValid
+          ? "public" as const
+          : "hidden" as const,
       email: "hidden" as const,
       x: showX && hasXValue ? "public" as const : "hidden" as const,
       youtube: showYouTube && hasYouTubeValue ? "public" as const : "hidden" as const,
@@ -1843,6 +1859,7 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
           showRole,
           showBio,
           showWebsiteUrl,
+          showNightDomain,
           showEmail: false,
           showX,
           showYouTube,
@@ -2224,7 +2241,7 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
         bio: showBio && hasBioValue ? bio || null : null,
         avatarUrl: showAvatarUrl && hasAvatarUrlValue ? avatarUrl || null : null,
         websiteUrl: showWebsiteUrl && hasWebsiteUrlValue ? websiteUrl || null : null,
-        nightDomain: hasNightDomainValue && nightDomainIsValid
+        nightDomain: showNightDomain && hasNightDomainValue && nightDomainIsValid
           ? normalizeNightDomainInput(nightDomain)
           : null,
         publicEmail: showEmail && hasEmailValue ? email || null : null,
@@ -2315,10 +2332,10 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
       disabled: !hasBioValue,
     },
     {
-      label: "Show website URL",
-      value: showWebsiteUrl,
-      set: setShowWebsiteUrl,
-      disabled: !hasWebsiteUrlValue,
+      label: "Show .night domain",
+      value: showNightDomain,
+      set: setShowNightDomain,
+      disabled: !hasNightDomainValue || !nightDomainIsValid,
     },
     {
       label: "Show email publicly",
@@ -3104,7 +3121,7 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
           viewLabel="Full preview →"
           viewTarget="_blank"
           onViewClick={saveFullProfilePreview}
-          nightIdentityMode="static"
+          nightIdentityMode="interactive"
         />
       ) : (
         <div className="border border-zinc-800 rounded-lg p-4 text-center">

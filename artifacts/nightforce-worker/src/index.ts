@@ -268,6 +268,7 @@ const fieldVisibilitySchema = z.object({
   role: visibilitySettingSchema,
   bio: visibilitySettingSchema,
   websiteUrl: visibilitySettingSchema,
+  nightDomain: visibilitySettingSchema,
   email: visibilitySettingSchema,
   x: visibilitySettingSchema,
   youtube: visibilitySettingSchema,
@@ -866,7 +867,10 @@ function toPublicProfile(profile: typeof profilesTable.$inferSelect) {
       profile.fieldVisibility.websiteUrl === "public"
         ? profile.websiteUrl
         : null,
-    nightDomain: profile.nightDomain,
+    nightDomain:
+      (profile.fieldVisibility as unknown as Record<string, string>).nightDomain === "public"
+        ? profile.nightDomain
+        : null,
     publicEmail:
       profile.fieldVisibility.email === "public"
         ? profile.publicEmail
