@@ -55,30 +55,96 @@ type VisitorActivityResponse = {
 const VISITOR_ACTIVITY_REFRESH_MS = 30 * 1000;
 
 const COUNTRY_COORDINATES: Record<string, { lat: number; lng: number }> = {
-  malaysia: { lat: 4.21, lng: 101.98 },
-  singapore: { lat: 1.35, lng: 103.82 },
-  indonesia: { lat: -2.55, lng: 118.02 },
-  thailand: { lat: 15.87, lng: 100.99 },
-  philippines: { lat: 12.88, lng: 121.77 },
-  japan: { lat: 36.2, lng: 138.25 },
-  india: { lat: 20.59, lng: 78.96 },
-
-  "united kingdom": { lat: 55.38, lng: -3.44 },
-  germany: { lat: 51.17, lng: 10.45 },
-  france: { lat: 46.23, lng: 2.21 },
-  netherlands: { lat: 52.13, lng: 5.29 },
-  spain: { lat: 40.46, lng: -3.75 },
-  nigeria: { lat: 9.08, lng: 8.68 },
-  morocco: { lat: 31.79, lng: -7.09 },
-  "south africa": { lat: -30.56, lng: 22.94 },
-
-  brazil: { lat: -14.24, lng: -51.93 },
-  mexico: { lat: 23.63, lng: -102.55 },
+  afghanistan: { lat: 33.94, lng: 67.71 },
+  albania: { lat: 41.15, lng: 20.17 },
+  algeria: { lat: 28.03, lng: 1.66 },
   argentina: { lat: -38.42, lng: -63.62 },
-  colombia: { lat: 4.57, lng: -74.3 },
-
-  "united states": { lat: 37.09, lng: -95.71 },
+  armenia: { lat: 40.07, lng: 45.04 },
+  australia: { lat: -25.27, lng: 133.78 },
+  austria: { lat: 47.52, lng: 14.55 },
+  azerbaijan: { lat: 40.14, lng: 47.58 },
+  bahrain: { lat: 26.07, lng: 50.56 },
+  bangladesh: { lat: 23.69, lng: 90.36 },
+  belgium: { lat: 50.5, lng: 4.47 },
+  bolivia: { lat: -16.29, lng: -63.59 },
+  brazil: { lat: -14.24, lng: -51.93 },
+  brunei: { lat: 4.54, lng: 114.73 },
+  bulgaria: { lat: 42.73, lng: 25.49 },
+  cambodia: { lat: 12.57, lng: 104.99 },
   canada: { lat: 56.13, lng: -106.35 },
+  chile: { lat: -35.68, lng: -71.54 },
+  china: { lat: 35.86, lng: 104.2 },
+  colombia: { lat: 4.57, lng: -74.3 },
+  croatia: { lat: 45.1, lng: 15.2 },
+  "czech republic": { lat: 49.82, lng: 15.47 },
+  czechia: { lat: 49.82, lng: 15.47 },
+  denmark: { lat: 56.26, lng: 9.5 },
+  egypt: { lat: 26.82, lng: 30.8 },
+  estonia: { lat: 58.6, lng: 25.01 },
+  finland: { lat: 61.92, lng: 25.75 },
+  france: { lat: 46.23, lng: 2.21 },
+  georgia: { lat: 42.32, lng: 43.36 },
+  germany: { lat: 51.17, lng: 10.45 },
+  ghana: { lat: 7.95, lng: -1.02 },
+  greece: { lat: 39.07, lng: 21.82 },
+  "hong kong": { lat: 22.32, lng: 114.17 },
+  hungary: { lat: 47.16, lng: 19.5 },
+  india: { lat: 20.59, lng: 78.96 },
+  indonesia: { lat: -2.55, lng: 118.02 },
+  ireland: { lat: 53.14, lng: -8.24 },
+  israel: { lat: 31.05, lng: 34.85 },
+  italy: { lat: 41.87, lng: 12.57 },
+  japan: { lat: 36.2, lng: 138.25 },
+  jordan: { lat: 30.59, lng: 36.24 },
+  kazakhstan: { lat: 48.02, lng: 66.92 },
+  kenya: { lat: -0.02, lng: 37.91 },
+  kuwait: { lat: 29.31, lng: 47.48 },
+  laos: { lat: 19.86, lng: 102.5 },
+  latvia: { lat: 56.88, lng: 24.6 },
+  lithuania: { lat: 55.17, lng: 23.88 },
+  luxembourg: { lat: 49.82, lng: 6.13 },
+  malaysia: { lat: 4.21, lng: 101.98 },
+  mexico: { lat: 23.63, lng: -102.55 },
+  mongolia: { lat: 46.86, lng: 103.85 },
+  morocco: { lat: 31.79, lng: -7.09 },
+  myanmar: { lat: 21.92, lng: 95.96 },
+  nepal: { lat: 28.39, lng: 84.12 },
+  netherlands: { lat: 52.13, lng: 5.29 },
+  "new zealand": { lat: -40.9, lng: 174.89 },
+  nigeria: { lat: 9.08, lng: 8.68 },
+  norway: { lat: 60.47, lng: 8.47 },
+  pakistan: { lat: 30.38, lng: 69.35 },
+  peru: { lat: -9.19, lng: -75.02 },
+  philippines: { lat: 12.88, lng: 121.77 },
+  poland: { lat: 51.92, lng: 19.15 },
+  portugal: { lat: 39.4, lng: -8.22 },
+  qatar: { lat: 25.35, lng: 51.18 },
+  romania: { lat: 45.94, lng: 24.97 },
+  "saudi arabia": { lat: 23.89, lng: 45.08 },
+  serbia: { lat: 44.02, lng: 21.01 },
+  singapore: { lat: 1.35, lng: 103.82 },
+  slovakia: { lat: 48.67, lng: 19.7 },
+  slovenia: { lat: 46.15, lng: 14.99 },
+  "south africa": { lat: -30.56, lng: 22.94 },
+  "south korea": { lat: 35.91, lng: 127.77 },
+  spain: { lat: 40.46, lng: -3.75 },
+  "sri lanka": { lat: 7.87, lng: 80.77 },
+  sweden: { lat: 60.13, lng: 18.64 },
+  switzerland: { lat: 46.82, lng: 8.23 },
+  taiwan: { lat: 23.7, lng: 120.96 },
+  thailand: { lat: 15.87, lng: 100.99 },
+  turkey: { lat: 38.96, lng: 35.24 },
+  ukraine: { lat: 48.38, lng: 31.17 },
+  "united arab emirates": { lat: 23.42, lng: 53.85 },
+  uae: { lat: 23.42, lng: 53.85 },
+  "united kingdom": { lat: 55.38, lng: -3.44 },
+  uk: { lat: 55.38, lng: -3.44 },
+  "united states": { lat: 37.09, lng: -95.71 },
+  "united states of america": { lat: 37.09, lng: -95.71 },
+  usa: { lat: 37.09, lng: -95.71 },
+  uzbekistan: { lat: 41.38, lng: 64.59 },
+  vietnam: { lat: 14.06, lng: 108.28 },
+
 };
 
 const FALLBACK_POINTS: CountryPoint[] = [
@@ -114,16 +180,27 @@ const FALLBACK_POINTS: CountryPoint[] = [
   },
 ];
 
-function getCountryCoordinates(country: string, index: number) {
+const NON_GLOBE_COUNTRY_VALUES = new Set([
+  "",
+  "other",
+  "other / not listed",
+  "not listed",
+  "unknown",
+  "global",
+  "worldwide",
+  "n/a",
+  "na",
+  "none",
+]);
+
+function getCountryCoordinates(country: string): { lat: number; lng: number } | null {
   const key = country.trim().toLowerCase();
-  const stored = COUNTRY_COORDINATES[key];
 
-  if (stored) return stored;
+  if (NON_GLOBE_COUNTRY_VALUES.has(key)) {
+    return null;
+  }
 
-  return {
-    lat: 10 + index * 7,
-    lng: -120 + index * 35,
-  };
+  return COUNTRY_COORDINATES[key] ?? null;
 }
 
 function buildCountryPoints(
@@ -134,13 +211,19 @@ function buildCountryPoints(
   for (const profile of profiles) {
     if (!profile.country) continue;
 
-    const current = byCountry.get(profile.country) ?? [];
+    const normalizedCountry = profile.country.trim();
+
+    if (!getCountryCoordinates(normalizedCountry)) {
+      continue;
+    }
+
+    const current = byCountry.get(normalizedCountry) ?? [];
     current.push(profile);
-    byCountry.set(profile.country, current);
+    byCountry.set(normalizedCountry, current);
   }
 
   return Array.from(byCountry.entries())
-    .map(([country, countryProfiles], index) => {
+    .map(([country, countryProfiles]) => {
       const regions = new Set(
         countryProfiles
           .map((profile) => profile.region)
@@ -153,7 +236,11 @@ function buildCountryPoints(
           profile.contactMode === "PRIVATE_CONTACT_AVAILABLE",
       );
 
-      const coordinates = getCountryCoordinates(country, index);
+      const coordinates = getCountryCoordinates(country);
+
+      if (!coordinates) {
+        return null;
+      }
 
       return {
         country,
@@ -170,6 +257,7 @@ function buildCountryPoints(
         lng: coordinates.lng,
       };
     })
+    .filter((point): point is CountryPoint => Boolean(point))
     .sort((a, b) => b.count - a.count || a.country.localeCompare(b.country));
 }
 
@@ -300,6 +388,58 @@ function clamp(value: number, min: number, max: number): number {
 
 const DEFAULT_GLOBE_ZOOM = 0.63;
 
+type GlobeMarker = {
+  location: [number, number];
+  size: number;
+  id: string;
+  color?: [number, number, number];
+};
+
+const NATIVE_PIN_HALO_ENABLED = false;
+const NATIVE_PIN_HALO_VISIBLE_LIMIT = 8;
+
+function buildNativePinPulseMarkers({
+  markers,
+  timestamp,
+  reducedMotion,
+}: {
+  markers: GlobeMarker[];
+  timestamp: number;
+  reducedMotion: boolean;
+}): GlobeMarker[] {
+  if (reducedMotion) {
+    return markers;
+  }
+
+  return markers.flatMap((marker, index) => {
+    const breathPhase =
+      (Math.sin(timestamp * 0.0018 + index * 0.57) + 1) / 2;
+
+    const coreMarker: GlobeMarker = {
+      ...marker,
+      // Every native pin breathes. This is intentionally gentle.
+      size: marker.size * (0.94 + breathPhase * 0.18),
+    };
+
+    if (!NATIVE_PIN_HALO_ENABLED || index >= NATIVE_PIN_HALO_VISIBLE_LIMIT) {
+      return [coreMarker];
+    }
+
+    const haloPhase =
+      (Math.sin(timestamp * 0.00135 + index * 0.71) + 1) / 2;
+
+    const haloMarker: GlobeMarker = {
+      ...marker,
+      id: `${marker.id}-halo`,
+      // Very small/soft halo so it does not become a thick blob.
+      size: marker.size * (1.12 + haloPhase * 0.32),
+      color: [0.035, 0.16, 0.105],
+    };
+
+    return [haloMarker, coreMarker];
+  });
+}
+
 export function CobeAmbassadorGlobe({
   profiles,
   loading,
@@ -352,13 +492,7 @@ export function CobeAmbassadorGlobe({
     ).length;
   }, [profiles]);
 
-  const countriesRepresented = useMemo(() => {
-    return new Set(
-      profiles
-        .map((profile) => profile.country)
-        .filter((country): country is string => Boolean(country)),
-    ).size;
-  }, [profiles]);
+  const countriesRepresented = countryPoints.length;
 
   const regionsRepresented = useMemo(() => {
     return new Set(
@@ -372,9 +506,9 @@ export function CobeAmbassadorGlobe({
     return [...visitorActivity].reverse();
   }, [visitorActivity]);
 
-  const cobeMarkers = useMemo(() => {
+  const cobeMarkers = useMemo<GlobeMarker[]>(() => {
     return displayPoints.map((point) => ({
-      location: [point.lat, point.lng] as [number, number],
+      location: [point.lat, point.lng],
       size: Math.min(0.085, 0.035 + point.count * 0.004),
       id: getMarkerId(point.country),
     }));
@@ -591,14 +725,11 @@ export function CobeAmbassadorGlobe({
         phiRef.current += 0.0022;
       }
 
-      const pulse = reducedMotion
-        ? 1
-        : 1 + Math.sin(timestamp * 0.0022) * 0.16;
-
-      const pulsingMarkers = cobeMarkers.map((marker) => ({
-        ...marker,
-        size: marker.size * pulse,
-      }));
+      const pulsingMarkers = buildNativePinPulseMarkers({
+        markers: cobeMarkers,
+        timestamp,
+        reducedMotion,
+      });
 
       globe.update({
         phi: phiRef.current,
@@ -675,6 +806,7 @@ export function CobeAmbassadorGlobe({
 
   return (
     <section id="globe" className="mt-8">
+    
       <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900">
         <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
           <div>
