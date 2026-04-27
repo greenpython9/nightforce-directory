@@ -3104,6 +3104,7 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
           viewLabel="Full preview →"
           viewTarget="_blank"
           onViewClick={saveFullProfilePreview}
+          nightIdentityMode="static"
         />
       ) : (
         <div className="border border-zinc-800 rounded-lg p-4 text-center">

@@ -20,6 +20,7 @@ type DirectoryProfileRecord = {
   bio: string | null;
   avatarUrl: string | null;
   websiteUrl: string | null;
+  nightDomain?: string | null;
   publicEmail: string | null;
   contactMode: ContactMode | null;
   socials: string[];
@@ -464,6 +465,7 @@ export function Landing() {
                       role: profile.role,
                       country: profile.country,
                       region: profile.region,
+                      nightDomain: profile.nightDomain ?? null,
                       contactMode: profile.contactMode,
                       socials: profile.socials,
                       isVerified: true,

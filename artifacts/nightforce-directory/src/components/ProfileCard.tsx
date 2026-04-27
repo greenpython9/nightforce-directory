@@ -9,6 +9,7 @@ import {
 import { Link } from "wouter";
 
 import { MidnamesProfileButton } from "./MidnamesProfileButton";
+import { getUsableNightDomain } from "../services/nightDomain";
 
 type ContactMode =
   | "NO_CONTACT"
@@ -36,6 +37,7 @@ interface ProfileCardProps {
   viewLabel?: string;
   viewTarget?: "_self" | "_blank";
   onViewClick?: () => void;
+  nightIdentityMode?: "interactive" | "static";
 }
 
 function formatContactMode(value: ProfileCardProfile["contactMode"]): string {
@@ -167,6 +169,7 @@ export function ProfileCard({
   viewLabel = "View →",
   viewTarget = "_self",
   onViewClick,
+  nightIdentityMode = "interactive",
 }: ProfileCardProps) {
   const displayName =
     profile.visibility === "anonymous"
@@ -175,6 +178,8 @@ export function ProfileCard({
 
   const location = [profile.country, profile.region].filter(Boolean).join(" · ");
   const roleText = profile.role?.trim();
+
+  const usableNightDomain = getUsableNightDomain(profile.nightDomain);
 
   const socialLinks = (profile.socials ?? [])
     .map(getSocialLink)
@@ -315,14 +320,25 @@ export function ProfileCard({
       )}
 
       <div className="relative z-10 mt-auto flex items-center pt-3">
-        <MidnamesProfileButton
-          domain={profile.nightDomain}
-          mode="card"
-          className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-emerald-300 transition-all hover:text-emerald-100 hover:[text-shadow:0_0_14px_rgba(52,211,153,0.55)]"
-          ariaLabel={`Open ${displayName} .night identity card`}
-        >
-          .night
-        </MidnamesProfileButton>
+        {usableNightDomain && nightIdentityMode === "static" && (
+          <span
+            title={usableNightDomain}
+            className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-emerald-300"
+          >
+            .night
+          </span>
+        )}
+
+        {usableNightDomain && nightIdentityMode === "interactive" && (
+          <MidnamesProfileButton
+            domain={usableNightDomain}
+            mode="card"
+            className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-emerald-300 transition-all hover:text-emerald-100 hover:[text-shadow:0_0_14px_rgba(52,211,153,0.55)]"
+            ariaLabel={`Open ${displayName} .night identity card`}
+          >
+            .night
+          </MidnamesProfileButton>
+        )}
 
         <div className="ml-auto">
           {viewTarget === "_blank" ? (

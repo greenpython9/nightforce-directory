@@ -14,6 +14,7 @@ type DirectoryProfileRecord = {
   bio: string | null;
   avatarUrl: string | null;
   websiteUrl: string | null;
+  nightDomain?: string | null;
   publicEmail: string | null;
   contactMode: "NO_CONTACT" | "PRIVATE_CONTACT_AVAILABLE" | "PUBLIC_CONTACT_ALLOWED";
   socials: string[];
@@ -90,6 +91,7 @@ function toPublicProfile(profile: DirectoryProfileRecord): PublicProfile {
     bio: profile.bio,
     avatarUrl: profile.avatarUrl,
     websiteUrl: profile.websiteUrl,
+    nightDomain: profile.nightDomain ?? null,
     publicEmail: profile.publicEmail,
     contactMode: profile.contactMode,
     socials: profile.socials,
