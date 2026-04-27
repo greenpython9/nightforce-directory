@@ -18,12 +18,13 @@ type SortOption =
 
 type VerificationRequestRecord = {
   id: string;
-  discordHandle: string;
-  region: string;
-  note: string;
+  discordHandle?: string | null;
+  region?: string | null;
+  country?: string | null;
+  note?: string | null;
   midnightWalletAddress?: string | null;
   status: "pending" | "approved" | "rejected";
-  adminNotes: string;
+  adminNotes?: string | null;
   createdAt: string;
   reviewedAt: string | null;
   updatedAt: string;
@@ -146,6 +147,22 @@ function formatCsvCell(value: unknown): string {
   }
 
   return `"${text.replace(/"/g, '""')}"`;
+}
+
+function getRequestDisplayName(request: VerificationRequestRecord): string {
+  return request.discordHandle?.trim() || "Unknown requester";
+}
+
+function getRequestCountryOrRegion(request: VerificationRequestRecord): string {
+  return request.country?.trim() || request.region?.trim() || "Unknown";
+}
+
+function getRequestNote(request: VerificationRequestRecord): string {
+  return request.note?.trim() || "";
+}
+
+function getRequestAdminNotes(request: VerificationRequestRecord): string {
+  return request.adminNotes?.trim() || "";
 }
 
 function downloadCsvFile(filename: string, rows: string[][]) {
@@ -274,7 +291,7 @@ export function AdminReview() {
     new Set(
       requests
         .filter((req) => req.status === tab)
-        .map((req) => req.region.trim())
+        .map((req) => getRequestCountryOrRegion(req))
         .filter(Boolean),
     ),
   ).sort((a, b) => a.localeCompare(b));
@@ -283,17 +300,20 @@ export function AdminReview() {
     requests.filter((r) => {
       if (r.status !== tab) return false;
 
-      if (countryFilter !== "all" && r.region !== countryFilter) {
-        return false;
-      }
+      if (
+      countryFilter !== "all" &&
+      getRequestCountryOrRegion(r) !== countryFilter
+    ) {
+      return false;
+    }
 
       if (!search.trim()) return true;
 
       const q = search.toLowerCase();
 
       return (
-        r.discordHandle.toLowerCase().includes(q) ||
-        r.region.toLowerCase().includes(q) ||
+        getRequestDisplayName(r).toLowerCase().includes(q) ||
+        getRequestCountryOrRegion(r).toLowerCase().includes(q) ||
         r.id.toLowerCase().includes(q) ||
         (r.midnightWalletAddress ?? "").toLowerCase().includes(q)
       );
@@ -322,7 +342,7 @@ export function AdminReview() {
 
   const handleSelect = (req: VerificationRequestRecord) => {
     setSelected(req);
-    setAdminNotes(req.adminNotes);
+    setAdminNotes(getRequestAdminNotes(req));
   };
 
   const toggleRequestSelection = (requestId: string) => {
@@ -499,11 +519,11 @@ export function AdminReview() {
       ...exportRequests.map((request) => [
         request.id,
         request.status,
-        request.discordHandle,
-        request.region,
+        getRequestDisplayName(request),
+        getRequestCountryOrRegion(request),
         request.midnightWalletAddress ?? "",
-        request.note,
-        request.adminNotes,
+        getRequestNote(request),
+        getRequestAdminNotes(request),
         request.createdAt,
         request.reviewedAt ?? "",
         request.updatedAt,
@@ -713,7 +733,7 @@ export function AdminReview() {
                     checked={selectedRequestIds.includes(req.id)}
                     onChange={() => toggleRequestSelection(req.id)}
                     className="mt-1 h-4 w-4 flex-shrink-0 accent-emerald-400"
-                    aria-label={`Select request from ${req.discordHandle}`}
+                    aria-label={`Select request from ${getRequestDisplayName(req)}`}
                   />
 
                   <button
@@ -723,12 +743,12 @@ export function AdminReview() {
                   >
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <span className="text-sm font-mono text-white">
-                      {req.discordHandle}
+                      {getRequestDisplayName(req)}
                     </span>
                     <StatusBadge status={req.status} />
                   </div>
                   <div className="text-xs font-mono text-zinc-500">
-                    {req.region}
+                    {getRequestCountryOrRegion(req)}
                   </div>
                   <div className="text-xs font-mono text-zinc-600 mt-1">
                     {formatDate(req.createdAt)}
@@ -751,7 +771,7 @@ export function AdminReview() {
             <div className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(24,24,27,0.84),rgba(9,9,11,0.96))] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.035)]">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-mono font-semibold text-white">
-                  {selected.discordHandle}
+                  {getRequestDisplayName(selected)}
                 </span>
                 <StatusBadge status={selected.status} />
               </div>
@@ -902,7 +922,7 @@ export function AdminReview() {
                     className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2"
                   >
                     <div className="text-xs font-mono font-semibold text-zinc-200">
-                      {request.discordHandle}
+                      {getRequestDisplayName(request)}
                     </div>
                     <div className="mt-1 break-all text-[11px] font-mono text-zinc-600">
                       {request.id}
