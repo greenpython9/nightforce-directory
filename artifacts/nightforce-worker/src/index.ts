@@ -46,6 +46,192 @@ const optionalEmailInputSchema = z
   .optional()
   .nullable();
 
+const PROFILE_LINK_MIN_LENGTH = 3;
+const PROFILE_LINK_MAX_LENGTH = 32;
+const DISPLAY_NAME_MIN_LENGTH = 2;
+const DISPLAY_NAME_MAX_LENGTH = 40;
+const BIO_MAX_LENGTH = 280;
+
+const RESERVED_PROFILE_LINK_WORDS = new Set([
+  "admin",
+  "administrator",
+  "mod",
+  "moderator",
+  "staff",
+  "support",
+  "help",
+  "contact",
+  "submit",
+  "login",
+  "signin",
+  "signup",
+  "register",
+  "verify",
+  "verification",
+  "request",
+  "dashboard",
+  "settings",
+  "account",
+  "profile",
+  "profiles",
+  "directory",
+  "api",
+  "404",
+  "500",
+  "error",
+  "terms",
+  "privacy",
+  "faq",
+  "wallet",
+  "midnight",
+  "nightforce",
+  "official",
+  "team",
+  "security",
+  "scam",
+  "phishing",
+  "fraud",
+  "hack",
+  "hacked",
+  "airdrop",
+  "claim",
+  "token",
+  "giveaway",
+  "free",
+]);
+
+function hasLetterOrNumber(value: string): boolean {
+  return /[\p{L}\p{N}]/u.test(value);
+}
+
+function getProfileLinkValidationMessage(value: string): string | null {
+  const normalized = value.trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (
+    normalized.length < PROFILE_LINK_MIN_LENGTH ||
+    normalized.length > PROFILE_LINK_MAX_LENGTH
+  ) {
+    return `Profile link must be ${PROFILE_LINK_MIN_LENGTH}–${PROFILE_LINK_MAX_LENGTH} characters.`;
+  }
+
+  if (!/^[a-z0-9-]+$/.test(normalized)) {
+    return "Profile link can only use lowercase letters, numbers, and hyphens.";
+  }
+
+  if (normalized.startsWith("-") || normalized.endsWith("-")) {
+    return "Profile link cannot start or end with a hyphen.";
+  }
+
+  if (normalized.includes("--")) {
+    return "Profile link cannot contain double hyphens.";
+  }
+
+  const reservedWord = normalized
+    .split("-")
+    .find((part) => RESERVED_PROFILE_LINK_WORDS.has(part));
+
+  if (reservedWord) {
+    return `Profile link cannot use reserved words like “${reservedWord}”.`;
+  }
+
+  return null;
+}
+
+function getDisplayNameValidationMessage(value: string): string | null {
+  const normalized = value.trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (
+    normalized.length < DISPLAY_NAME_MIN_LENGTH ||
+    normalized.length > DISPLAY_NAME_MAX_LENGTH
+  ) {
+    return `Display name must be ${DISPLAY_NAME_MIN_LENGTH}–${DISPLAY_NAME_MAX_LENGTH} characters.`;
+  }
+
+  if (!hasLetterOrNumber(normalized)) {
+    return "Display name must include at least one letter or number.";
+  }
+
+  return null;
+}
+
+function getBioValidationMessage(value: string): string | null {
+  const normalized = value.trim();
+
+  if (normalized.length > BIO_MAX_LENGTH) {
+    return `Bio must be ${BIO_MAX_LENGTH} characters or less.`;
+  }
+
+  return null;
+}
+
+const optionalProfileLinkInputSchema = z
+  .string()
+  .trim()
+  .optional()
+  .nullable()
+  .superRefine((value, ctx) => {
+    if (typeof value !== "string" || value.trim().length === 0) {
+      return;
+    }
+
+    const message = getProfileLinkValidationMessage(value);
+
+    if (message) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message,
+      });
+    }
+  });
+
+const optionalDisplayNameInputSchema = z
+  .string()
+  .trim()
+  .optional()
+  .nullable()
+  .superRefine((value, ctx) => {
+    if (typeof value !== "string" || value.trim().length === 0) {
+      return;
+    }
+
+    const message = getDisplayNameValidationMessage(value);
+
+    if (message) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message,
+      });
+    }
+  });
+
+const optionalBioInputSchema = z
+  .string()
+  .trim()
+  .optional()
+  .nullable()
+  .superRefine((value, ctx) => {
+    if (typeof value !== "string") {
+      return;
+    }
+
+    const message = getBioValidationMessage(value);
+
+    if (message) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message,
+      });
+    }
+  });
+
 const createVerificationRequestInputSchema = z.object({
   discordHandle: z.string().trim().min(1),
   region: z.string().trim().min(1),
@@ -92,13 +278,13 @@ const encryptedHiddenPayloadSchema = z.object({
 
 const upsertProfileInputSchema = z.object({
   walletBindingId: uuidSchema,
-  publicId: z.string().trim().min(1).optional(),
-  slug: z.string().trim().optional().nullable(),
-  displayName: z.string().trim().optional().nullable(),
+  publicId: optionalProfileLinkInputSchema,
+  slug: optionalProfileLinkInputSchema,
+  displayName: optionalDisplayNameInputSchema,
   region: z.string().trim().optional().nullable(),
   country: z.string().trim().optional().nullable(),
   role: z.string().trim().optional().nullable(),
-  bio: z.string().trim().optional().nullable(),
+  bio: optionalBioInputSchema,
   avatarUrl: z.string().trim().optional().nullable(),
   websiteUrl: z.string().trim().optional().nullable(),
   publicEmail: optionalEmailInputSchema,
