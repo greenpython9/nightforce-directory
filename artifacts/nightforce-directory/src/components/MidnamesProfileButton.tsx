@@ -1,8 +1,20 @@
-import { useState, type MouseEvent, type ReactElement, type ReactNode } from "react";
+import {
+  lazy,
+  Suspense,
+  useState,
+  type MouseEvent,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 
-import { MidnamesModal } from "./MidnamesModal";
-import { MIDNAMES_ENABLED } from "../services/midnames";
+import { MIDNAMES_ENABLED } from "../services/midnamesConfig";
 import { getUsableNightDomain } from "../services/nightDomain";
+
+const LazyMidnamesModal = lazy(() =>
+  import("./MidnamesModal").then((module) => ({
+    default: module.MidnamesModal,
+  })),
+);
 
 interface MidnamesProfileButtonProps {
   domain: string | null | undefined;
@@ -43,12 +55,24 @@ export function MidnamesProfileButton({
         {children ?? ".night"}
       </button>
 
-      <MidnamesModal
-        open={isOpen}
-        domain={usableDomain}
-        mode={mode}
-        onClose={() => setIsOpen(false)}
-      />
+      {isOpen && (
+        <Suspense
+          fallback={
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 px-4 py-6 backdrop-blur-sm">
+              <div className="rounded-2xl border border-white/10 bg-zinc-950 px-5 py-4 text-sm font-mono text-zinc-300 shadow-2xl">
+                Loading .night profile…
+              </div>
+            </div>
+          }
+        >
+          <LazyMidnamesModal
+            open={isOpen}
+            domain={usableDomain}
+            mode={mode}
+            onClose={() => setIsOpen(false)}
+          />
+        </Suspense>
+      )}
     </>
   );
 }

@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 
+import { MidnamesProfileButton } from "./MidnamesProfileButton";
+
 type ContactMode =
   | "NO_CONTACT"
   | "PRIVATE_CONTACT_AVAILABLE"
@@ -21,6 +23,7 @@ export type ProfileCardProfile = {
   country?: string | null;
   region?: string | null;
   contactMode?: ContactMode | null;
+  nightDomain?: string | null;
   socials?: string[];
   isVerified?: boolean;
   visibility?: "public" | "anonymous" | "hidden";
@@ -311,22 +314,33 @@ export function ProfileCard({
         </div>
       )}
 
-      <div className="relative z-10 mt-auto flex items-center justify-end pt-3">
-        {viewTarget === "_blank" ? (
-          <a
-            href={resolvedViewHref}
-            target="_blank"
-            rel="noreferrer"
-            onClick={onViewClick}
-            className={viewClassName}
-          >
-            {viewLabel}
-          </a>
-        ) : (
-          <Link href={resolvedViewHref} className={viewClassName}>
-            {viewLabel}
-          </Link>
-        )}
+      <div className="relative z-10 mt-auto flex items-center pt-3">
+        <MidnamesProfileButton
+          domain={profile.nightDomain}
+          mode="card"
+          className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-emerald-300 transition-all hover:text-emerald-100 hover:[text-shadow:0_0_14px_rgba(52,211,153,0.55)]"
+          ariaLabel={`Open ${displayName} .night identity card`}
+        >
+          .night
+        </MidnamesProfileButton>
+
+        <div className="ml-auto">
+          {viewTarget === "_blank" ? (
+            <a
+              href={resolvedViewHref}
+              target="_blank"
+              rel="noreferrer"
+              onClick={onViewClick}
+              className={viewClassName}
+            >
+              {viewLabel}
+            </a>
+          ) : (
+            <Link href={resolvedViewHref} className={viewClassName}>
+              {viewLabel}
+            </Link>
+          )}
+        </div>
       </div>
     </div>
   );

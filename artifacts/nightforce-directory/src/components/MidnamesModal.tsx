@@ -4,12 +4,12 @@ import { HolographicCard } from "@midnames/sdk/react/HolographicCard";
 import "@midnames/sdk/styles.css";
 import "@midnames/sdk/holographic-card.css";
 
+import { getMidnamesProvider } from "../services/midnames";
 import {
   getMidnamesNetworkLabel,
-  getMidnamesProvider,
   isMidnamesPreprod,
   MIDNAMES_ENABLED,
-} from "../services/midnames";
+} from "../services/midnamesConfig";
 import { getUsableNightDomain } from "../services/nightDomain";
 
 type MidnamesModalMode = "full" | "card";

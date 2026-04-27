@@ -1,14 +1,6 @@
 import { createDefaultProvider, getDefaultProvider } from "@midnames/sdk";
 
-type MidnamesNetworkId = "preprod" | "mainnet";
-
-const rawFeatureFlag = import.meta.env.VITE_FEATURE_MIDNAMES;
-const rawNetworkId = import.meta.env.VITE_MIDNAMES_NETWORK_ID;
-
-export const MIDNAMES_ENABLED = rawFeatureFlag !== "false";
-
-export const MIDNAMES_NETWORK_ID: MidnamesNetworkId =
-  rawNetworkId === "mainnet" ? "mainnet" : "preprod";
+import { MIDNAMES_NETWORK_ID } from "./midnamesConfig";
 
 let cachedProvider: ReturnType<typeof createDefaultProvider> | null = null;
 
