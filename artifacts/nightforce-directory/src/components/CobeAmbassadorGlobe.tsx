@@ -386,7 +386,7 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
-const DEFAULT_GLOBE_ZOOM = 0.63;
+const DEFAULT_GLOBE_ZOOM = 0.87;
 
 type GlobeMarker = {
   location: [number, number];
@@ -459,6 +459,7 @@ export function CobeAmbassadorGlobe({
   const [reducedMotion, setReducedMotion] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(DEFAULT_GLOBE_ZOOM);
   const [countryPanelExpanded, setCountryPanelExpanded] = useState(false);
+  const [countryPanelSearch, setCountryPanelSearch] = useState("");
   const [visitorActivity, setVisitorActivity] = useState<VisitorActivity[]>([]);
   const [visitorActivityLoading, setVisitorActivityLoading] = useState(true);
   const [visitorActivityError, setVisitorActivityError] = useState(false);
@@ -518,6 +519,18 @@ export function CobeAmbassadorGlobe({
   const topCountryChoices = useMemo(() => {
     return displayPoints;
   }, [displayPoints]);
+
+  const filteredCountryChoices = useMemo(() => {
+    const query = countryPanelSearch.trim().toLowerCase();
+
+    if (!query) {
+      return topCountryChoices;
+    }
+
+    return topCountryChoices.filter((point) =>
+      point.country.toLowerCase().includes(query),
+    );
+  }, [countryPanelSearch, topCountryChoices]);
 
   const topCountryChips = useMemo(() => {
     return displayPoints;
@@ -855,7 +868,11 @@ export function CobeAmbassadorGlobe({
 
           <div className="absolute inset-0 bg-[linear-gradient(rgba(34,197,94,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(34,197,94,0.035)_1px,transparent_1px)] [background-size:34px_34px] opacity-10" />
 
-          <div className="absolute left-4 right-4 top-4 z-20 rounded-2xl border border-zinc-800/70 bg-[#1d1d1f]/55 p-3 shadow-2xl backdrop-blur-md md:right-auto md:w-[345px]">
+          <div
+            className={`absolute left-4 right-4 top-4 z-20 rounded-2xl border border-zinc-800/70 bg-[#1d1d1f]/55 p-3 shadow-2xl backdrop-blur-md md:right-auto md:block md:w-[345px] ${
+              countryPanelExpanded ? "hidden" : "block"
+            }`}
+          >
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0 truncate text-[12px] font-mono font-bold text-zinc-100">
                 Nightforce
@@ -994,7 +1011,11 @@ export function CobeAmbassadorGlobe({
             </div>
           </div>
 
-          <div className="absolute bottom-4 left-4 right-4 z-20 rounded-2xl border border-zinc-800/70 bg-[#1d1d1f]/55 p-2 shadow-2xl backdrop-blur-md md:right-auto md:w-[400px]">
+          <div
+            className={`absolute bottom-4 left-4 right-4 z-20 rounded-2xl border border-zinc-800/70 bg-[#1d1d1f]/55 p-2 shadow-2xl backdrop-blur-md md:right-auto md:block md:w-[400px] ${
+              countryPanelExpanded ? "hidden" : "block"
+            }`}
+          >
   <div className="mb-1 flex items-center justify-between gap-3 border-b border-zinc-800/70 pb-1">
     <div className="min-w-0 text-[10px] font-mono uppercase tracking-wide text-zinc-500">
       Visitor activity
@@ -1075,7 +1096,13 @@ export function CobeAmbassadorGlobe({
   </div>
 </div>
 
-          <div className="absolute right-4 top-[365px] z-20 w-[calc(100%-2rem)] rounded-xl border border-zinc-800/70 bg-[#1d1d1f]/55 p-4 shadow-2xl backdrop-blur-md md:top-4 md:w-[300px]">
+          <div
+            className={`absolute right-4 z-20 w-[calc(100%-2rem)] rounded-xl border border-zinc-800/70 bg-[#1d1d1f]/55 p-4 shadow-2xl backdrop-blur-md md:right-4 md:top-4 md:w-[300px] ${
+              countryPanelExpanded
+                ? "left-4 top-1/2 -translate-y-1/2 md:left-auto md:translate-y-0"
+                : "top-[365px]"
+            }`}
+          >
             {selectedCountryData ? (
               <>
                 <div className="mb-3 flex items-start justify-between gap-3">
@@ -1157,41 +1184,77 @@ export function CobeAmbassadorGlobe({
                 {countryPanelExpanded ? (
                   <>
                     <p className="mt-2 text-[11px] leading-5 text-zinc-500">
-                      Select a country below to view its ambassador summary.
+                      Select a country below to view its summary.
                     </p>
 
                     <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950/90 px-3 py-2 text-[10px] font-mono text-zinc-500">
-                      Zoom: {Math.round(zoomLevel * 100)}%
+                      <span className="font-semibold text-zinc-200">
+                        {topCountryChoices.length}
+                      </span>{" "}
+                      mapped countries · Zoom {Math.round(zoomLevel * 100)}%
                     </div>
+
+                    <input
+                      type="search"
+                      value={countryPanelSearch}
+                      onChange={(event) => setCountryPanelSearch(event.target.value)}
+                      placeholder="Search countries..."
+                      className="mt-3 w-full rounded-lg border border-zinc-800 bg-zinc-950/90 px-3 py-2 text-[11px] font-mono text-zinc-200 placeholder:text-zinc-600 outline-none transition-colors focus:border-emerald-700"
+                    />
 
                     <div
                       data-vertical-scroll
                       onWheel={(event) => {
                         event.stopPropagation();
                       }}
-                      className="mt-3 max-h-[230px] space-y-2 overflow-y-auto pr-2 [scrollbar-width:thin]"
+                      className="mt-3 max-h-[340px] space-y-2 overflow-y-auto pr-2 [scrollbar-width:thin] md:max-h-[230px]"
                     >
-                      {topCountryChoices.map((point) => (
-                        <button
-                          key={point.country}
-                          type="button"
-                          onClick={() => setSelectedCountry(point.country)}
-                          className="flex w-full items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/90 px-3 py-2 text-left transition-colors hover:border-emerald-700"
-                        >
-                          <span className="min-w-0 truncate text-[11px] font-mono text-zinc-300">
-                            {point.country}
-                          </span>
-                          <span className="ml-3 shrink-0 text-[10px] font-mono text-emerald-400">
-                            {point.count}
-                          </span>
-                        </button>
-                      ))}
+                      {filteredCountryChoices.length > 0 ? (
+                        filteredCountryChoices.map((point) => (
+                          <button
+                            key={point.country}
+                            type="button"
+                            onClick={() => setSelectedCountry(point.country)}
+                            className="flex w-full items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/90 px-3 py-2 text-left transition-colors hover:border-emerald-700"
+                          >
+                            <span className="flex min-w-0 items-center gap-2">
+                              <span className="shrink-0">
+                                {getCountryFlag(point.country)}
+                              </span>
+                              <span className="min-w-0 truncate text-[11px] font-mono text-zinc-300">
+                                {point.country}
+                              </span>
+                            </span>
+
+                            <span className="ml-3 shrink-0 rounded-md border border-emerald-900/70 bg-emerald-950/50 px-2 py-0.5 text-[10px] font-mono text-emerald-300">
+                              {point.count}
+                            </span>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="rounded-lg border border-zinc-800 bg-zinc-950/90 px-3 py-3 text-[11px] font-mono text-zinc-500">
+                          No mapped countries match this search.
+                        </div>
+                      )}
                     </div>
                   </>
                 ) : (
                   <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950/80 px-3 py-2 text-[10px] font-mono text-zinc-500">
-                    {topCountryChoices.length} countries available · Zoom{" "}
-                    {Math.round(zoomLevel * 100)}%
+                    <div>
+                      <span className="font-semibold text-zinc-200">
+                        {topCountryChoices.length}
+                      </span>{" "}
+                      mapped countries
+                    </div>
+                    <div className="mt-1">
+                      <span className="font-semibold text-zinc-200">
+                        {getStatValue(loading, visibleDirectoryProfiles.length)}
+                      </span>{" "}
+                      visible profiles · Zoom {Math.round(zoomLevel * 100)}%
+                    </div>
+                    <div className="mt-1 text-zinc-600">
+                      Expand to browse ambassadors by country.
+                    </div>
                   </div>
                 )}
               </>
