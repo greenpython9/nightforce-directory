@@ -86,6 +86,94 @@ function getErrorMessageFromPayload(
   return fallback;
 }
 
+const COUNTRY_OPTIONS = [
+  "Afghanistan",
+  "Albania",
+  "Algeria",
+  "Argentina",
+  "Armenia",
+  "Australia",
+  "Austria",
+  "Azerbaijan",
+  "Bahrain",
+  "Bangladesh",
+  "Belgium",
+  "Bolivia",
+  "Brazil",
+  "Brunei",
+  "Bulgaria",
+  "Cambodia",
+  "Canada",
+  "Chile",
+  "China",
+  "Colombia",
+  "Croatia",
+  "Czech Republic",
+  "Denmark",
+  "Egypt",
+  "Estonia",
+  "Finland",
+  "France",
+  "Georgia",
+  "Germany",
+  "Ghana",
+  "Greece",
+  "Hong Kong",
+  "Hungary",
+  "India",
+  "Indonesia",
+  "Ireland",
+  "Israel",
+  "Italy",
+  "Japan",
+  "Jordan",
+  "Kazakhstan",
+  "Kenya",
+  "Kuwait",
+  "Laos",
+  "Latvia",
+  "Lithuania",
+  "Luxembourg",
+  "Malaysia",
+  "Mexico",
+  "Mongolia",
+  "Morocco",
+  "Myanmar",
+  "Nepal",
+  "Netherlands",
+  "New Zealand",
+  "Nigeria",
+  "Norway",
+  "Pakistan",
+  "Peru",
+  "Philippines",
+  "Poland",
+  "Portugal",
+  "Qatar",
+  "Romania",
+  "Saudi Arabia",
+  "Serbia",
+  "Singapore",
+  "Slovakia",
+  "Slovenia",
+  "South Africa",
+  "South Korea",
+  "Spain",
+  "Sri Lanka",
+  "Sweden",
+  "Switzerland",
+  "Taiwan",
+  "Thailand",
+  "Turkey",
+  "Ukraine",
+  "United Arab Emirates",
+  "United Kingdom",
+  "United States",
+  "Uzbekistan",
+  "Vietnam",
+  "Other / Not listed",
+];
+
 export function RequestVerification() {
   const { walletId, isConnected } = useWallet();
 
@@ -191,7 +279,7 @@ export function RequestVerification() {
     }
 
     if (!discordHandle.trim() || !region.trim()) {
-      setError("Discord handle and region are required.");
+      setError("Discord handle and country are required.");
       return;
     }
 
@@ -490,15 +578,20 @@ export function RequestVerification() {
 
         <div>
           <label className="mb-1.5 block text-[11px] font-mono uppercase tracking-[0.16em] text-zinc-500">
-            Country <span className="text-emerald-300">*</span>
+            Country / Region <span className="text-emerald-300">*</span>
           </label>
-          <input
-            type="text"
+          <select
             value={region}
             onChange={(e) => setRegion(e.target.value)}
-            placeholder="e.g. Malaysia, Southeast Asia"
-            className="w-full rounded-xl border border-white/10 bg-black/35 px-3.5 py-3 text-sm font-mono text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] placeholder:text-zinc-700 transition-all focus:border-emerald-300/35 focus:bg-black/45 focus:outline-none focus:ring-2 focus:ring-emerald-400/10"
-          />
+            className="w-full rounded-xl border border-white/10 bg-black/35 px-3.5 py-3 text-sm font-mono text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition-all focus:border-emerald-300/35 focus:bg-black/45 focus:outline-none focus:ring-2 focus:ring-emerald-400/10"
+          >
+            <option value="">Select your country / region</option>
+            {COUNTRY_OPTIONS.map((country) => (
+              <option key={country} value={country}>
+                {country}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>
