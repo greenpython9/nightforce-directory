@@ -35,6 +35,18 @@ type ReviewConfirmation = {
   requests: VerificationRequestRecord[];
 };
 
+const ADMIN_VERIFICATION_REQUESTS_PATH =
+  "/api/nightforce/admin/verification-requests";
+
+function buildAdminVerificationRequestReviewPath(
+  requestId: string,
+  action: ReviewAction,
+): string {
+  return `${ADMIN_VERIFICATION_REQUESTS_PATH}/${encodeURIComponent(
+    requestId,
+  )}/${action}`;
+}
+
 function formatCsvCell(value: unknown): string {
   let text = value === null || value === undefined ? "" : String(value);
 
@@ -90,7 +102,7 @@ export function AdminReview() {
 
     try {
       const response = await fetch(
-        buildNightforceApiUrl("/api/nightforce/verification-requests"),
+        buildNightforceApiUrl(ADMIN_VERIFICATION_REQUESTS_PATH),
       );
 
       let payload: unknown = null;
@@ -140,8 +152,17 @@ export function AdminReview() {
   };
 
   useEffect(() => {
+    if (walletId !== ADMIN_WALLET_ID) {
+      setLoading(false);
+      setError("");
+      setRequests([]);
+      setSelected(null);
+      setSelectedRequestIds([]);
+      return;
+    }
+
     void reload();
-  }, []);
+  }, [walletId]);
 
   if (walletId !== ADMIN_WALLET_ID) {
     return (
@@ -265,7 +286,7 @@ export function AdminReview() {
   ) => {
     const response = await fetch(
       buildNightforceApiUrl(
-        `/api/nightforce/verification-requests/${requestId}/${action}`,
+        buildAdminVerificationRequestReviewPath(requestId, action),
       ),
       {
         method: "POST",
