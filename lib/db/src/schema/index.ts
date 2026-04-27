@@ -99,6 +99,7 @@ export const profilesTable = sqliteTable("profiles", {
   bio: text("bio"),
   avatarUrl: text("avatar_url"),
   websiteUrl: text("website_url"),
+  nightDomain: text("night_domain"),
   publicEmail: text("public_email"),
   contactModeContractAddress: text("contact_mode_contract_address"),
   contactModeSyncStatus: text("contact_mode_sync_status")

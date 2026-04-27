@@ -46,11 +46,23 @@ const optionalEmailInputSchema = z
   .optional()
   .nullable();
 
+const optionalNightDomainInputSchema = z
+  .string()
+  .trim()
+  .transform((value) => value.toLowerCase())
+  .refine((value) => value === "" || isValidNightDomain(value), {
+    message: "Enter a valid .night domain, such as 12345.night",
+  })
+  .optional()
+  .nullable();
+
 const PROFILE_LINK_MIN_LENGTH = 3;
 const PROFILE_LINK_MAX_LENGTH = 32;
 const DISPLAY_NAME_MIN_LENGTH = 2;
 const DISPLAY_NAME_MAX_LENGTH = 40;
 const BIO_MAX_LENGTH = 280;
+const NIGHT_DOMAIN_MAX_LENGTH = 253;
+const NIGHT_DOMAIN_LABEL_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 
 const RESERVED_PROFILE_LINK_WORDS = new Set([
   "admin",
@@ -287,6 +299,7 @@ const upsertProfileInputSchema = z.object({
   bio: optionalBioInputSchema,
   avatarUrl: z.string().trim().optional().nullable(),
   websiteUrl: z.string().trim().optional().nullable(),
+  nightDomain: optionalNightDomainInputSchema,
   publicEmail: optionalEmailInputSchema,
   socials: z.array(z.string().trim()).optional(),
   fieldVisibility: fieldVisibilitySchema,
@@ -559,6 +572,43 @@ function normalizeOptionalString(
   return normalized.length > 0 ? normalized : null;
 }
 
+function isValidNightDomain(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+
+  if (
+    !normalized.endsWith(".night") ||
+    normalized.length > NIGHT_DOMAIN_MAX_LENGTH ||
+    normalized.includes("..") ||
+    normalized.includes("/") ||
+    normalized.includes(":")
+  ) {
+    return false;
+  }
+
+  const domainWithoutTld = normalized.slice(0, -".night".length);
+  const labels = domainWithoutTld.split(".");
+
+  return (
+    labels.length > 0 &&
+    labels.every(
+      (label) =>
+        label.length > 0 &&
+        label.length <= 63 &&
+        NIGHT_DOMAIN_LABEL_PATTERN.test(label),
+    )
+  );
+}
+
+function normalizeNightDomain(value: string | null | undefined): string | null {
+  const normalized = normalizeOptionalString(value)?.toLowerCase();
+
+  if (!normalized) {
+    return null;
+  }
+
+  return isValidNightDomain(normalized) ? normalized : null;
+}
+
 function normalizeSlug(value: string | null | undefined): string | null {
   const normalized = normalizeOptionalString(value);
 
@@ -816,6 +866,7 @@ function toPublicProfile(profile: typeof profilesTable.$inferSelect) {
       profile.fieldVisibility.websiteUrl === "public"
         ? profile.websiteUrl
         : null,
+    nightDomain: profile.nightDomain,
     publicEmail:
       profile.fieldVisibility.email === "public"
         ? profile.publicEmail
@@ -1634,6 +1685,11 @@ export default {
             ? (existingProfile?.websiteUrl ?? null)
             : normalizeOptionalString(input.websiteUrl);
 
+        const nextNightDomain =
+          input.nightDomain === undefined
+            ? (existingProfile?.nightDomain ?? null)
+            : normalizeNightDomain(input.nightDomain);
+
         const nextPublicEmail =
           input.publicEmail === undefined
             ? (existingProfile?.publicEmail ?? null)
@@ -1666,6 +1722,7 @@ export default {
               bio: nextBio,
               avatarUrl: nextAvatarUrl,
               websiteUrl: nextWebsiteUrl,
+              nightDomain: nextNightDomain,
               publicEmail: nextPublicEmail,
               socials: nextSocials,
               fieldVisibility: input.fieldVisibility,
@@ -1702,6 +1759,7 @@ export default {
             bio: nextBio,
             avatarUrl: nextAvatarUrl,
             websiteUrl: nextWebsiteUrl,
+            nightDomain: nextNightDomain,
             publicEmail: nextPublicEmail,
             contactModeContractAddress: null,
             contactModeSyncStatus: "not_created",

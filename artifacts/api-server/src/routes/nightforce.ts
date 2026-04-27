@@ -39,6 +39,7 @@ type ProfileRecord = JsonRecord & {
   bio: string | null;
   avatarUrl: string | null;
   websiteUrl: string | null;
+  nightDomain: string | null;
   publicEmail: string | null;
   contactModeContractAddress: string | null;
   contactModeSyncStatus: "not_created" | "synced" | "failed";
@@ -89,11 +90,54 @@ function asStringArray(value: unknown): string[] {
   return value.filter((item): item is string => typeof item === "string");
 }
 
+function isValidNightDomain(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+
+  if (
+    !normalized.endsWith(".night") ||
+    normalized.length > NIGHT_DOMAIN_MAX_LENGTH ||
+    normalized.includes("..") ||
+    normalized.includes("/") ||
+    normalized.includes(":")
+  ) {
+    return false;
+  }
+
+  const domainWithoutTld = normalized.slice(0, -".night".length);
+  const labels = domainWithoutTld.split(".");
+
+  return (
+    labels.length > 0 &&
+    labels.every(
+      (label) =>
+        label.length > 0 &&
+        label.length <= 63 &&
+        NIGHT_DOMAIN_LABEL_PATTERN.test(label),
+    )
+  );
+}
+
+function normalizeNightDomain(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim().toLowerCase();
+
+  if (!normalized) {
+    return null;
+  }
+
+  return isValidNightDomain(normalized) ? normalized : null;
+}
+
 const PROFILE_LINK_MIN_LENGTH = 3;
 const PROFILE_LINK_MAX_LENGTH = 32;
 const DISPLAY_NAME_MIN_LENGTH = 2;
 const DISPLAY_NAME_MAX_LENGTH = 40;
 const BIO_MAX_LENGTH = 280;
+const NIGHT_DOMAIN_MAX_LENGTH = 253;
+const NIGHT_DOMAIN_LABEL_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 
 const RESERVED_PROFILE_LINK_WORDS = new Set([
   "admin",
@@ -583,6 +627,10 @@ router.put("/nightforce/profiles/:verificationRequestId", (req, res) => {
     bio: requestedBio,
     avatarUrl: asString(body.avatarUrl),
     websiteUrl: asString(body.websiteUrl),
+    nightDomain:
+      body.nightDomain === undefined
+        ? (existingProfile?.nightDomain ?? null)
+        : normalizeNightDomain(body.nightDomain),
     publicEmail: asString(body.publicEmail),
     contactModeContractAddress:
       existingProfile?.contactModeContractAddress ?? null,
@@ -834,6 +882,7 @@ function toPublicProfile(profile: ProfileRecord) {
     websiteUrl: isPublicField(profile, "websiteUrl")
       ? profile.websiteUrl
       : null,
+    nightDomain: profile.nightDomain,
     publicEmail: isPublicField(profile, "email") ? profile.publicEmail : null,
     contactMode: getSanitizedPublicContactMode(profile),
     socials: filterPublicSocials(profile),

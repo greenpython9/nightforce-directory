@@ -17,6 +17,8 @@ const PROFILE_LINK_MAX_LENGTH = 32;
 const DISPLAY_NAME_MIN_LENGTH = 2;
 const DISPLAY_NAME_MAX_LENGTH = 40;
 const BIO_MAX_LENGTH = 280;
+const NIGHT_DOMAIN_MAX_LENGTH = 253;
+const NIGHT_DOMAIN_LABEL_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 const PUBLIC_SITE_ORIGIN = "https://nightforce.cc";
 
 const RESERVED_PROFILE_LINK_WORDS = new Set([
@@ -329,6 +331,7 @@ type ProfileResponse = {
     bio: string | null;
     avatarUrl: string | null;
     websiteUrl: string | null;
+    nightDomain: string | null;
     publicEmail: string | null;
     contactModeContractAddress: string | null;
     contactModeSyncStatus: "not_created" | "synced" | "failed";
@@ -818,6 +821,55 @@ function getBioValidationMessage(value: string): string | null {
   return null;
 }
 
+function normalizeNightDomainInput(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function isValidNightDomain(value: string): boolean {
+  const normalized = normalizeNightDomainInput(value);
+
+  if (!normalized) {
+    return true;
+  }
+
+  if (
+    !normalized.endsWith(".night") ||
+    normalized.length > NIGHT_DOMAIN_MAX_LENGTH ||
+    normalized.includes("..") ||
+    normalized.includes("/") ||
+    normalized.includes(":")
+  ) {
+    return false;
+  }
+
+  const domainWithoutTld = normalized.slice(0, -".night".length);
+  const labels = domainWithoutTld.split(".");
+
+  return (
+    labels.length > 0 &&
+    labels.every(
+      (label) =>
+        label.length > 0 &&
+        label.length <= 63 &&
+        NIGHT_DOMAIN_LABEL_PATTERN.test(label),
+    )
+  );
+}
+
+function getNightDomainValidationMessage(value: string): string | null {
+  const normalized = normalizeNightDomainInput(value);
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (!isValidNightDomain(normalized)) {
+    return "Enter a valid .night domain, such as 12345.night.";
+  }
+
+  return null;
+}
+
 function isValidEmail(value: string): boolean {
   const normalized = value.trim();
 
@@ -882,6 +934,7 @@ type ProfileEditorFingerprintInput = {
   bio: string;
   avatarUrl: string;
   websiteUrl: string;
+  nightDomain: string;
   email: string;
   xUsername: string;
   youtubeHandle: string;
@@ -912,6 +965,7 @@ function buildEditorFingerprint(input: ProfileEditorFingerprintInput): string {
     bio: input.bio.trim(),
     avatarUrl: input.avatarUrl.trim(),
     websiteUrl: input.websiteUrl.trim(),
+    nightDomain: normalizeNightDomainInput(input.nightDomain),
     email: input.email.trim(),
     xUsername: input.xUsername.trim(),
     youtubeHandle: input.youtubeHandle.trim(),
@@ -956,6 +1010,7 @@ export function MyProfile() {
   const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
+  const [nightDomain, setNightDomain] = useState("");
   const [email, setEmail] = useState("");
   const [savedPublicEmail, setSavedPublicEmail] = useState<string | null>(null);
   const [xUsername, setXUsername] = useState("");
@@ -1011,6 +1066,7 @@ export function MyProfile() {
     setBio("");
     setAvatarUrl("");
     setWebsiteUrl("");
+    setNightDomain("");
     setEmail("");
     setSavedPublicEmail(null);
     setXUsername("");
@@ -1140,6 +1196,7 @@ export function MyProfile() {
       setBio(profile.bio ?? "");
       setAvatarUrl(profile.avatarUrl ?? "");
       setWebsiteUrl(profile.websiteUrl ?? "");
+      setNightDomain(profile.nightDomain ?? "");
 
       const nextEmail = profile.publicEmail ?? "";
       setSavedPublicEmail(profile.publicEmail ?? null);
@@ -1206,6 +1263,7 @@ export function MyProfile() {
           bio: profile.bio ?? "",
           avatarUrl: profile.avatarUrl ?? "",
           websiteUrl: profile.websiteUrl ?? "",
+          nightDomain: profile.nightDomain ?? "",
           email: nextEmail,
           xUsername: parsedSocials.xUsername,
           youtubeHandle: parsedSocials.youtubeHandle,
@@ -1267,6 +1325,9 @@ export function MyProfile() {
   const hasRoleValue = hasText(role);
   const hasBioValue = hasText(bio);
   const hasWebsiteUrlValue = hasText(websiteUrl);
+  const hasNightDomainValue = hasText(nightDomain);
+  const nightDomainValidationMessage = getNightDomainValidationMessage(nightDomain);
+  const nightDomainIsValid = nightDomainValidationMessage === null;
   const hasEmailValue = hasText(email);
   const emailIsValid = isValidEmail(email);
   const hasXValue = hasText(xUsername);
@@ -1304,6 +1365,7 @@ export function MyProfile() {
     publicIdValidationMessage,
     displayNameValidationMessage,
     bioValidationMessage,
+    nightDomainValidationMessage,
   ].filter((value): value is string => value !== null);
 
   const profileFieldsAreValid = fieldValidationMessages.length === 0;
@@ -1325,6 +1387,7 @@ export function MyProfile() {
     bio,
     avatarUrl,
     websiteUrl,
+    nightDomain,
     email,
     xUsername,
     youtubeHandle,
@@ -1661,6 +1724,7 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
             bio: bio.trim() || null,
             avatarUrl: avatarUrl.trim() || null,
             websiteUrl: websiteUrl.trim() || null,
+            nightDomain: normalizeNightDomainInput(nightDomain) || null,
             publicEmail: null,
             socials: buildSocialsArray({
               xUsername,
@@ -1765,6 +1829,7 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
           bio,
           avatarUrl,
           websiteUrl,
+          nightDomain,
           email: "",
           xUsername,
           youtubeHandle,
@@ -1883,6 +1948,11 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
       return;
     }
 
+    if (!nightDomainIsValid) {
+      setError(nightDomainValidationMessage ?? "Please enter a valid .night domain.");
+      return;
+    }
+
     if (!walletId) {
       setError("Midnight wallet is not connected.");
       return;
@@ -1955,6 +2025,7 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
             bio: bio.trim() || null,
             avatarUrl: avatarUrl.trim() || null,
             websiteUrl: websiteUrl.trim() || null,
+            nightDomain: normalizeNightDomainInput(nightDomain) || null,
             publicEmail: showEmail && hasEmailValue ? trimmedEmail : null,
             socials: buildSocialsArray({
               xUsername,
@@ -2153,6 +2224,9 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
         bio: showBio && hasBioValue ? bio || null : null,
         avatarUrl: showAvatarUrl && hasAvatarUrlValue ? avatarUrl || null : null,
         websiteUrl: showWebsiteUrl && hasWebsiteUrlValue ? websiteUrl || null : null,
+        nightDomain: hasNightDomainValue && nightDomainIsValid
+          ? normalizeNightDomainInput(nightDomain)
+          : null,
         publicEmail: showEmail && hasEmailValue ? email || null : null,
         contactMode: derivePreviewContactMode({
           hasEmailValue,
@@ -2621,6 +2695,32 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
                   />
                 </div>
 
+                <div>
+                  <label className="block text-xs font-mono text-zinc-500 mb-1.5">
+                    .night domain
+                  </label>
+                  <input
+                    type="text"
+                    value={nightDomain}
+                    onChange={(e) => setNightDomain(e.target.value)}
+                    onBlur={() => setNightDomain((value) => normalizeNightDomainInput(value))}
+                    placeholder="12345.night"
+                    className={`w-full bg-zinc-950 border rounded-lg px-3 py-2 text-sm font-mono text-white placeholder:text-zinc-600 focus:outline-none ${
+                      nightDomainIsValid
+                        ? "border-zinc-700 focus:border-zinc-500"
+                        : "border-red-800 focus:border-red-600"
+                    }`}
+                  />
+                  <p className="mt-2 text-[11px] font-mono text-zinc-600 leading-relaxed">
+                    Optional. Add your Midnames .night domain to show a public identity card.
+                    Preprod/testnet data may change or reset.
+                  </p>
+                  {!nightDomainIsValid && (
+                    <p className="mt-2 text-[11px] font-mono text-red-400">
+                      {nightDomainValidationMessage}
+                    </p>
+                  )}
+                </div>
 
                 <div>
                   <label className="block text-xs font-mono text-zinc-500 mb-1.5">

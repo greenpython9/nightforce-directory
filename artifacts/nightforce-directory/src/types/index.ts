@@ -62,6 +62,7 @@ export interface PublicProfile {
   bio: string | null;
   avatarUrl?: string | null;
   websiteUrl?: string | null;
+  nightDomain?: string | null;
   publicEmail?: string | null;
   contactMode?: ContactMode;
   socials?: string[];
