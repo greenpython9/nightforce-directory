@@ -2434,21 +2434,41 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
                   <input
                     type="text"
                     value={publicId}
-                    onChange={(e) => setPublicId(e.target.value)}
-                    placeholder="e.g. john-doe"
+                    onChange={(e) =>
+                      setPublicId(e.target.value.slice(0, PROFILE_LINK_MAX_LENGTH))
+                    }
+                    maxLength={PROFILE_LINK_MAX_LENGTH}
+                    placeholder="3–32 lowercase letters, numbers, or hyphens"
                     className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500"
                   />
+                  <p className="mt-1.5 text-[11px] font-mono leading-relaxed text-zinc-600">
+                    This becomes your profile link. Use lowercase letters, numbers, and hyphens only.
+                  </p>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono text-zinc-500 mb-1.5">
-                    Display Name <span className="text-red-500">*</span>
-                  </label>
+                  <div className="mb-1.5 flex items-center justify-between gap-3">
+                    <label className="block text-xs font-mono text-zinc-500">
+                      Display Name <span className="text-red-500">*</span>
+                    </label>
+                    <span
+                      className={`text-[10px] font-mono ${
+                        displayName.length >= DISPLAY_NAME_MAX_LENGTH
+                          ? "text-amber-300"
+                          : "text-zinc-600"
+                      }`}
+                    >
+                      {displayName.length}/{DISPLAY_NAME_MAX_LENGTH}
+                    </span>
+                  </div>
                   <input
                     type="text"
                     value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="Your public display name"
+                    onChange={(e) =>
+                      setDisplayName(e.target.value.slice(0, DISPLAY_NAME_MAX_LENGTH))
+                    }
+                    maxLength={DISPLAY_NAME_MAX_LENGTH}
+                    placeholder="2–40 characters, e.g. John Doe"
                     className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500"
                   />
                 </div>
@@ -2509,13 +2529,25 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono text-zinc-500 mb-1.5">
-                    Short Bio
-                  </label>
+                  <div className="mb-1.5 flex items-center justify-between gap-3">
+                    <label className="block text-xs font-mono text-zinc-500">
+                      Short Bio
+                    </label>
+                    <span
+                      className={`text-[10px] font-mono ${
+                        bio.length >= BIO_MAX_LENGTH
+                          ? "text-amber-300"
+                          : "text-zinc-600"
+                      }`}
+                    >
+                      {bio.length}/{BIO_MAX_LENGTH}
+                    </span>
+                  </div>
                   <textarea
                     value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    placeholder="Write your bio"
+                    onChange={(e) => setBio(e.target.value.slice(0, BIO_MAX_LENGTH))}
+                    maxLength={BIO_MAX_LENGTH}
+                    placeholder="Optional. Max 280 characters."
                     rows={3}
                     className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 resize-none"
                   />
