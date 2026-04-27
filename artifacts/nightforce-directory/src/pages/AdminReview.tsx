@@ -6,6 +6,16 @@ import { buildNightforceApiUrl } from "../lib/nightforceApi";
 
 type Tab = "pending" | "approved" | "rejected";
 
+type SortOption =
+  | "newest"
+  | "oldest"
+  | "discord-asc"
+  | "discord-desc"
+  | "region-asc"
+  | "region-desc"
+  | "wallet-asc"
+  | "wallet-desc";
+
 type VerificationRequestRecord = {
   id: string;
   discordHandle: string;
@@ -18,6 +28,86 @@ type VerificationRequestRecord = {
   reviewedAt: string | null;
   updatedAt: string;
 };
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: "newest", label: "Sort: Newest first" },
+  { value: "oldest", label: "Sort: Oldest first" },
+  { value: "discord-asc", label: "Discord A–Z" },
+  { value: "discord-desc", label: "Discord Z–A" },
+  { value: "region-asc", label: "Region A–Z" },
+  { value: "region-desc", label: "Region Z–A" },
+  { value: "wallet-asc", label: "Wallet A–Z" },
+  { value: "wallet-desc", label: "Wallet Z–A" },
+];
+
+function compareText(
+  a: string | null | undefined,
+  b: string | null | undefined,
+  direction: "asc" | "desc",
+): number {
+  const left = (a ?? "").trim();
+  const right = (b ?? "").trim();
+
+  if (!left && right) return 1;
+  if (left && !right) return -1;
+
+  const result = left.localeCompare(right, undefined, {
+    sensitivity: "base",
+  });
+
+  return direction === "asc" ? result : -result;
+}
+
+function compareIsoDate(
+  a: string,
+  b: string,
+  direction: "asc" | "desc",
+): number {
+  const left = Date.parse(a);
+  const right = Date.parse(b);
+  const result = left - right;
+
+  return direction === "asc" ? result : -result;
+}
+
+function sortVerificationRequests(
+  items: VerificationRequestRecord[],
+  sortOption: SortOption,
+): VerificationRequestRecord[] {
+  return [...items].sort((a, b) => {
+    let result = 0;
+
+    switch (sortOption) {
+      case "oldest":
+        result = compareIsoDate(a.createdAt, b.createdAt, "asc");
+        break;
+      case "discord-asc":
+        result = compareText(a.discordHandle, b.discordHandle, "asc");
+        break;
+      case "discord-desc":
+        result = compareText(a.discordHandle, b.discordHandle, "desc");
+        break;
+      case "region-asc":
+        result = compareText(a.region, b.region, "asc");
+        break;
+      case "region-desc":
+        result = compareText(a.region, b.region, "desc");
+        break;
+      case "wallet-asc":
+        result = compareText(a.midnightWalletAddress, b.midnightWalletAddress, "asc");
+        break;
+      case "wallet-desc":
+        result = compareText(a.midnightWalletAddress, b.midnightWalletAddress, "desc");
+        break;
+      case "newest":
+      default:
+        result = compareIsoDate(a.createdAt, b.createdAt, "desc");
+        break;
+    }
+
+    return result || a.id.localeCompare(b.id);
+  });
+}
 
 type VerificationRequestListResponse = {
   requests: VerificationRequestRecord[];
@@ -84,6 +174,7 @@ export function AdminReview() {
   const [tab, setTab] = useState<Tab>("pending");
   const [search, setSearch] = useState("");
   const [countryFilter, setCountryFilter] = useState("all");
+  const [sortOption, setSortOption] = useState<SortOption>("newest");
   const [requests, setRequests] = useState<VerificationRequestRecord[]>([]);
   const [selected, setSelected] = useState<VerificationRequestRecord | null>(null);
   const [selectedRequestIds, setSelectedRequestIds] = useState<string[]>([]);
@@ -188,24 +279,27 @@ export function AdminReview() {
     ),
   ).sort((a, b) => a.localeCompare(b));
 
-  const filtered = requests.filter((r) => {
-    if (r.status !== tab) return false;
+  const filtered = sortVerificationRequests(
+    requests.filter((r) => {
+      if (r.status !== tab) return false;
 
-    if (countryFilter !== "all" && r.region !== countryFilter) {
-      return false;
-    }
+      if (countryFilter !== "all" && r.region !== countryFilter) {
+        return false;
+      }
 
-    if (!search.trim()) return true;
+      if (!search.trim()) return true;
 
-    const q = search.toLowerCase();
+      const q = search.toLowerCase();
 
-    return (
-      r.discordHandle.toLowerCase().includes(q) ||
-      r.region.toLowerCase().includes(q) ||
-      r.id.toLowerCase().includes(q) ||
-      (r.midnightWalletAddress ?? "").toLowerCase().includes(q)
-    );
-  });
+      return (
+        r.discordHandle.toLowerCase().includes(q) ||
+        r.region.toLowerCase().includes(q) ||
+        r.id.toLowerCase().includes(q) ||
+        (r.midnightWalletAddress ?? "").toLowerCase().includes(q)
+      );
+    }),
+    sortOption,
+  );
 
   const filteredIds = filtered.map((req) => req.id);
   const selectedVisibleCount = selectedRequestIds.filter((id) =>
@@ -485,7 +579,7 @@ export function AdminReview() {
               className="w-full rounded-xl border border-white/10 bg-black/35 px-3.5 py-3 text-sm font-mono text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] placeholder:text-zinc-700 transition-all focus:border-emerald-300/35 focus:bg-black/45 focus:outline-none focus:ring-2 focus:ring-emerald-400/10"
             />
 
-            <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(12rem,16rem)_auto]">
               <select
                 value={countryFilter}
                 onChange={(e) => setCountryFilter(e.target.value)}
@@ -495,6 +589,18 @@ export function AdminReview() {
                 {countryOptions.map((country) => (
                   <option key={country} value={country}>
                     {country}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={sortOption}
+                onChange={(e) => setSortOption(e.target.value as SortOption)}
+                className="rounded-xl border border-white/10 bg-black/35 px-3.5 py-3 text-sm font-mono text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition-all focus:border-emerald-300/35 focus:bg-black/45 focus:outline-none focus:ring-2 focus:ring-emerald-400/10"
+              >
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
                   </option>
                 ))}
               </select>
