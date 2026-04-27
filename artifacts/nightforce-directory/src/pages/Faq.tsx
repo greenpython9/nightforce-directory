@@ -95,9 +95,19 @@ const faqSections = [
           "nightforce.cc uses a hybrid architecture: the backend remains the source of truth for profile records, the user wallet is used for user-authorized actions, and selected metadata may be synchronized through Midnight contracts as a privacy-aware blockchain layer.",
       },
       {
+        question: "How does nightforce.cc use Midnight?",
+        answer:
+          "In simple terms, nightforce.cc uses Midnight like a privacy-aware contact status switch for wallet-connected profiles. That switch can say one of three things: no contact available, private contact available, or public contact allowed. The full profile record still lives in the directory backend. Midnight is used for selected wallet/profile metadata, so the website can show how a privacy-aware blockchain layer can help manage public vs private contact availability without putting the full profile or raw contact details on-chain.",
+      },
+      {
         question: "Is all profile data stored on Midnight?",
         answer:
           "No. The backend remains the source of truth. Only selected profile and contact-mode metadata may be synchronized through Midnight contracts.",
+      },
+      {
+        question: "How does encrypted private contact work?",
+        answer:
+          "Think of private contact like a locked contact card. If a profile uses private contact, the raw contact email is not shown on the public profile. The directory can know that a private contact path exists, but visitors do not simply see the email address unless the profile owner chooses a public contact option.",
       },
     ],
   },
@@ -200,7 +210,7 @@ export function Faq() {
                 </div>
 
                 <span className="rounded-full border border-emerald-900/70 bg-emerald-950/35 px-2.5 py-1 text-[9px] font-mono uppercase tracking-wide text-emerald-300">
-                  13 answers
+                  15 answers
                 </span>
               </div>
 
