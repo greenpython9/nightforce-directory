@@ -17,6 +17,7 @@ const PROFILE_LINK_MAX_LENGTH = 32;
 const DISPLAY_NAME_MIN_LENGTH = 2;
 const DISPLAY_NAME_MAX_LENGTH = 40;
 const BIO_MAX_LENGTH = 280;
+const PUBLIC_SITE_ORIGIN = "https://nightforce.cc";
 
 const RESERVED_PROFILE_LINK_WORDS = new Set([
   "admin",
@@ -999,6 +1000,7 @@ export function MyProfile() {
   const [contactModeCompareError, setContactModeCompareError] = useState("");
   const [saveMsg, setSaveMsg] = useState("");
   const [error, setError] = useState("");
+  const [profileLinkCopied, setProfileLinkCopied] = useState(false);
 
   const resetFields = useCallback(() => {
     setPublicId("");
@@ -1306,6 +1308,14 @@ export function MyProfile() {
 
   const profileFieldsAreValid = fieldValidationMessages.length === 0;
 
+  const normalizedPublicProfileId = publicId.trim();
+  const publicProfilePath = `/profile/${
+    normalizedPublicProfileId || "your-public-id"
+  }`;
+  const publicProfileUrl = `${PUBLIC_SITE_ORIGIN}${publicProfilePath}`;
+  const canCopyProfileLink =
+    Boolean(normalizedPublicProfileId) && !publicIdValidationMessage;
+
   const currentEditorFingerprint = buildEditorFingerprint({
     publicId,
     displayName,
@@ -1443,6 +1453,20 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
     setShowDisplayName(false);
   }
 };
+
+  const copyPublicProfileLink = async () => {
+    if (!canCopyProfileLink) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(publicProfileUrl);
+      setProfileLinkCopied(true);
+      window.setTimeout(() => setProfileLinkCopied(false), 1800);
+    } catch {
+      setError("Unable to copy profile link. Please copy it manually.");
+    }
+  };
 
   const uploadAvatarFile = async (file: File) => {
     if (!AVATAR_ALLOWED_TYPES.has(file.type)) {
@@ -2441,9 +2465,40 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
                     placeholder="3–32 lowercase letters, numbers, or hyphens"
                     className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500"
                   />
+
                   <p className="mt-1.5 text-[11px] font-mono leading-relaxed text-zinc-600">
-                    This becomes your profile link. Use lowercase letters, numbers, and hyphens only.
+                    This becomes your public profile link. Use lowercase letters,
+                    numbers, and hyphens only.
                   </p>
+
+                  <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950/70 p-3">
+                    <div className="mb-1 text-[10px] font-mono uppercase tracking-wide text-zinc-600">
+                      Public profile link preview
+                    </div>
+
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <div className="min-w-0 flex-1 rounded-md border border-zinc-800 bg-black/30 px-3 py-2 text-[11px] font-mono text-zinc-400">
+                        <span className="block truncate">
+                          {publicProfileUrl}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => void copyPublicProfileLink()}
+                        disabled={!canCopyProfileLink}
+                        className="shrink-0 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-[11px] font-mono text-zinc-300 transition-colors hover:border-emerald-700 hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-45"
+                      >
+                        {profileLinkCopied ? "Copied" : "Copy"}
+                      </button>
+                    </div>
+
+                    {!canCopyProfileLink && (
+                      <div className="mt-2 text-[10px] font-mono text-zinc-600">
+                        Enter a valid Public ID before copying the link.
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div>
