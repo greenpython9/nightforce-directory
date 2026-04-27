@@ -89,6 +89,173 @@ function asStringArray(value: unknown): string[] {
   return value.filter((item): item is string => typeof item === "string");
 }
 
+const PROFILE_LINK_MIN_LENGTH = 3;
+const PROFILE_LINK_MAX_LENGTH = 32;
+const DISPLAY_NAME_MIN_LENGTH = 2;
+const DISPLAY_NAME_MAX_LENGTH = 40;
+const BIO_MAX_LENGTH = 280;
+
+const RESERVED_PROFILE_LINK_WORDS = new Set([
+  "admin",
+  "administrator",
+  "mod",
+  "moderator",
+  "staff",
+  "support",
+  "help",
+  "contact",
+  "submit",
+  "login",
+  "signin",
+  "signup",
+  "register",
+  "verify",
+  "verification",
+  "request",
+  "dashboard",
+  "settings",
+  "account",
+  "profile",
+  "profiles",
+  "directory",
+  "api",
+  "404",
+  "500",
+  "error",
+  "terms",
+  "privacy",
+  "faq",
+  "wallet",
+  "midnight",
+  "nightforce",
+  "official",
+  "team",
+  "security",
+  "scam",
+  "phishing",
+  "fraud",
+  "hack",
+  "hacked",
+  "airdrop",
+  "claim",
+  "token",
+  "giveaway",
+  "free",
+]);
+
+function hasLetterOrNumber(value: string): boolean {
+  return /[\p{L}\p{N}]/u.test(value);
+}
+
+function getProfileLinkValidationMessage(value: string): string | null {
+  const normalized = value.trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (
+    normalized.length < PROFILE_LINK_MIN_LENGTH ||
+    normalized.length > PROFILE_LINK_MAX_LENGTH
+  ) {
+    return `Profile link must be ${PROFILE_LINK_MIN_LENGTH}–${PROFILE_LINK_MAX_LENGTH} characters.`;
+  }
+
+  if (!/^[a-z0-9-]+$/.test(normalized)) {
+    return "Profile link can only use lowercase letters, numbers, and hyphens.";
+  }
+
+  if (normalized.startsWith("-") || normalized.endsWith("-")) {
+    return "Profile link cannot start or end with a hyphen.";
+  }
+
+  if (normalized.includes("--")) {
+    return "Profile link cannot contain double hyphens.";
+  }
+
+  const reservedWord = normalized
+    .split("-")
+    .find((part) => RESERVED_PROFILE_LINK_WORDS.has(part));
+
+  if (reservedWord) {
+    return `Profile link cannot use reserved words like “${reservedWord}”.`;
+  }
+
+  return null;
+}
+
+function getDisplayNameValidationMessage(value: string): string | null {
+  const normalized = value.trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (
+    normalized.length < DISPLAY_NAME_MIN_LENGTH ||
+    normalized.length > DISPLAY_NAME_MAX_LENGTH
+  ) {
+    return `Display name must be ${DISPLAY_NAME_MIN_LENGTH}–${DISPLAY_NAME_MAX_LENGTH} characters.`;
+  }
+
+  if (!hasLetterOrNumber(normalized)) {
+    return "Display name must include at least one letter or number.";
+  }
+
+  return null;
+}
+
+function getBioValidationMessage(value: string): string | null {
+  const normalized = value.trim();
+
+  if (normalized.length > BIO_MAX_LENGTH) {
+    return `Bio must be ${BIO_MAX_LENGTH} characters or less.`;
+  }
+
+  return null;
+}
+
+function getProfileValidationErrors(input: {
+  publicId: string | null;
+  slug: string | null;
+  displayName: string | null;
+  bio: string | null;
+}): Record<string, string[]> {
+  const errors: Record<string, string[]> = {};
+
+  const publicIdMessage = input.publicId
+    ? getProfileLinkValidationMessage(input.publicId)
+    : null;
+
+  if (publicIdMessage) {
+    errors.publicId = [publicIdMessage];
+  }
+
+  const slugMessage = input.slug
+    ? getProfileLinkValidationMessage(input.slug)
+    : null;
+
+  if (slugMessage) {
+    errors.slug = [slugMessage];
+  }
+
+  const displayNameMessage = input.displayName
+    ? getDisplayNameValidationMessage(input.displayName)
+    : null;
+
+  if (displayNameMessage) {
+    errors.displayName = [displayNameMessage];
+  }
+
+  const bioMessage = input.bio ? getBioValidationMessage(input.bio) : null;
+
+  if (bioMessage) {
+    errors.bio = [bioMessage];
+  }
+
+  return errors;
+}
+
 function makePublicId(verificationRequestId: string): string {
   return `profile-${verificationRequestId.slice(0, 8)}`;
 }
@@ -364,11 +531,36 @@ router.put("/nightforce/profiles/:verificationRequestId", (req, res) => {
     return;
   }
 
+  const requestedPublicId = asString(body.publicId);
+  const requestedSlug = asString(body.slug);
+  const requestedDisplayName = asString(body.displayName);
+  const requestedBio = asString(body.bio);
+
+  const validationErrors = getProfileValidationErrors({
+    publicId: requestedPublicId ?? requestedSlug,
+    slug: requestedSlug,
+    displayName: requestedDisplayName,
+    bio: requestedBio,
+  });
+
+  if (Object.keys(validationErrors).length > 0) {
+    res.status(400).json({
+      error: "Invalid profile input",
+      details: {
+        formErrors: [],
+        fieldErrors: validationErrors,
+      },
+    });
+    return;
+  }
+
   const publicId =
-    asString(body.publicId) ??
-    asString(body.slug) ??
+    requestedPublicId ??
+    requestedSlug ??
     existingProfile?.publicId ??
     makePublicId(verificationRequestId);
+
+  const slug = requestedSlug ?? publicId;
 
   const publishState =
     body.publishState === "inactive" || body.publishState === "draft"
@@ -383,12 +575,12 @@ router.put("/nightforce/profiles/:verificationRequestId", (req, res) => {
     verificationRequestId,
     walletBindingId,
     publicId,
-    slug: asString(body.slug) ?? publicId,
-    displayName: asString(body.displayName),
+    slug,
+    displayName: requestedDisplayName,
     region: asString(body.region),
     country: asString(body.country),
     role: asString(body.role),
-    bio: asString(body.bio),
+    bio: requestedBio,
     avatarUrl: asString(body.avatarUrl),
     websiteUrl: asString(body.websiteUrl),
     publicEmail: asString(body.publicEmail),
