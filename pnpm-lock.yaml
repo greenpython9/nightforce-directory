@@ -318,6 +318,9 @@ importers:
 
   artifacts/nightforce-directory:
     dependencies:
+      '@midnames/sdk':
+        specifier: ^2.0.0
+        version: 2.0.0(@types/react@19.2.14)(lucide-react@0.545.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@midnight-ntwrk/compact-js':
         specifier: 2.5.0
         version: 2.5.0
@@ -1445,6 +1448,20 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
+
+  '@midnames/sdk@2.0.0':
+    resolution: {integrity: sha512-/U1fuxUIAX01j9eVNlO84gVDoe+p84aFbOkR/2X1O9zw4c4iKjITseuMd9EIZJc52TZpV8etQpvdIZTkj9ss2w==}
+    peerDependencies:
+      lucide-react: '>=0.400.0'
+      react: '>=18'
+      react-dom: '>=18'
+    peerDependenciesMeta:
+      lucide-react:
+        optional: true
+      react:
+        optional: true
+      react-dom:
+        optional: true
 
   '@midnight-ntwrk/compact-js@2.5.0':
     resolution: {integrity: sha512-vCLbndc3GtSTjZE30NtNqINOrrjZ2O/m8q4jCVeyx9t+rTLwwFqGXUOYobKbM34rwfnTz95ZAI6vVixYnarfrA==}
@@ -5270,6 +5287,28 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
+
+  '@midnames/sdk@2.0.0(@types/react@19.2.14)(lucide-react@0.545.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
+    dependencies:
+      '@midnight-ntwrk/compact-js': 2.5.0
+      '@midnight-ntwrk/compact-runtime': 0.15.0
+      '@midnight-ntwrk/ledger-v8': 8.0.3
+      '@midnight-ntwrk/midnight-js-contracts': 4.0.2
+      '@midnight-ntwrk/midnight-js-indexer-public-data-provider': 4.0.2(@types/react@19.2.14)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@midnight-ntwrk/midnight-js-network-id': 4.0.2
+      '@midnight-ntwrk/wallet-sdk-address-format': 3.1.0
+    optionalDependencies:
+      lucide-react: 0.545.0(react@19.1.0)
+      react: 19.1.0
+      react-dom: 19.1.0(react@19.1.0)
+    transitivePeerDependencies:
+      - '@fastify/websocket'
+      - '@types/react'
+      - bufferutil
+      - crossws
+      - encoding
+      - subscriptions-transport-ws
+      - utf-8-validate
 
   '@midnight-ntwrk/compact-js@2.5.0':
     dependencies:
