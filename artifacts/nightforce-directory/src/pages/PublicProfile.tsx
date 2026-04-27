@@ -10,6 +10,7 @@ import {
   Ban,
   CheckCircle2,
   ExternalLink,
+  Fingerprint,
   Github,
   Globe2,
   Info,
@@ -738,42 +739,41 @@ export function PublicProfile() {
             </div>
 
             <div className="grid gap-4 lg:grid-cols-3">
-              <div className="min-h-[108px] rounded-2xl border border-emerald-900/60 bg-emerald-950/20 p-3.5 shadow-[0_0_0_1px_rgba(16,185,129,0.05)]">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-800/50 bg-emerald-950/40">
-                    <ShieldCheck
-                      className="h-3.5 w-3.5 text-emerald-300"
-                      aria-hidden="true"
-                    />
-                  </div>
+              <div className="flex min-h-[108px] items-start gap-3 rounded-2xl border border-emerald-900/60 bg-emerald-950/20 p-3.5 shadow-[0_0_0_1px_rgba(16,185,129,0.05)]">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-800/50 bg-emerald-950/40">
+                  <ShieldCheck
+                    className="h-3.5 w-3.5 text-emerald-300"
+                    aria-hidden="true"
+                  />
+                </div>
 
-                  <div>
-                    <div className="text-sm font-mono font-semibold text-emerald-200">
-                      Verified
-                    </div>
-                    <p className="mt-1.5 text-[11px] font-mono leading-5 text-zinc-400">
-                      Passed the directory verification flow. Not official Midnight identity
-                      verification.
-                    </p>
+                <div className="min-w-0">
+                  <div className="text-sm font-mono font-semibold leading-5 text-emerald-200">
+                    Verified
                   </div>
+                  <p className="mt-1.5 text-[11px] font-mono leading-5 text-zinc-400">
+                    Passed the directory verification flow. Not official Midnight identity
+                    verification.
+                  </p>
                 </div>
               </div>
 
-              <div className="min-h-[108px] rounded-2xl border border-white/10 bg-black/25 p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
-                <div className="flex items-start gap-3">
+              <div className="flex min-h-[108px] items-start gap-3 rounded-2xl border border-white/10 bg-black/25 p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-zinc-950/50">
                   <Info
-                    className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500"
+                    className="h-3.5 w-3.5 text-zinc-500"
                     aria-hidden="true"
                   />
-                  <div>
-                    <h2 className="text-sm font-mono font-semibold text-white">
-                      Privacy-aware profile
-                    </h2>
-                    <p className="mt-1.5 text-[11px] font-mono leading-5 text-zinc-600">
-                      Public fields are controlled by the ambassador. Any hidden details are
-                      intentional.
-                    </p>
+                </div>
+
+                <div className="min-w-0">
+                  <div className="text-sm font-mono font-semibold leading-5 text-white">
+                    Privacy-aware profile
                   </div>
+                  <p className="mt-1.5 text-[11px] font-mono leading-5 text-zinc-600">
+                    Public fields are controlled by the ambassador. Any hidden details are
+                    intentional.
+                  </p>
                 </div>
               </div>
 
@@ -781,27 +781,25 @@ export function PublicProfile() {
                 <MidnamesProfileButton
                   domain={profile.nightDomain}
                   mode="full"
-                  className="min-h-[108px] w-full rounded-2xl border border-emerald-900/50 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_46%),rgba(0,0,0,0.25)] p-3.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition-all hover:border-emerald-500/50 hover:bg-emerald-950/20 hover:shadow-[0_0_24px_rgba(16,185,129,0.12),inset_0_1px_0_rgba(255,255,255,0.045)]"
+                  className="relative isolate flex min-h-[108px] w-full appearance-none items-start gap-3 overflow-hidden rounded-2xl border border-emerald-400/35 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.24),transparent_48%),rgba(0,0,0,0.28)] p-3.5 text-left align-top font-mono shadow-[0_0_24px_rgba(16,185,129,0.16),inset_0_1px_0_rgba(255,255,255,0.05)] transition-all after:pointer-events-none after:absolute after:inset-0 after:rounded-2xl after:border after:border-emerald-300/60 after:opacity-90 after:shadow-[0_0_34px_rgba(52,211,153,0.34),inset_0_0_18px_rgba(52,211,153,0.08)] after:content-[''] after:animate-pulse hover:border-emerald-300/80 hover:bg-emerald-950/25 hover:shadow-[0_0_38px_rgba(16,185,129,0.28),inset_0_1px_0_rgba(255,255,255,0.07)]"
                   ariaLabel={`Open ${displayName} .night identity profile`}
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-800/50 bg-emerald-950/40">
-                      <Globe2
-                        className="h-3.5 w-3.5 text-emerald-300"
-                        aria-hidden="true"
-                      />
-                    </div>
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-800/50 bg-emerald-950/40">
+                    <Fingerprint
+                      className="h-3.5 w-3.5 text-emerald-300"
+                      aria-hidden="true"
+                    />
+                  </div>
 
-                    <div>
-                      <h2 className="text-sm font-mono font-semibold text-emerald-100">
-                        .night identity
-                      </h2>
-                      <p className="mt-1.5 text-[11px] font-mono leading-5 text-zinc-500">
-                        View this ambassador&apos;s Midnames profile.
-                      </p>
-                      <div className="mt-2 break-all text-[11px] font-mono text-emerald-300">
-                        {profile.nightDomain}
-                      </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-mono font-semibold leading-5 text-emerald-100">
+                      .night identity
+                    </div>
+                    <p className="mt-1.5 text-[11px] font-mono leading-5 text-zinc-400">
+                      View this ambassador&apos;s Midnames profile.
+                    </p>
+                    <div className="mt-2 break-all text-[11px] font-mono leading-5 text-emerald-300">
+                      {profile.nightDomain}
                     </div>
                   </div>
                 </MidnamesProfileButton>
