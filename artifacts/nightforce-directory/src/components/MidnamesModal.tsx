@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactElement } from "react";
 import { DomainProfileWidget } from "@midnames/sdk/react/DomainProfileWidget";
 import { HolographicCard } from "@midnames/sdk/react/HolographicCard";
 import "@midnames/sdk/styles.css";
@@ -26,7 +26,7 @@ export function MidnamesModal({
   domain,
   mode,
   onClose,
-}: MidnamesModalProps): JSX.Element | null {
+}: MidnamesModalProps): ReactElement | null {
   const [widgetError, setWidgetError] = useState<string | null>(null);
 
   const usableDomain = useMemo(() => getUsableNightDomain(domain), [domain]);

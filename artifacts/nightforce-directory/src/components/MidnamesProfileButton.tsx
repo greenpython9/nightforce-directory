@@ -1,4 +1,4 @@
-import { useState, type MouseEvent, type ReactNode } from "react";
+import { useState, type MouseEvent, type ReactElement, type ReactNode } from "react";
 
 import { MidnamesModal } from "./MidnamesModal";
 import { MIDNAMES_ENABLED } from "../services/midnames";
@@ -18,7 +18,7 @@ export function MidnamesProfileButton({
   children,
   className,
   ariaLabel,
-}: MidnamesProfileButtonProps): JSX.Element | null {
+}: MidnamesProfileButtonProps): ReactElement | null {
   const [isOpen, setIsOpen] = useState(false);
   const usableDomain = getUsableNightDomain(domain);
 
