@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
 
 const router: IRouter = Router();
 
@@ -147,13 +147,16 @@ router.post("/nightforce/verification-requests", (req, res) => {
   });
 });
 
-router.get("/nightforce/verification-requests", (_req, res) => {
+function listVerificationRequests(_req: Request, res: Response) {
   res.json({
     requests: Array.from(verificationRequests.values()).sort((a, b) =>
       b.createdAt.localeCompare(a.createdAt),
     ),
   });
-});
+}
+
+router.get("/nightforce/verification-requests", listVerificationRequests);
+router.get("/nightforce/admin/verification-requests", listVerificationRequests);
 
 router.get("/nightforce/verification-requests/by-wallet/:walletAddress", (req, res) => {
   const walletAddress = asString(req.params.walletAddress);
@@ -179,8 +182,21 @@ router.get("/nightforce/verification-requests/by-wallet/:walletAddress", (req, r
   });
 });
 
-router.post("/nightforce/verification-requests/:id/:action", (req, res) => {
-  const { id, action } = req.params;
+function reviewVerificationRequest(
+  req: Request,
+  res: Response,
+  actionOverride?: "approve" | "reject",
+) {
+  const id = asString(req.params.id);
+  const action = actionOverride ?? asString(req.params.action);
+
+  if (!id) {
+    res.status(400).json({
+      error: "Verification request id is required.",
+    });
+    return;
+  }
+
   const request = verificationRequests.get(id);
 
   if (!request) {
@@ -210,6 +226,18 @@ router.post("/nightforce/verification-requests/:id/:action", (req, res) => {
   res.json({
     request,
   });
+}
+
+router.post("/nightforce/verification-requests/:id/:action", (req, res) => {
+  reviewVerificationRequest(req, res);
+});
+
+router.post("/nightforce/admin/verification-requests/:id/approve", (req, res) => {
+  reviewVerificationRequest(req, res, "approve");
+});
+
+router.post("/nightforce/admin/verification-requests/:id/reject", (req, res) => {
+  reviewVerificationRequest(req, res, "reject");
 });
 
 router.post("/nightforce/wallet-bindings", (req, res) => {

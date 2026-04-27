@@ -750,7 +750,8 @@ export default {
     }
 
     if (
-      pathname === "/api/nightforce/verification-requests" &&
+      (pathname === "/api/nightforce/verification-requests" ||
+        pathname === "/api/nightforce/admin/verification-requests") &&
       request.method === "GET"
     ) {
       try {
@@ -1038,15 +1039,21 @@ export default {
     }
 
     if (
-      parts.length === 5 &&
-      parts[0] === "api" &&
-      parts[1] === "nightforce" &&
-      parts[2] === "verification-requests" &&
-      parts[4] === "approve" &&
+      ((parts.length === 5 &&
+        parts[0] === "api" &&
+        parts[1] === "nightforce" &&
+        parts[2] === "verification-requests" &&
+        parts[4] === "approve") ||
+        (parts.length === 6 &&
+          parts[0] === "api" &&
+          parts[1] === "nightforce" &&
+          parts[2] === "admin" &&
+          parts[3] === "verification-requests" &&
+          parts[5] === "approve")) &&
       request.method === "POST"
     ) {
       try {
-        const id = uuidSchema.parse(parts[3]);
+        const id = uuidSchema.parse(parts.length === 6 ? parts[4] : parts[3]);
         let rawBody: unknown = {};
 
         try {
@@ -1100,15 +1107,21 @@ export default {
     }
 
     if (
-      parts.length === 5 &&
-      parts[0] === "api" &&
-      parts[1] === "nightforce" &&
-      parts[2] === "verification-requests" &&
-      parts[4] === "reject" &&
+      ((parts.length === 5 &&
+        parts[0] === "api" &&
+        parts[1] === "nightforce" &&
+        parts[2] === "verification-requests" &&
+        parts[4] === "reject") ||
+        (parts.length === 6 &&
+          parts[0] === "api" &&
+          parts[1] === "nightforce" &&
+          parts[2] === "admin" &&
+          parts[3] === "verification-requests" &&
+          parts[5] === "reject")) &&
       request.method === "POST"
     ) {
       try {
-        const id = uuidSchema.parse(parts[3]);
+        const id = uuidSchema.parse(parts.length === 6 ? parts[4] : parts[3]);
         let rawBody: unknown = {};
 
         try {
