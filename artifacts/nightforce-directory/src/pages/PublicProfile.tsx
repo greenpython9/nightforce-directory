@@ -26,6 +26,7 @@ import {
 import { Link, useLocation, useParams } from "wouter";
 import { buildNightforceApiUrl } from "../lib/nightforceApi";
 import type { PublicProfile as PublicProfileType } from "../types";
+import { MidnamesProfileButton } from "../components/MidnamesProfileButton";
 
 type BackendPublicProfile = {
   publicId: string;
@@ -37,6 +38,7 @@ type BackendPublicProfile = {
   bio: string | null;
   avatarUrl: string | null;
   websiteUrl: string | null;
+  nightDomain: string | null;
   publicEmail: string | null;
   contactMode: "NO_CONTACT" | "PRIVATE_CONTACT_AVAILABLE" | "PUBLIC_CONTACT_ALLOWED" | null;
   contactModeSyncedValue?:
@@ -143,6 +145,7 @@ function toPublicProfile(profile: BackendPublicProfile): PublicProfileType {
     bio: profile.bio,
     avatarUrl: profile.avatarUrl,
     websiteUrl: profile.websiteUrl,
+    nightDomain: profile.nightDomain,
     publicEmail: profile.publicEmail,
     contactMode: resolveContactMode(profile),
     socials: profile.socials,
@@ -774,7 +777,37 @@ export function PublicProfile() {
                 </div>
               </div>
 
-              <div className="hidden lg:block" aria-hidden="true" />
+              {profile.nightDomain ? (
+                <MidnamesProfileButton
+                  domain={profile.nightDomain}
+                  mode="full"
+                  className="min-h-[108px] w-full rounded-2xl border border-emerald-900/50 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_46%),rgba(0,0,0,0.25)] p-3.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition-all hover:border-emerald-500/50 hover:bg-emerald-950/20 hover:shadow-[0_0_24px_rgba(16,185,129,0.12),inset_0_1px_0_rgba(255,255,255,0.045)]"
+                  ariaLabel={`Open ${displayName} .night identity profile`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-800/50 bg-emerald-950/40">
+                      <Globe2
+                        className="h-3.5 w-3.5 text-emerald-300"
+                        aria-hidden="true"
+                      />
+                    </div>
+
+                    <div>
+                      <h2 className="text-sm font-mono font-semibold text-emerald-100">
+                        .night identity
+                      </h2>
+                      <p className="mt-1.5 text-[11px] font-mono leading-5 text-zinc-500">
+                        View this ambassador&apos;s Midnames profile.
+                      </p>
+                      <div className="mt-2 break-all text-[11px] font-mono text-emerald-300">
+                        {profile.nightDomain}
+                      </div>
+                    </div>
+                  </div>
+                </MidnamesProfileButton>
+              ) : (
+                <div className="hidden lg:block" aria-hidden="true" />
+              )}
             </div>
           </div>
         </section>
