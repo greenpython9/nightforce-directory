@@ -12,6 +12,60 @@ const AVATAR_ALLOWED_TYPES = new Set([
   "image/webp",
 ]);
 
+const PROFILE_LINK_MIN_LENGTH = 3;
+const PROFILE_LINK_MAX_LENGTH = 32;
+const DISPLAY_NAME_MIN_LENGTH = 2;
+const DISPLAY_NAME_MAX_LENGTH = 40;
+const BIO_MAX_LENGTH = 280;
+
+const RESERVED_PROFILE_LINK_WORDS = new Set([
+  "admin",
+  "administrator",
+  "mod",
+  "moderator",
+  "staff",
+  "support",
+  "help",
+  "contact",
+  "submit",
+  "login",
+  "signin",
+  "signup",
+  "register",
+  "verify",
+  "verification",
+  "request",
+  "dashboard",
+  "settings",
+  "account",
+  "profile",
+  "profiles",
+  "directory",
+  "api",
+  "404",
+  "500",
+  "error",
+  "terms",
+  "privacy",
+  "faq",
+  "wallet",
+  "midnight",
+  "nightforce",
+  "official",
+  "team",
+  "security",
+  "scam",
+  "phishing",
+  "fraud",
+  "hack",
+  "hacked",
+  "airdrop",
+  "claim",
+  "token",
+  "giveaway",
+  "free",
+]);
+
 const REGION_OPTIONS = [
   "APAC",
   "EMEA",
@@ -691,6 +745,78 @@ function hasText(value: string): boolean {
   return value.trim().length > 0;
 }
 
+function hasLetterOrNumber(value: string): boolean {
+  return /[\p{L}\p{N}]/u.test(value);
+}
+
+function getProfileLinkValidationMessage(value: string): string | null {
+  const normalized = value.trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (
+    normalized.length < PROFILE_LINK_MIN_LENGTH ||
+    normalized.length > PROFILE_LINK_MAX_LENGTH
+  ) {
+    return `Profile link must be ${PROFILE_LINK_MIN_LENGTH}–${PROFILE_LINK_MAX_LENGTH} characters.`;
+  }
+
+  if (!/^[a-z0-9-]+$/.test(normalized)) {
+    return "Profile link can only use lowercase letters, numbers, and hyphens.";
+  }
+
+  if (normalized.startsWith("-") || normalized.endsWith("-")) {
+    return "Profile link cannot start or end with a hyphen.";
+  }
+
+  if (normalized.includes("--")) {
+    return "Profile link cannot contain double hyphens.";
+  }
+
+  const reservedWord = normalized
+    .split("-")
+    .find((part) => RESERVED_PROFILE_LINK_WORDS.has(part));
+
+  if (reservedWord) {
+    return `Profile link cannot use reserved words like “${reservedWord}”.`;
+  }
+
+  return null;
+}
+
+function getDisplayNameValidationMessage(value: string): string | null {
+  const normalized = value.trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (
+    normalized.length < DISPLAY_NAME_MIN_LENGTH ||
+    normalized.length > DISPLAY_NAME_MAX_LENGTH
+  ) {
+    return `Display name must be ${DISPLAY_NAME_MIN_LENGTH}–${DISPLAY_NAME_MAX_LENGTH} characters.`;
+  }
+
+  if (!hasLetterOrNumber(normalized)) {
+    return "Display name must include at least one letter or number.";
+  }
+
+  return null;
+}
+
+function getBioValidationMessage(value: string): string | null {
+  const normalized = value.trim();
+
+  if (normalized.length > BIO_MAX_LENGTH) {
+    return `Bio must be ${BIO_MAX_LENGTH} characters or less.`;
+  }
+
+  return null;
+}
+
 function isValidEmail(value: string): boolean {
   const normalized = value.trim();
 
@@ -1167,6 +1293,19 @@ export function MyProfile() {
     !hasCountryValue ? "Country" : null,
   ].filter((value): value is string => value !== null);
 
+  const publicIdValidationMessage = getProfileLinkValidationMessage(publicId);
+  const displayNameValidationMessage =
+    getDisplayNameValidationMessage(displayName);
+  const bioValidationMessage = getBioValidationMessage(bio);
+
+  const fieldValidationMessages = [
+    publicIdValidationMessage,
+    displayNameValidationMessage,
+    bioValidationMessage,
+  ].filter((value): value is string => value !== null);
+
+  const profileFieldsAreValid = fieldValidationMessages.length === 0;
+
   const currentEditorFingerprint = buildEditorFingerprint({
     publicId,
     displayName,
@@ -1207,6 +1346,7 @@ export function MyProfile() {
     !!verificationRequestId &&
     !!walletBindingId &&
     missingRequiredFields.length === 0 &&
+    profileFieldsAreValid &&
     emailIsValid &&
     socialUrlsAreValid &&
     hasChangesToPublish;
@@ -2685,6 +2825,19 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
               <div className="text-[11px] font-mono text-zinc-400">
                 Fill in: {missingRequiredFields.join(", ")}
               </div>
+            </div>
+          )}
+
+          {fieldValidationMessages.length > 0 && (
+            <div className="border border-red-900/70 rounded-lg p-4 bg-zinc-900">
+              <div className="text-xs font-mono text-red-300 mb-2">
+                Fix before publish
+              </div>
+              <ul className="list-disc space-y-1 pl-4 text-[11px] font-mono text-zinc-400">
+                {fieldValidationMessages.map((message) => (
+                  <li key={message}>{message}</li>
+                ))}
+              </ul>
             </div>
           )}
 
