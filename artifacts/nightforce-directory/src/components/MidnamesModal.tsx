@@ -65,14 +65,18 @@ export function MidnamesModal({
 
   const modal = (
     <div
-      className="fixed inset-0 isolate z-[100] flex items-center justify-center bg-black/75 px-4 py-6 backdrop-blur-sm"
+      className="fixed inset-0 isolate z-[100] flex items-center justify-center bg-black/45 px-4 py-6 backdrop-blur-md"
       role="dialog"
       aria-modal="true"
       aria-label={`${usableDomain} Midnames profile`}
       onClick={onClose}
     >
       <div
-        className={activeMode === "full" ? "relative w-full max-w-5xl overflow-visible rounded-2xl border border-white/10 bg-zinc-950 shadow-2xl" : "relative w-full max-w-3xl overflow-visible rounded-2xl border border-white/10 bg-zinc-950 shadow-2xl"}
+        className={
+          activeMode === "full"
+            ? "relative w-full max-w-5xl overflow-visible rounded-2xl border border-emerald-300/15 bg-zinc-950/40 shadow-2xl shadow-emerald-950/30 ring-1 ring-white/10 backdrop-blur-2xl"
+            : "relative w-full max-w-3xl overflow-visible rounded-2xl border border-emerald-300/20 bg-zinc-950/35 shadow-2xl shadow-emerald-950/30 ring-1 ring-white/10 backdrop-blur-2xl"
+        }
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-4">
@@ -145,7 +149,7 @@ export function MidnamesModal({
               </div>
             ) : (
               <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start">
-                <div className="overflow-visible rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.14),transparent_52%),rgba(255,255,255,0.025)] px-4 py-6">
+                <div className="overflow-visible rounded-2xl border border-emerald-300/15 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.16),transparent_56%),rgba(9,9,11,0.28)] px-4 py-6 shadow-xl shadow-emerald-950/20 ring-1 ring-white/5 backdrop-blur-xl">
                   <div className="mx-auto flex min-h-[440px] max-w-sm items-center justify-center overflow-visible">
                     <HolographicCard
                       domain={usableDomain}

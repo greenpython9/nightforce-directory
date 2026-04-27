@@ -49,7 +49,7 @@ export function MidnamesProfileButton({
       <button
         type="button"
         onClick={handleClick}
-        className={className}
+        className={["cursor-pointer", className].filter(Boolean).join(" ")}
         aria-label={ariaLabel ?? `Open ${usableDomain} Midnames profile`}
       >
         {children ?? ".night"}
