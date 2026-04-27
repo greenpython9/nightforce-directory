@@ -476,21 +476,22 @@ export function CobeAmbassadorGlobe({
     );
   }, [displayPoints, selectedCountry]);
 
-  const anonymousProfiles = useMemo(() => {
-    return profiles.filter((profile) => !profile.displayName).length;
+  const visibleDirectoryProfiles = useMemo(() => {
+    return profiles.filter(
+      (profile) => profile.requestedVisibility !== "hidden",
+    );
   }, [profiles]);
 
-  const hiddenProfiles = useMemo(() => {
-    return profiles.filter(
-      (profile) => profile.requestedVisibility === "hidden",
-    ).length;
-  }, [profiles]);
+  const anonymousProfiles = useMemo(() => {
+    return visibleDirectoryProfiles.filter((profile) => !profile.displayName)
+      .length;
+  }, [visibleDirectoryProfiles]);
 
   const publicProfiles = useMemo(() => {
-    return profiles.filter(
-      (profile) => profile.requestedVisibility === "public",
+    return visibleDirectoryProfiles.filter((profile) =>
+      Boolean(profile.displayName),
     ).length;
-  }, [profiles]);
+  }, [visibleDirectoryProfiles]);
 
   const countriesRepresented = countryPoints.length;
 
@@ -519,7 +520,7 @@ export function CobeAmbassadorGlobe({
   }, [displayPoints]);
 
   const topCountryChips = useMemo(() => {
-    return displayPoints.slice(0, 6);
+    return displayPoints;
   }, [displayPoints]);
 
   const topRegionChips = useMemo(() => {
@@ -876,7 +877,7 @@ export function CobeAmbassadorGlobe({
               </span>
               <span>
                 <span className="font-semibold text-white">
-                  {getStatValue(loading, profiles.length)}
+                  {getStatValue(loading, visibleDirectoryProfiles.length)}
                 </span>{" "}
                 verified profiles across{" "}
                 <span className="font-semibold text-white">
@@ -911,10 +912,6 @@ export function CobeAmbassadorGlobe({
                       label: "Anonymous",
                       value: getStatValue(loading, anonymousProfiles),
                     },                   
-                    {
-                      label: "Hidden",
-                      value: getStatValue(loading, hiddenProfiles),
-                    },
                   ].map((stat) => (
                     <span
                       key={stat.label}
