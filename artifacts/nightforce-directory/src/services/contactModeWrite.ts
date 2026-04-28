@@ -29,6 +29,73 @@ type ConnectedShieldedAddresses = {
   shieldedEncryptionPublicKey?: string;
 };
 
+type ContactModeConnectedApi = {
+  balanceUnsealedTransaction?: (
+    tx: string,
+    options?: { payFees?: boolean },
+  ) => Promise<{ tx: string }>;
+  submitTransaction?: (tx: string) => Promise<void>;
+};
+
+function requireBalanceUnsealedTransaction(
+  connectedApi: ContactModeConnectedApi,
+): NonNullable<ContactModeConnectedApi["balanceUnsealedTransaction"]> {
+  if (typeof connectedApi.balanceUnsealedTransaction !== "function") {
+    throw new Error(
+      "Connected Midnight wallet does not expose balanceUnsealedTransaction. This wallet cannot prepare Contact Mode transactions in the expected Nightforce flow.",
+    );
+  }
+
+  return connectedApi.balanceUnsealedTransaction.bind(connectedApi);
+}
+
+function getReadableWalletError(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  if (typeof error === "string" && error.trim()) {
+    return error;
+  }
+
+  try {
+    const serialized = JSON.stringify(error);
+
+    if (serialized && serialized !== "{}") {
+      return serialized;
+    }
+  } catch {
+    // Fall back below.
+  }
+
+  return fallback;
+}
+
+function requireSubmitTransaction(
+  connectedApi: ContactModeConnectedApi,
+): NonNullable<ContactModeConnectedApi["submitTransaction"]> {
+  if (typeof connectedApi.submitTransaction !== "function") {
+    throw new Error(
+      "Connected Midnight wallet does not expose submitTransaction. The transaction was not submitted. Unlock the wallet, reconnect, and try again. If this only happens with Lace, Lace may not support this Midnight submit method yet.",
+    );
+  }
+
+  const submitTransaction = connectedApi.submitTransaction.bind(connectedApi);
+
+  return async (tx: string) => {
+    try {
+      await submitTransaction(tx);
+    } catch (error) {
+      throw new Error(
+        `Midnight wallet submitTransaction failed: ${getReadableWalletError(
+          error,
+          "The wallet rejected or failed the transaction without a readable error.",
+        )}`,
+      );
+    }
+  };
+}
+
 export type ContactModeWriteValue =
   | "NO_CONTACT"
   | "PRIVATE_CONTACT_AVAILABLE"
@@ -332,10 +399,12 @@ export async function deployContactModePublic(
     async balanceTx(tx: any) {
       const serialized = uint8ArrayToHex(tx.serialize());
 
-      const result = await connectedApi.balanceUnsealedTransaction?.(
-        serialized,
-        { payFees: true },
-      );
+      const balanceUnsealedTransaction =
+        requireBalanceUnsealedTransaction(connectedApi);
+
+      const result = await balanceUnsealedTransaction(serialized, {
+        payFees: true,
+      });
 
       if (!result?.tx) {
         throw new Error("Midnight wallet failed to balance the contract transaction.");
@@ -356,7 +425,9 @@ export async function deployContactModePublic(
     async submitTx(tx: any): Promise<string> {
       const serialized = uint8ArrayToHex(tx.serialize());
 
-      await connectedApi.submitTransaction?.(serialized);
+      const submitTransaction = requireSubmitTransaction(connectedApi);
+
+      await submitTransaction(serialized);
 
       if (typeof tx.identifiers === "function") {
         const ids = tx.identifiers();
@@ -486,10 +557,12 @@ export async function updateContactModePublic(
     async balanceTx(tx: any) {
       const serialized = uint8ArrayToHex(tx.serialize());
 
-      const result = await connectedApi.balanceUnsealedTransaction?.(
-        serialized,
-        { payFees: true },
-      );
+      const balanceUnsealedTransaction =
+        requireBalanceUnsealedTransaction(connectedApi);
+
+      const result = await balanceUnsealedTransaction(serialized, {
+        payFees: true,
+      });
 
       if (!result?.tx) {
         throw new Error("Midnight wallet failed to balance the contract transaction.");
@@ -510,7 +583,9 @@ export async function updateContactModePublic(
     async submitTx(tx: any): Promise<string> {
       const serialized = uint8ArrayToHex(tx.serialize());
 
-      await connectedApi.submitTransaction?.(serialized);
+      const submitTransaction = requireSubmitTransaction(connectedApi);
+
+      await submitTransaction(serialized);
 
       if (typeof tx.identifiers === "function") {
         const ids = tx.identifiers();

@@ -318,6 +318,13 @@ type HiddenProfilePayload = {
   email: string;
 };
 
+type PublishNotice = {
+  id: number;
+  kind: "success" | "error" | "pending";
+  title: string;
+  message: string;
+} | null;
+
 type ProfileResponse = {
   profile: {
     id: string;
@@ -910,6 +917,46 @@ function resolveSocialVisibility(
   return fallback;
 }
 
+function getReadablePublishError(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  if (typeof error === "string" && error.trim()) {
+    return error;
+  }
+
+  if (error && typeof error === "object") {
+    const maybeEffectError = error as {
+      cause?: {
+        failure?: {
+          message?: unknown;
+          _tag?: unknown;
+          tokenType?: unknown;
+        };
+      };
+    };
+
+    const nestedMessage = maybeEffectError.cause?.failure?.message;
+
+    if (typeof nestedMessage === "string" && nestedMessage.trim()) {
+      return nestedMessage;
+    }
+  }
+
+  try {
+    const serialized = JSON.stringify(error);
+
+    if (serialized && serialized !== "{}") {
+      return serialized;
+    }
+  } catch {
+    // Fall back below.
+  }
+
+  return fallback;
+}
+
 function derivePreviewContactMode(input: {
   hasEmailValue: boolean;
   showEmail: boolean;
@@ -1048,6 +1095,7 @@ export function MyProfile() {
   const [hasSavedShieldedEmail, setHasSavedShieldedEmail] = useState(false);
   const [savedContactMode, setSavedContactMode] = useState<ContactMode | null>(null);
   const [contactModeCompareLoading, setContactModeCompareLoading] = useState(false);
+  const [contactModeRepairLoading, setContactModeRepairLoading] = useState(false);
   const [contactModeCompareResult, setContactModeCompareResult] = useState<{
     backendMode: ContactMode;
     midnightMode: ContactMode;
@@ -1059,6 +1107,7 @@ export function MyProfile() {
   const [contactModeCompareError, setContactModeCompareError] = useState("");
   const [saveMsg, setSaveMsg] = useState("");
   const [error, setError] = useState("");
+  const [publishNotice, setPublishNotice] = useState<PublishNotice>(null);
   const [profileLinkCopied, setProfileLinkCopied] = useState(false);
 
   const resetFields = useCallback(() => {
@@ -1098,6 +1147,7 @@ export function MyProfile() {
     setSavedContactMode(null);
     setContactModeCompareResult(null);
     setContactModeCompareError("");
+    setContactModeRepairLoading(false);
     setPublishSettling(false);
   }, []);
 
@@ -1307,6 +1357,53 @@ export function MyProfile() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
+
+    setPublishNotice({
+      id: Date.now(),
+      kind: "error",
+      title: "Action failed",
+      message: error,
+    });
+  }, [error]);
+
+  useEffect(() => {
+    if (!saveMsg) {
+      return;
+    }
+
+    const isPending =
+      saveMsg.includes("Publishing") ||
+      saveMsg.includes("Waiting") ||
+      saveMsg.includes("Syncing") ||
+      saveMsg.includes("Refreshing") ||
+      saveMsg.includes("Removing");
+
+    const notice = {
+      id: Date.now(),
+      kind: isPending ? "pending" as const : "success" as const,
+      title: isPending ? "Working..." : "Success",
+      message: saveMsg,
+    };
+
+    setPublishNotice(notice);
+
+    if (isPending) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setPublishNotice((currentNotice) =>
+        currentNotice?.id === notice.id ? null : currentNotice,
+      );
+    }, 3200);
+
+    return () => window.clearTimeout(timer);
+  }, [saveMsg]);
 
   const settleAfterProfileWrite = useCallback(
   async (message: string) => {
@@ -1676,6 +1773,83 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
     }
   };
 
+  const retryContactModeSync = async () => {
+    if (contactModeRepairLoading || contactModeCompareLoading) {
+      return;
+    }
+
+    if (!verificationRequestId) {
+      setContactModeCompareError("No verification request was found.");
+      return;
+    }
+
+    const mismatch = contactModeCompareResult;
+
+    if (!mismatch || mismatch.matched) {
+      setContactModeCompareError("No Contact Mode mismatch was found to repair.");
+      return;
+    }
+
+    setContactModeRepairLoading(true);
+    setContactModeCompareError("");
+    setError("");
+    setSaveMsg("Retrying Contact Mode sync...");
+
+    try {
+      const updateResult = await updateContactMode(
+        mismatch.contractAddress,
+        mismatch.backendMode,
+      );
+
+      const midnightResult = await readContactMode(updateResult.contractAddress);
+      const checkedAt = new Date().toISOString();
+      const matched = midnightResult.contactMode === mismatch.backendMode;
+
+      await updateContactModeSyncMetadata({
+        verificationRequestId,
+        contactModeContractAddress: updateResult.contractAddress,
+        contactModeSyncStatus: matched ? "synced" : "failed",
+        contactModeLastSyncedAt: matched ? checkedAt : null,
+        contactModeSyncError: matched
+          ? null
+          : `Midnight still reports ${midnightResult.contactMode} instead of ${mismatch.backendMode}.`,
+        contactModeSyncedValue: matched ? mismatch.backendMode : null,
+      });
+
+      setContactModeContractAddress(updateResult.contractAddress);
+      setSavedContactMode(mismatch.backendMode);
+      setContactModeCompareResult({
+        backendMode: mismatch.backendMode,
+        midnightMode: midnightResult.contactMode,
+        contractAddress: updateResult.contractAddress,
+        rawValue: midnightResult.rawValue,
+        matched,
+        checkedAt,
+      });
+
+      await load({ preserveSaveMsg: true });
+
+      if (!matched) {
+        throw new Error(
+          `Contact Mode retry finished, but sync still mismatched. Midnight reports ${midnightResult.contactMode} instead of ${mismatch.backendMode}.`,
+        );
+      }
+
+      setSaveMsg("Contact Mode sync repaired.");
+      window.setTimeout(() => setSaveMsg(""), 2500);
+    } catch (err) {
+      const message = getReadablePublishError(
+        err,
+        "Failed to retry Contact Mode sync. The wallet or Midnight SDK returned no readable error.",
+      );
+
+      setError(`Contact-mode retry failed: ${message}`);
+      setSaveMsg("");
+    } finally {
+      setContactModeRepairLoading(false);
+    }
+  };
+
   const removeSavedEmail = async () => {
     if (removingEmail) {
       return;
@@ -1712,7 +1886,7 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
         showNightDomain && hasNightDomainValue && nightDomainIsValid
           ? "public" as const
           : "hidden" as const,
-      email: "hidden" as const,
+      email: showEmail && hasEmailValue ? "public" as const : "hidden" as const,
       x: showX && hasXValue ? "public" as const : "hidden" as const,
       youtube: showYouTube && hasYouTubeValue ? "public" as const : "hidden" as const,
       discord: showDiscord && hasDiscordValue ? "public" as const : "hidden" as const,
@@ -1803,10 +1977,10 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
           setContactModeContractAddress(updateResult.contractAddress);
           setSavedContactMode(nextMode);
         } catch (syncError) {
-          const syncMessage =
-            syncError instanceof Error
-              ? syncError.message
-              : "Failed to update contact-mode contract.";
+          const syncMessage = getReadablePublishError(
+            syncError,
+            "Failed to update contact-mode contract. The wallet or Midnight SDK returned no readable error. Check the Lace wallet activity panel for a pending, failed, or rejected transaction.",
+          );
 
           syncPending = true;
 
@@ -1993,6 +2167,10 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
       role: showRole && hasRoleValue ? "public" : "hidden",
       bio: showBio && hasBioValue ? "public" : "hidden",
       websiteUrl: showWebsiteUrl && hasWebsiteUrlValue ? "public" as const : "hidden" as const,
+      nightDomain:
+        showNightDomain && hasNightDomainValue && nightDomainIsValid
+          ? "public" as const
+          : "hidden" as const,
       email: showEmail && hasEmailValue ? "public" as const : "hidden" as const,
       x: showX && hasXValue ? "public" as const : "hidden" as const,
       youtube: showYouTube && hasYouTubeValue ? "public" as const : "hidden" as const,
@@ -2111,8 +2289,6 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
           return;
         }
 
-        let existingContractPublishMessage = "Changes published.";
-
         try {
           const updateResult = await updateContactMode(
             existingContactModeAddress,
@@ -2148,19 +2324,16 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
               contactModeSyncedValue: null,
             });
           } catch {
-            // Keep backend publish success even if sync metadata update also fails.
+            // Keep the original wallet/transaction error as the visible publish failure.
           }
 
           setContactModeContractAddress(existingContactModeAddress);
-          existingContractPublishMessage =
-            "Changes published. Contact-mode sync pending.";
+          throw new Error(`Contact-mode sync failed: ${syncMessage}`);
         }
 
-        await settleAfterProfileWrite(existingContractPublishMessage);
+        await settleAfterProfileWrite("Changes published.");
         return;
       }
-
-      let deployPublishMessage = "Changes published.";
 
       try {
         const initialMode = deriveContactModeForSync({
@@ -2182,10 +2355,10 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
         setContactModeContractAddress(deployResult.contractAddress);
         setSavedContactMode(initialMode);
       } catch (syncError) {
-        const syncMessage =
-          syncError instanceof Error
-            ? syncError.message
-            : "Failed to deploy contact-mode contract.";
+        const syncMessage = getReadablePublishError(
+          syncError,
+          "Failed to deploy contact-mode contract. The wallet or Midnight SDK returned no readable error. Check the Lace wallet activity panel for a pending, failed, or rejected transaction.",
+        );
 
         try {
           await updateContactModeSyncMetadata({
@@ -2197,17 +2370,19 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
             contactModeSyncedValue: null,
           });
         } catch {
-          // Keep backend publish success even if sync metadata update also fails.
+          // Keep the original wallet/transaction error as the visible publish failure.
         }
 
         setContactModeContractAddress(null);
-        deployPublishMessage = "Changes published. Contact-mode sync pending.";
+        throw new Error(`Contact-mode sync failed: ${syncMessage}`);
       }
 
-      await settleAfterProfileWrite(deployPublishMessage);
+      await settleAfterProfileWrite("Changes published.");
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to publish profile.";
+      const message = getReadablePublishError(
+        err,
+        "Failed to publish profile. The wallet or Midnight SDK returned no readable error.",
+      );
 
       if (message.includes("Duplicate request")) {
         setError(
@@ -2263,7 +2438,11 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
     writeFullProfilePreviewToStorage(livePublic);
   };
 
-  const visibilitySummaryItems = [
+  const visibilitySummaryItems: Array<{
+    label: string;
+    visible: boolean;
+    note?: string;
+  }> = [
     {
       label: "Directory",
       visible: profileVisibility !== "hidden",
@@ -2273,14 +2452,12 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
       visible: profileVisibility !== "hidden",
     },
     {
-      label: "Homepage Card",
+      label: "Homepage Profile Card",
       visible: profileVisibility !== "hidden",
-      note: "(not built yet)",
     },
     {
       label: "Map Presence",
       visible: profileVisibility !== "hidden",
-      note: "(not built yet)",
     },
   ];
 
@@ -2367,6 +2544,48 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
 
   return (
     <div className="max-w-[1180px] mx-auto py-8 px-4">
+      {publishNotice && (
+        <div className="fixed inset-x-0 top-5 z-50 flex justify-center px-4">
+          <div
+            className={
+              publishNotice.kind === "error"
+                ? "w-full max-w-xl rounded-2xl border border-red-400/30 bg-red-950/95 p-4 shadow-2xl shadow-black/40 backdrop-blur"
+                : publishNotice.kind === "pending"
+                  ? "w-full max-w-xl rounded-2xl border border-sky-400/30 bg-sky-950/95 p-4 shadow-2xl shadow-black/40 backdrop-blur"
+                  : "w-full max-w-xl rounded-2xl border border-emerald-400/30 bg-emerald-950/95 p-4 shadow-2xl shadow-black/40 backdrop-blur"
+            }
+            role={publishNotice.kind === "error" ? "alert" : "status"}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div
+                  className={
+                    publishNotice.kind === "error"
+                      ? "text-sm font-mono font-semibold text-red-200"
+                      : publishNotice.kind === "pending"
+                        ? "text-sm font-mono font-semibold text-sky-200"
+                        : "text-sm font-mono font-semibold text-emerald-200"
+                  }
+                >
+                  {publishNotice.title}
+                </div>
+                <div className="mt-1 break-words text-xs font-mono leading-5 text-zinc-200">
+                  {publishNotice.message}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setPublishNotice(null)}
+                className="shrink-0 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[11px] font-mono text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <h1 className="text-xl font-mono font-bold text-white mb-6">My Profile</h1>
 
       {error && (
@@ -2395,14 +2614,35 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
               </div>
 
               {canVerifyContactModeSync && (
-                <button
-                  type="button"
-                  onClick={() => void compareContactModeSync()}
-                  disabled={contactModeCompareLoading || !contactModeContractAddress}
-                  className="shrink-0 font-mono text-[11px] bg-zinc-950 hover:bg-zinc-800 text-zinc-200 border border-zinc-700 px-3 py-2 rounded-lg transition-colors disabled:opacity-50"
-                >
-                  {contactModeCompareLoading ? "Verifying..." : "Verify Sync"}
-                </button>
+                <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={() => void compareContactModeSync()}
+                    disabled={
+                      contactModeCompareLoading ||
+                      contactModeRepairLoading ||
+                      !contactModeContractAddress
+                    }
+                    className="font-mono text-[11px] bg-zinc-950 hover:bg-zinc-800 text-zinc-200 border border-zinc-700 px-3 py-2 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {contactModeCompareLoading ? "Verifying..." : "Verify Sync"}
+                  </button>
+
+                  {contactModeCompareResult && !contactModeCompareResult.matched && (
+                    <button
+                      type="button"
+                      onClick={() => void retryContactModeSync()}
+                      disabled={
+                        contactModeCompareLoading ||
+                        contactModeRepairLoading ||
+                        !contactModeContractAddress
+                      }
+                      className="font-mono text-[11px] bg-red-950/40 hover:bg-red-950/70 text-red-200 border border-red-500/40 px-3 py-2 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {contactModeRepairLoading ? "Retrying..." : "Retry Sync"}
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 
