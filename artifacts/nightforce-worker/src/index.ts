@@ -1449,6 +1449,19 @@ export default {
           );
         }
 
+        if (
+          requestRecord.midnightWalletAddress &&
+          requestRecord.midnightWalletAddress !== input.midnightWalletAddress
+        ) {
+          return json(
+            {
+              error:
+                "This verification request belongs to a different Midnight wallet address.",
+            },
+            409,
+          );
+        }
+
         const [binding] = await db
           .insert(walletBindingsTable)
           .values({

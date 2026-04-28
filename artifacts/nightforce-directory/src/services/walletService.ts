@@ -42,6 +42,8 @@ type MidnightInitialApiLike = {
   connect: (networkId: string) => Promise<MidnightConnectedApiLike>;
 };
 
+type MidnightWalletRegistry = Record<string, MidnightInitialApiLike | undefined>;
+
 type MidnightConnectedApiLike = {
   getConfiguration?: () => Promise<{
     indexerUri?: string;
@@ -214,16 +216,121 @@ export function getWalletAdapter(): WalletAdapter {
 let connectedMidnightApi: MidnightConnectedApiLike | null = null;
 let connectedMidnightProviderId: string | null = null;
 
-function getMidnightRegistry(): Record<string, MidnightInitialApiLike | undefined> {
+function isMidnightInitialApiLike(value: unknown): value is MidnightInitialApiLike {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "connect" in value &&
+    typeof (value as { connect?: unknown }).connect === "function"
+  );
+}
+
+function getMidnightRegistry(): MidnightWalletRegistry {
   if (typeof window === "undefined") {
     return {};
   }
 
-  const maybeWindow = window as Window & {
-    midnight?: Record<string, MidnightInitialApiLike | undefined>;
-  };
+  const injectedMidnightWallets =
+    ((window as unknown as { midnight?: Record<string, unknown> }).midnight ??
+      {}) as Record<string, unknown>;
 
-  return maybeWindow.midnight ?? {};
+  const registry: MidnightWalletRegistry = {};
+  const seenProviders = new Set<MidnightInitialApiLike>();
+  const seenConnectMethods = new Set<MidnightInitialApiLike["connect"]>();
+  const seenAliasKeys = new Set<string>();
+  const entries: Array<[string, MidnightInitialApiLike]> = [];
+
+  for (const [providerId, provider] of Object.entries(injectedMidnightWallets)) {
+    if (isMidnightInitialApiLike(provider)) {
+      entries.push([providerId, provider]);
+    }
+  }
+
+  entries.sort(([providerIdA], [providerIdB]) => {
+    const rankDifference =
+      getKnownMidnightProviderRank(providerIdA) -
+      getKnownMidnightProviderRank(providerIdB);
+
+    if (rankDifference !== 0) {
+      return rankDifference;
+    }
+
+    return providerIdA.localeCompare(providerIdB);
+  });
+
+  for (const [providerId, provider] of entries) {
+    const aliasKey = getMidnightProviderAliasKey(providerId, provider);
+
+    if (seenProviders.has(provider)) {
+      continue;
+    }
+
+    if (seenConnectMethods.has(provider.connect)) {
+      continue;
+    }
+
+    if (isUuidLikeProviderId(providerId) && seenAliasKeys.has(aliasKey)) {
+      continue;
+    }
+
+    registry[providerId] = provider;
+    seenProviders.add(provider);
+    seenConnectMethods.add(provider.connect);
+    seenAliasKeys.add(aliasKey);
+  }
+
+  return registry;
+}
+
+const MIDNIGHT_PROVIDER_NAME_BY_ID: Record<string, string> = {
+  "1am": "1AM Wallet",
+  mnLace: "Lace Wallet (Midnight)",
+};
+
+function getMidnightProviderDisplayName(
+  providerId: string,
+  provider: MidnightInitialApiLike,
+): string {
+  const mappedName = MIDNIGHT_PROVIDER_NAME_BY_ID[providerId];
+
+  if (mappedName) {
+    return mappedName;
+  }
+
+  const injectedName = provider.name?.trim();
+
+  if (injectedName?.toLowerCase() === "lace") {
+    return "Lace Wallet (Midnight)";
+  }
+
+  if (injectedName) {
+    return injectedName;
+  }
+
+  return providerId;
+}
+
+function isUuidLikeProviderId(providerId: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    providerId,
+  );
+}
+
+function getKnownMidnightProviderRank(providerId: string): number {
+  if (providerId === "1am") return 1;
+  if (providerId === "mnLace") return 2;
+  if (isUuidLikeProviderId(providerId)) return 100;
+  return 50;
+}
+
+function getMidnightProviderAliasKey(
+  providerId: string,
+  provider: MidnightInitialApiLike,
+): string {
+  return [
+    getMidnightProviderDisplayName(providerId, provider).toLowerCase(),
+    provider.apiVersion ?? "",
+  ].join(":");
 }
 
 function formatBigIntLike(value: bigint | undefined): string {
@@ -250,7 +357,7 @@ async function buildMidnightWalletSnapshot(
 
   return {
     providerId,
-    providerName: provider.name ?? providerId,
+    providerName: getMidnightProviderDisplayName(providerId, provider),
     icon: provider.icon ?? null,
     apiVersion: provider.apiVersion ?? "unknown",
     networkId:
@@ -288,7 +395,7 @@ export function getAvailableMidnightWallets(): MidnightWalletProviderSummary[] {
     })
     .map(([providerId, wallet]) => ({
       providerId,
-      providerName: wallet.name ?? providerId,
+      providerName: getMidnightProviderDisplayName(providerId, wallet),
       icon: wallet.icon ?? null,
       apiVersion: wallet.apiVersion ?? "unknown",
     }));

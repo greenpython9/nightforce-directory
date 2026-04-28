@@ -2263,10 +2263,6 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
     writeFullProfilePreviewToStorage(livePublic);
   };
 
-  useEffect(() => {
-    writeFullProfilePreviewToStorage(livePublic);
-  }, [livePublic]);
-
   const visibilitySummaryItems = [
     {
       label: "Directory",

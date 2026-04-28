@@ -486,6 +486,17 @@ router.post("/nightforce/wallet-bindings", (req, res) => {
     return;
   }
 
+  if (
+    request.midnightWalletAddress &&
+    request.midnightWalletAddress !== midnightWalletAddress
+  ) {
+    res.status(409).json({
+      error:
+        "This verification request belongs to a different Midnight wallet address.",
+    });
+    return;
+  }
+
   const existingBindingId = walletBindingIdsByWallet.get(midnightWalletAddress);
 
   if (existingBindingId) {

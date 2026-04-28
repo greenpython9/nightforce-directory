@@ -627,25 +627,49 @@ export function WalletAccess() {
             </div>
 
             {MIDNIGHT_CONNECT_ENABLED && (
-              <button
-                onClick={async () => {
-                  const providerId = availableMidnightWallets[0]?.providerId ?? null;
+              <div className="space-y-2">
+                {availableMidnightWallets.length > 0 ? (
+                  availableMidnightWallets.map((wallet) => (
+                    <button
+                      key={wallet.providerId}
+                      onClick={async () => {
+                        await connectMidnight(wallet.providerId);
+                      }}
+                      disabled={isWalletLoading}
+                      className="flex w-full items-center justify-between gap-3 rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-4 py-3 text-sm font-mono font-semibold text-emerald-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all hover:border-emerald-300/40 hover:bg-emerald-400/15 hover:text-white hover:shadow-[0_0_22px_rgba(52,211,153,0.18),inset_0_1px_0_rgba(255,255,255,0.04)] disabled:opacity-50"
+                    >
+                      <span>
+                        {isWalletLoading
+                          ? "Working..."
+                          : `Connect ${wallet.providerName}`}
+                      </span>
+                      <span className="text-[10px] font-normal text-emerald-200/70">
+                        {wallet.providerId}
+                      </span>
+                    </button>
+                  ))
+                ) : (
+                  <button
+                    disabled
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-mono font-semibold text-zinc-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] disabled:opacity-60"
+                  >
+                    No Midnight Wallet Detected
+                  </button>
+                )}
 
-                  if (!providerId) {
-                    throw new Error("No Midnight wallet detected.");
-                  }
-
-                  await connectMidnight(providerId);
-                }}
-                disabled={isWalletLoading || availableMidnightWallets.length === 0}
-                className="w-full rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-4 py-3 text-sm font-mono font-semibold text-emerald-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all hover:border-emerald-300/40 hover:bg-emerald-400/15 hover:text-white hover:shadow-[0_0_22px_rgba(52,211,153,0.18),inset_0_1px_0_rgba(255,255,255,0.04)] disabled:opacity-50"
-              >
-                {isWalletLoading
-                  ? "Working..."
-                  : availableMidnightWallets.length === 0
-                    ? "No Midnight Wallet Detected"
-                    : "Connect Midnight Wallet (Preprod)"}
-              </button>
+                {availableMidnightWallets.some((wallet) =>
+                  wallet.providerName.toLowerCase().includes("lace"),
+                ) && (
+                  <div className="rounded-xl border border-cyan-400/15 bg-cyan-400/[0.05] px-3 py-2.5 text-[11px] font-mono leading-5 text-zinc-400">
+                    <span className="font-semibold text-cyan-300">
+                      Lace note:
+                    </span>{" "}
+                    if Lace does not open an approval window, unlock Lace from
+                    the browser extension first, then return here and click
+                    Connect Lace Wallet again.
+                  </div>
+                )}
+              </div>
             )}
 
             <div className="mt-3 rounded-xl border border-emerald-400/15 bg-emerald-400/[0.05] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
