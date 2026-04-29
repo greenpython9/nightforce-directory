@@ -30,6 +30,9 @@ type ProfileImagesBucket = {
 
 interface Env extends DatabaseEnv {
   PROFILE_IMAGES: ProfileImagesBucket;
+  ADMIN_OWNER_EMAIL?: string;
+  ADMIN_OWNER_PASSWORD?: string;
+  ADMIN_SESSION_SECRET?: string;
 }
 
 const uuidSchema = z.string().uuid();
@@ -255,6 +258,11 @@ const reviewVerificationRequestInputSchema = z.object({
   adminNotes: z.string().trim().optional(),
 });
 
+const adminLoginInputSchema = z.object({
+  email: z.string().trim().email(),
+  password: z.string().min(1),
+});
+
 const createWalletBindingInputSchema = z.object({
   verificationRequestId: uuidSchema,
   midnightWalletAddress: z.string().trim().min(1),
@@ -357,6 +365,9 @@ const AVATAR_EXTENSION_BY_TYPE: Record<string, string> = {
 const VISITOR_ACTIVITY_RETENTION_DAYS = 7;
 const VISITOR_ACTIVITY_DEFAULT_LIMIT = 8;
 const VISITOR_ACTIVITY_MAX_LIMIT = 25;
+
+const ADMIN_SESSION_COOKIE_NAME = "nightforce_admin_session";
+const ADMIN_SESSION_MAX_AGE_SECONDS = 8 * 60 * 60;
 
 const PROFILE_PROOF_PREPROD_STATE = {
   contractAddress:
@@ -557,12 +568,241 @@ function json(data: unknown, status = 200): Response {
   });
 }
 
+function jsonWithHeaders(
+  data: unknown,
+  status = 200,
+  extraHeaders: Record<string, string> = {},
+): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      ...jsonHeaders,
+      ...extraHeaders,
+    },
+  });
+}
+
 function notFound(): Response {
   return json({ error: "Not found" }, 404);
 }
 
 function methodNotAllowed(): Response {
   return json({ error: "Method not allowed" }, 405);
+}
+
+type AdminSessionPayload = {
+  email: string;
+  expiresAt: number;
+};
+
+function getConfiguredAdminSecret(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+function base64UrlEncode(bytes: Uint8Array): string {
+  let binary = "";
+
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+function base64UrlEncodeString(value: string): string {
+  return base64UrlEncode(new TextEncoder().encode(value));
+}
+
+function base64UrlDecodeToString(value: string): string {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized.padEnd(
+    Math.ceil(normalized.length / 4) * 4,
+    "=",
+  );
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return new TextDecoder().decode(bytes);
+}
+
+function safeStringEqual(left: string, right: string): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  let result = 0;
+
+  for (let index = 0; index < left.length; index += 1) {
+    result |= left.charCodeAt(index) ^ right.charCodeAt(index);
+  }
+
+  return result === 0;
+}
+
+async function signAdminSessionValue(
+  secret: string,
+  value: string,
+): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    {
+      name: "HMAC",
+      hash: "SHA-256",
+    },
+    false,
+    ["sign"],
+  );
+
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    encoder.encode(value),
+  );
+
+  return base64UrlEncode(new Uint8Array(signature));
+}
+
+async function createAdminSessionToken(
+  env: Env,
+  email: string,
+): Promise<string> {
+  const secret = getConfiguredAdminSecret(env.ADMIN_SESSION_SECRET);
+
+  if (!secret) {
+    throw new Error("ADMIN_SESSION_SECRET is not configured.");
+  }
+
+  const payload: AdminSessionPayload = {
+    email,
+    expiresAt: Date.now() + ADMIN_SESSION_MAX_AGE_SECONDS * 1000,
+  };
+
+  const encodedPayload = base64UrlEncodeString(JSON.stringify(payload));
+  const signature = await signAdminSessionValue(secret, encodedPayload);
+
+  return `${encodedPayload}.${signature}`;
+}
+
+async function verifyAdminSessionToken(
+  env: Env,
+  token: string,
+): Promise<AdminSessionPayload | null> {
+  const secret = getConfiguredAdminSecret(env.ADMIN_SESSION_SECRET);
+
+  if (!secret) {
+    return null;
+  }
+
+  const [encodedPayload, signature] = token.split(".");
+
+  if (!encodedPayload || !signature) {
+    return null;
+  }
+
+  const expectedSignature = await signAdminSessionValue(secret, encodedPayload);
+
+  if (!safeStringEqual(signature, expectedSignature)) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(
+      base64UrlDecodeToString(encodedPayload),
+    ) as Partial<AdminSessionPayload>;
+
+    if (
+      typeof payload.email !== "string" ||
+      typeof payload.expiresAt !== "number" ||
+      payload.expiresAt < Date.now()
+    ) {
+      return null;
+    }
+
+    return {
+      email: payload.email,
+      expiresAt: payload.expiresAt,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function getCookieValue(request: Request, name: string): string | null {
+  const cookieHeader = request.headers.get("cookie");
+
+  if (!cookieHeader) {
+    return null;
+  }
+
+  const cookies = cookieHeader.split(";");
+
+  for (const cookie of cookies) {
+    const [rawName, ...rawValueParts] = cookie.trim().split("=");
+
+    if (rawName === name) {
+      return rawValueParts.join("=") || null;
+    }
+  }
+
+  return null;
+}
+
+async function getAdminSession(
+  request: Request,
+  env: Env,
+): Promise<AdminSessionPayload | null> {
+  const token = getCookieValue(request, ADMIN_SESSION_COOKIE_NAME);
+
+  if (!token) {
+    return null;
+  }
+
+  return verifyAdminSessionToken(env, token);
+}
+
+async function requireAdminSession(
+  request: Request,
+  env: Env,
+): Promise<Response | null> {
+  const session = await getAdminSession(request, env);
+
+  if (!session) {
+    return json({ error: "Admin login required" }, 401);
+  }
+
+  return null;
+}
+
+function buildAdminSessionCookie(token: string): string {
+  return [
+    `${ADMIN_SESSION_COOKIE_NAME}=${token}`,
+    "Path=/",
+    `Max-Age=${ADMIN_SESSION_MAX_AGE_SECONDS}`,
+    "HttpOnly",
+    "Secure",
+    "SameSite=Lax",
+  ].join("; ");
+}
+
+function buildClearAdminSessionCookie(): string {
+  return [
+    `${ADMIN_SESSION_COOKIE_NAME}=`,
+    "Path=/",
+    "Max-Age=0",
+    "HttpOnly",
+    "Secure",
+    "SameSite=Lax",
+  ].join("; ");
 }
 
 function getProfileProofStateResponse(url: URL): Response {
@@ -942,6 +1182,108 @@ export default {
       return getProfileProofStateResponse(url);
     }
 
+    if (pathname === "/api/nightforce/admin/session") {
+      if (request.method !== "GET") {
+        return methodNotAllowed();
+      }
+
+      const session = await getAdminSession(request, env);
+
+      if (!session) {
+        return json({ authenticated: false }, 401);
+      }
+
+      return json({
+        authenticated: true,
+        email: session.email,
+        expiresAt: session.expiresAt,
+      });
+    }
+
+    if (pathname === "/api/nightforce/admin/login") {
+      if (request.method !== "POST") {
+        return methodNotAllowed();
+      }
+
+      try {
+        let rawBody: unknown;
+
+        try {
+          rawBody = await request.json();
+        } catch {
+          return json({ error: "Invalid JSON body" }, 400);
+        }
+
+        const input = adminLoginInputSchema.parse(rawBody);
+        const ownerEmail = getConfiguredAdminSecret(env.ADMIN_OWNER_EMAIL);
+        const ownerPassword = getConfiguredAdminSecret(env.ADMIN_OWNER_PASSWORD);
+
+        if (!ownerEmail || !ownerPassword) {
+          return json(
+            {
+              error: "Admin login is not configured",
+            },
+            500,
+          );
+        }
+
+        const emailMatches =
+          input.email.trim().toLowerCase() === ownerEmail.toLowerCase();
+        const passwordMatches = safeStringEqual(input.password, ownerPassword);
+
+        if (!emailMatches || !passwordMatches) {
+          return json({ error: "Invalid admin email or password" }, 401);
+        }
+
+        const token = await createAdminSessionToken(env, ownerEmail);
+
+        return jsonWithHeaders(
+          {
+            authenticated: true,
+            email: ownerEmail,
+          },
+          200,
+          {
+            "set-cookie": buildAdminSessionCookie(token),
+          },
+        );
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          return json(
+            {
+              error: "Invalid admin login input",
+              details: error.flatten(),
+            },
+            400,
+          );
+        }
+
+        return json(
+          {
+            error: "Failed to log in",
+            details: getErrorMessage(error),
+          },
+          500,
+        );
+      }
+    }
+
+    if (pathname === "/api/nightforce/admin/logout") {
+      if (request.method !== "POST") {
+        return methodNotAllowed();
+      }
+
+      return jsonWithHeaders(
+        {
+          authenticated: false,
+        },
+        200,
+        {
+          "set-cookie": buildClearAdminSessionCookie(),
+        },
+      );
+    }
+
     if (
       pathname === "/api/nightforce/visitor-activity" &&
       request.method === "POST"
@@ -1029,10 +1371,15 @@ export default {
     }
 
     if (
-      (pathname === "/api/nightforce/verification-requests" ||
-        pathname === "/api/nightforce/admin/verification-requests") &&
+      pathname === "/api/nightforce/admin/verification-requests" &&
       request.method === "GET"
     ) {
+      const adminError = await requireAdminSession(request, env);
+
+      if (adminError) {
+        return adminError;
+      }
+
       try {
         const requests = await db
           .select()
@@ -1318,21 +1665,22 @@ export default {
     }
 
     if (
-      ((parts.length === 5 &&
-        parts[0] === "api" &&
-        parts[1] === "nightforce" &&
-        parts[2] === "verification-requests" &&
-        parts[4] === "approve") ||
-        (parts.length === 6 &&
-          parts[0] === "api" &&
-          parts[1] === "nightforce" &&
-          parts[2] === "admin" &&
-          parts[3] === "verification-requests" &&
-          parts[5] === "approve")) &&
+      parts.length === 6 &&
+      parts[0] === "api" &&
+      parts[1] === "nightforce" &&
+      parts[2] === "admin" &&
+      parts[3] === "verification-requests" &&
+      parts[5] === "approve" &&
       request.method === "POST"
     ) {
+      const adminError = await requireAdminSession(request, env);
+
+      if (adminError) {
+        return adminError;
+      }
+
       try {
-        const id = uuidSchema.parse(parts.length === 6 ? parts[4] : parts[3]);
+        const id = uuidSchema.parse(parts[4]);
         let rawBody: unknown = {};
 
         try {
@@ -1386,21 +1734,22 @@ export default {
     }
 
     if (
-      ((parts.length === 5 &&
-        parts[0] === "api" &&
-        parts[1] === "nightforce" &&
-        parts[2] === "verification-requests" &&
-        parts[4] === "reject") ||
-        (parts.length === 6 &&
-          parts[0] === "api" &&
-          parts[1] === "nightforce" &&
-          parts[2] === "admin" &&
-          parts[3] === "verification-requests" &&
-          parts[5] === "reject")) &&
+      parts.length === 6 &&
+      parts[0] === "api" &&
+      parts[1] === "nightforce" &&
+      parts[2] === "admin" &&
+      parts[3] === "verification-requests" &&
+      parts[5] === "reject" &&
       request.method === "POST"
     ) {
+      const adminError = await requireAdminSession(request, env);
+
+      if (adminError) {
+        return adminError;
+      }
+
       try {
-        const id = uuidSchema.parse(parts.length === 6 ? parts[4] : parts[3]);
+        const id = uuidSchema.parse(parts[4]);
         let rawBody: unknown = {};
 
         try {

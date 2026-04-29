@@ -1,7 +1,5 @@
-import { useEffect, useState } from "react";
-import { useWallet } from "../hooks/useWallet";
+import { useEffect, useState, type FormEvent } from "react";
 import { StatusBadge } from "../components/StatusBadge";
-import { ADMIN_WALLET_ID } from "../services/walletService";
 import { buildNightforceApiUrl } from "../lib/nightforceApi";
 
 type Tab = "pending" | "approved" | "rejected";
@@ -118,6 +116,12 @@ type VerificationRequestResponse = {
   request: VerificationRequestRecord;
 };
 
+type AdminSessionResponse = {
+  authenticated: boolean;
+  email?: string;
+  expiresAt?: number;
+};
+
 type ReviewAction = "approve" | "reject";
 
 type ReviewConfirmation = {
@@ -128,6 +132,19 @@ type ReviewConfirmation = {
 
 const ADMIN_VERIFICATION_REQUESTS_PATH =
   "/api/nightforce/admin/verification-requests";
+const ADMIN_SESSION_PATH = "/api/nightforce/admin/session";
+const ADMIN_LOGIN_PATH = "/api/nightforce/admin/login";
+const ADMIN_LOGOUT_PATH = "/api/nightforce/admin/logout";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function getApiErrorMessage(payload: unknown, fallback: string): string {
+  return isRecord(payload) && typeof payload.error === "string"
+    ? payload.error
+    : fallback;
+}
 
 function buildAdminVerificationRequestReviewPath(
   requestId: string,
@@ -187,7 +204,6 @@ function downloadCsvFile(filename: string, rows: string[][]) {
 }
 
 export function AdminReview() {
-  const { walletId } = useWallet();
   const [tab, setTab] = useState<Tab>("pending");
   const [search, setSearch] = useState("");
   const [countryFilter, setCountryFilter] = useState("all");
@@ -203,6 +219,12 @@ export function AdminReview() {
     useState<ReviewConfirmation | null>(null);
   const [bulkAdminNotes, setBulkAdminNotes] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminSessionEmail, setAdminSessionEmail] = useState<string | null>(null);
+  const [adminSessionLoading, setAdminSessionLoading] = useState(true);
+  const [adminLoginLoading, setAdminLoginLoading] = useState(false);
+  const [adminLoginError, setAdminLoginError] = useState("");
 
   const reload = async (selectedId?: string | null) => {
     setLoading(true);
@@ -211,6 +233,9 @@ export function AdminReview() {
     try {
       const response = await fetch(
         buildNightforceApiUrl(ADMIN_VERIFICATION_REQUESTS_PATH),
+        {
+          credentials: "include",
+        },
       );
 
       let payload: unknown = null;
@@ -222,15 +247,16 @@ export function AdminReview() {
       }
 
       if (!response.ok) {
-        const message =
-          typeof payload === "object" &&
-          payload !== null &&
-          "error" in payload &&
-          typeof payload.error === "string"
-            ? payload.error
-            : "Failed to load verification requests.";
+        if (response.status === 401) {
+          setAdminSessionEmail(null);
+          setRequests([]);
+          setSelected(null);
+          setSelectedRequestIds([]);
+        }
 
-        throw new Error(message);
+        throw new Error(
+          getApiErrorMessage(payload, "Failed to load verification requests."),
+        );
       }
 
       const data = payload as VerificationRequestListResponse;
@@ -259,29 +285,197 @@ export function AdminReview() {
     }
   };
 
-  useEffect(() => {
-    if (walletId !== ADMIN_WALLET_ID) {
-      setLoading(false);
-      setError("");
+  const handleAdminLogin = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    setAdminLoginLoading(true);
+    setAdminLoginError("");
+    setError("");
+
+    try {
+      const response = await fetch(buildNightforceApiUrl(ADMIN_LOGIN_PATH), {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          email: adminEmail.trim(),
+          password: adminPassword,
+        }),
+      });
+
+      let payload: unknown = null;
+
+      try {
+        payload = await response.json();
+      } catch {
+        payload = null;
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          getApiErrorMessage(payload, "Invalid admin email or password."),
+        );
+      }
+
+      const data = payload as AdminSessionResponse;
+
+      setAdminSessionEmail(data.email ?? adminEmail.trim());
+      setAdminPassword("");
+      await reload();
+    } catch (err) {
+      setAdminSessionEmail(null);
+      setAdminLoginError(
+        err instanceof Error ? err.message : "Failed to log in.",
+      );
+    } finally {
+      setAdminLoginLoading(false);
+    }
+  };
+
+  const handleAdminLogout = async () => {
+    setError("");
+    setAdminLoginError("");
+
+    try {
+      await fetch(buildNightforceApiUrl(ADMIN_LOGOUT_PATH), {
+        method: "POST",
+        credentials: "include",
+      });
+    } finally {
+      setAdminSessionEmail(null);
+      setAdminPassword("");
       setRequests([]);
       setSelected(null);
       setSelectedRequestIds([]);
-      return;
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAdminSession() {
+      setAdminSessionLoading(true);
+      setAdminLoginError("");
+
+      try {
+        const response = await fetch(buildNightforceApiUrl(ADMIN_SESSION_PATH), {
+          credentials: "include",
+        });
+
+        let payload: unknown = null;
+
+        try {
+          payload = await response.json();
+        } catch {
+          payload = null;
+        }
+
+        if (!response.ok) {
+          if (!cancelled) {
+            setAdminSessionEmail(null);
+            setRequests([]);
+          }
+
+          return;
+        }
+
+        const data = payload as AdminSessionResponse;
+
+        if (!cancelled && data.authenticated && data.email) {
+          setAdminSessionEmail(data.email);
+          await reload();
+        }
+      } catch {
+        if (!cancelled) {
+          setAdminSessionEmail(null);
+          setRequests([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setAdminSessionLoading(false);
+          setLoading(false);
+        }
+      }
     }
 
-    void reload();
-  }, [walletId]);
+    void loadAdminSession();
 
-  if (walletId !== ADMIN_WALLET_ID) {
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (adminSessionLoading) {
     return (
-      <div className="max-w-xl mx-auto py-16 px-4">
-        <div className="border border-red-800 rounded-lg p-6 bg-zinc-900">
-          <div className="text-red-400 font-mono text-sm font-semibold mb-2">
-            Access Denied
+      <div className="mx-auto max-w-xl px-4 py-16">
+        <div className="rounded-2xl border border-white/10 bg-zinc-900 p-6 text-sm font-mono text-zinc-400">
+          Checking admin session...
+        </div>
+      </div>
+    );
+  }
+
+  if (!adminSessionEmail) {
+    return (
+      <div className="mx-auto max-w-xl px-4 py-16">
+        <div className="rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(24,24,27,0.88),rgba(9,9,11,0.96))] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.035)]">
+          <div className="mb-2 text-[11px] font-mono uppercase tracking-[0.24em] text-emerald-300/70">
+            Admin Login
           </div>
-          <p className="text-zinc-400 font-mono text-sm">
-            You do not have permission to access this page.
+
+          <h1 className="text-2xl font-mono font-bold tracking-tight text-white">
+            Verification Review
+          </h1>
+
+          <p className="mt-2 text-sm font-mono leading-6 text-zinc-500">
+            Sign in with the owner admin email and password to review verification requests.
           </p>
+
+          {adminLoginError && (
+            <div className="mt-5 rounded-xl border border-red-900/60 bg-red-950/25 px-3.5 py-3 text-xs font-mono leading-5 text-red-300">
+              {adminLoginError}
+            </div>
+          )}
+
+          <form onSubmit={handleAdminLogin} className="mt-6 grid gap-4">
+            <label className="grid gap-1.5">
+              <span className="text-[11px] font-mono uppercase tracking-[0.16em] text-zinc-500">
+                Admin Email
+              </span>
+              <input
+                type="email"
+                value={adminEmail}
+                onChange={(event) => setAdminEmail(event.target.value)}
+                autoComplete="username"
+                required
+                className="w-full rounded-xl border border-white/10 bg-black/35 px-3.5 py-3 text-sm font-mono text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] placeholder:text-zinc-700 transition-all focus:border-emerald-300/35 focus:bg-black/45 focus:outline-none focus:ring-2 focus:ring-emerald-400/10"
+              />
+            </label>
+
+            <label className="grid gap-1.5">
+              <span className="text-[11px] font-mono uppercase tracking-[0.16em] text-zinc-500">
+                Password
+              </span>
+              <input
+                type="password"
+                value={adminPassword}
+                onChange={(event) => setAdminPassword(event.target.value)}
+                autoComplete="current-password"
+                required
+                className="w-full rounded-xl border border-white/10 bg-black/35 px-3.5 py-3 text-sm font-mono text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] placeholder:text-zinc-700 transition-all focus:border-emerald-300/35 focus:bg-black/45 focus:outline-none focus:ring-2 focus:ring-emerald-400/10"
+              />
+            </label>
+
+            <button
+              type="submit"
+              disabled={adminLoginLoading}
+              className="rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-4 py-3 text-sm font-mono font-semibold text-emerald-100 transition-all hover:border-emerald-300/40 hover:bg-emerald-400/15 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {adminLoginLoading ? "Signing in..." : "Sign In"}
+            </button>
+          </form>
         </div>
       </div>
     );
@@ -404,6 +598,7 @@ export function AdminReview() {
       ),
       {
         method: "POST",
+        credentials: "include",
         headers: {
           "content-type": "application/json",
         },
@@ -555,6 +750,21 @@ export function AdminReview() {
           Review ambassador verification requests, filter by country or region, and approve or
           reject requests in bulk.
         </p>
+
+        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-3.5 py-3">
+          <span className="text-xs font-mono text-zinc-500">
+            Signed in as{" "}
+            <span className="text-zinc-300">{adminSessionEmail}</span>
+          </span>
+
+          <button
+            type="button"
+            onClick={() => void handleAdminLogout()}
+            className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-mono font-semibold text-zinc-300 transition-all hover:border-red-300/30 hover:bg-red-400/10 hover:text-red-100"
+          >
+            Sign out
+          </button>
+        </div>
       </div>
 
       <div className="mb-6 flex flex-wrap gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-1.5">
