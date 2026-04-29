@@ -18,7 +18,7 @@ export function Privacy() {
             className="inline-flex items-center gap-2 text-[13px] font-mono font-semibold text-zinc-400 transition-colors hover:text-zinc-200"
           >
             <span className="text-sky-300">✦</span>
-            <span>Nightforce Directory</span>
+            <span>nightforce.cc Directory</span>
           </Link>
 
           <h1 className="mt-8 text-4xl font-bold tracking-tight text-white md:text-5xl">
@@ -152,20 +152,22 @@ export function Privacy() {
             </div>
 
             <h3 className="mt-8 text-lg font-bold text-white">
-              2.4 Contact Form Information
+              2.4 Contact Information
             </h3>
 
             <p className="mt-4">
-              The Contact page currently contains a static form UI only. At this
-              stage, the contact form does not send messages, submit data, or
-              store contact form entries.
+              The Contact page currently provides an email contact option using
+              hello@nightforce.cc. If you choose to email us, we may receive the
+              information you include in that message, such as your email
+              address, profile details, verification question, or support
+              request.
             </p>
 
             <p className="mt-4">
-              If we later connect the contact form to a backend, email service,
-              or support system, we may collect information submitted through
-              that form, such as name, email address, topic, and message. We
-              will update this Privacy Policy when that feature becomes active.
+              nightforce.cc does not currently collect contact form submissions
+              through an on-site form. If we later add a backend contact form,
+              email service, or support system, we will update this Privacy
+              Policy to explain what is collected and how it is used.
             </p>
 
             <h3 className="mt-8 text-lg font-bold text-white">

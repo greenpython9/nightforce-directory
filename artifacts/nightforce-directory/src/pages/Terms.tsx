@@ -18,7 +18,7 @@ export function Terms() {
             className="inline-flex items-center gap-2 text-[13px] font-mono font-semibold text-zinc-400 transition-colors hover:text-zinc-200"
           >
             <span className="text-sky-300">✦</span>
-            <span>Nightforce Directory</span>
+            <span>nightforce.cc Directory</span>
           </Link>
 
           <h1 className="mt-8 text-4xl font-bold tracking-tight text-white md:text-5xl">

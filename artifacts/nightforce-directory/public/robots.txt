@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+Disallow: /admin/
+Disallow: /my-profile
+Disallow: /api/
+
+Sitemap: https://nightforce.cc/sitemap.xml

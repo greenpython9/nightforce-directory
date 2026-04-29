@@ -340,7 +340,7 @@ export function Landing() {
             className="flex items-center gap-2 text-[11px] font-mono text-zinc-500"
           >
             <span className="text-sky-300">✦</span>
-            <span>Nightforce Directory</span>
+            <span>nightforce.cc Directory</span>
           </Link>
 
           <Link
@@ -612,7 +612,7 @@ export function Landing() {
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-zinc-700 bg-zinc-950">
               <img
                 src="/logo-mark.svg"
-                alt="Nightforce Directory"
+                alt="nightforce.cc Directory"
                 className="h-12 w-12 object-contain"
               />
             </div>

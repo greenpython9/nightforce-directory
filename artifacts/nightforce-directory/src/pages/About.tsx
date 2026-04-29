@@ -52,7 +52,7 @@ export function About() {
             className="flex items-center gap-2 text-[11px] font-mono text-zinc-500"
           >
             <span className="text-sky-300">✦</span>
-            <span>Nightforce Directory</span>
+            <span>nightforce.cc Directory</span>
           </Link>
         </header>
 
