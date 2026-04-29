@@ -10,6 +10,9 @@ import {
 import { MIDNAMES_ENABLED } from "../services/midnamesConfig";
 import { getUsableNightDomain } from "../services/nightDomain";
 
+const ENABLE_INTERACTIVE_MIDNAMES =
+  import.meta.env.VITE_ENABLE_INTERACTIVE_MIDNAMES === "true";
+
 const LazyMidnamesModal = lazy(() =>
   import("./MidnamesModal").then((module) => ({
     default: module.MidnamesModal,
@@ -36,6 +39,18 @@ export function MidnamesProfileButton({
 
   if (!MIDNAMES_ENABLED || !usableDomain) {
     return null;
+  }
+
+  if (!ENABLE_INTERACTIVE_MIDNAMES) {
+    return (
+      <span
+        className={["cursor-default", className].filter(Boolean).join(" ")}
+        aria-label={ariaLabel ?? `${usableDomain} .night identity`}
+        title={`${usableDomain} .night identity`}
+      >
+        {children ?? ".night"}
+      </span>
+    );
   }
 
   const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
