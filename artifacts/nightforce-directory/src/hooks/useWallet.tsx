@@ -10,13 +10,7 @@ import {
   type MidnightWalletProviderSummary,
   type MidnightWalletSnapshot,
 } from "../services/walletService";
-import { writeProfileProofPublicMy } from "../services/profileProofWrite";
-import {
-  deployContactModePublic,
-  readContactModePublic,
-  updateContactModePublic,
-  type ContactModeWriteValue,
-} from "../services/contactModeWrite";
+import type { ContactModeWriteValue } from "../services/contactModeWrite";
 import type { VerificationStatus } from "../types";
 import { buildNightforceApiUrl } from "../lib/nightforceApi";
 
@@ -262,6 +256,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setWalletError(null);
 
     try {
+      const { writeProfileProofPublicMy } = await import(
+        "../services/profileProofWrite"
+      );
+
       const result = await writeProfileProofPublicMy();
       const snapshot = await getMidnightWalletSnapshot();
       const resolvedWalletId = resolveMidnightWalletAddress(snapshot);
@@ -292,6 +290,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       setWalletError(null);
 
       try {
+        const { deployContactModePublic } = await import(
+          "../services/contactModeWrite"
+        );
+
         const result = await deployContactModePublic(initialMode);
         const snapshot = await getMidnightWalletSnapshot();
         const resolvedWalletId = resolveMidnightWalletAddress(snapshot);
@@ -325,6 +327,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       setWalletError(null);
 
       try {
+        const { updateContactModePublic } = await import(
+          "../services/contactModeWrite"
+        );
+
         const result = await updateContactModePublic(contractAddress, nextMode);
         const snapshot = await getMidnightWalletSnapshot();
         const resolvedWalletId = resolveMidnightWalletAddress(snapshot);
@@ -357,6 +363,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setWalletError(null);
 
     try {
+      const { readContactModePublic } = await import(
+        "../services/contactModeWrite"
+      );
+
       const result = await readContactModePublic(contractAddress);
       const snapshot = await getMidnightWalletSnapshot();
       const resolvedWalletId = resolveMidnightWalletAddress(snapshot);
