@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import {
+  integer,
   sqliteTable,
   text,
 } from "drizzle-orm/sqlite-core";
@@ -9,6 +10,8 @@ import { z } from "zod/v4";
 export type VerificationStatus = "pending" | "approved" | "rejected";
 export type PublishState = "draft" | "published" | "inactive";
 export type TrustedVisibility = "public" | "hidden";
+export type AdminUserRole = "owner" | "admin";
+export type AdminUserStatus = "active" | "disabled";
 
 export interface FieldVisibility {
   avatarUrl: "public" | "hidden";
@@ -145,6 +148,43 @@ export const visitorActivityTable = sqliteTable("visitor_activity", {
   createdAt: text("created_at").notNull().$defaultFn(nowIso),
 });
 
+export const adminUsersTable = sqliteTable("admin_users", {
+  id: text("id").primaryKey().$defaultFn(createId),
+  email: text("email").notNull().unique(),
+  role: text("role")
+    .$type<AdminUserRole>()
+    .notNull()
+    .$defaultFn(() => "admin"),
+  status: text("status")
+    .$type<AdminUserStatus>()
+    .notNull()
+    .$defaultFn(() => "active"),
+  passwordHash: text("password_hash").notNull(),
+  passwordSalt: text("password_salt").notNull(),
+  passwordIterations: integer("password_iterations")
+    .notNull()
+    .$defaultFn(() => 100000),
+  createdBy: text("created_by"),
+  createdAt: text("created_at").notNull().$defaultFn(nowIso),
+  updatedAt: text("updated_at").notNull().$defaultFn(nowIso),
+  lastLoginAt: text("last_login_at"),
+  disabledAt: text("disabled_at"),
+});
+
+export const adminAuditEventsTable = sqliteTable("admin_audit_events", {
+  id: text("id").primaryKey().$defaultFn(createId),
+  actorEmail: text("actor_email").notNull(),
+  actorRole: text("actor_role").$type<AdminUserRole | null>(),
+  action: text("action").notNull(),
+  targetType: text("target_type"),
+  targetId: text("target_id"),
+  metadataJson: text("metadata_json", { mode: "json" })
+    .$type<Record<string, unknown>>()
+    .notNull()
+    .$defaultFn(() => ({})),
+  createdAt: text("created_at").notNull().$defaultFn(nowIso),
+});
+
 export const insertVerificationRequestSchema = createInsertSchema(
   verificationRequestsTable,
 ).omit({
@@ -177,6 +217,21 @@ export const insertVisitorActivitySchema = createInsertSchema(
   createdAt: true,
 });
 
+export const insertAdminUserSchema = createInsertSchema(adminUsersTable).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastLoginAt: true,
+  disabledAt: true,
+});
+
+export const insertAdminAuditEventSchema = createInsertSchema(
+  adminAuditEventsTable,
+).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertVerificationRequest = z.infer<
   typeof insertVerificationRequestSchema
 >;
@@ -193,3 +248,11 @@ export type InsertVisitorActivity = z.infer<
   typeof insertVisitorActivitySchema
 >;
 export type VisitorActivity = typeof visitorActivityTable.$inferSelect;
+
+export type InsertAdminUser = z.infer<typeof insertAdminUserSchema>;
+export type AdminUser = typeof adminUsersTable.$inferSelect;
+
+export type InsertAdminAuditEvent = z.infer<
+  typeof insertAdminAuditEventSchema
+>;
+export type AdminAuditEvent = typeof adminAuditEventsTable.$inferSelect;

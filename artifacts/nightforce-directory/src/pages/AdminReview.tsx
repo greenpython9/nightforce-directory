@@ -116,10 +116,44 @@ type VerificationRequestResponse = {
   request: VerificationRequestRecord;
 };
 
+type AdminRole = "owner" | "admin";
+
 type AdminSessionResponse = {
   authenticated: boolean;
   email?: string;
+  role?: AdminRole;
   expiresAt?: number;
+};
+
+type AdminUserRecord = {
+  id: string;
+  email: string;
+  role: AdminRole;
+  status: "active" | "disabled";
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  lastLoginAt: string | null;
+  disabledAt: string | null;
+};
+
+type AdminUserListResponse = {
+  adminUsers: AdminUserRecord[];
+};
+
+type AdminAuditEventRecord = {
+  id: string;
+  actorEmail: string;
+  actorRole: AdminRole | null;
+  action: string;
+  targetType: string | null;
+  targetId: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+};
+
+type AdminAuditEventListResponse = {
+  auditEvents: AdminAuditEventRecord[];
 };
 
 type ReviewAction = "approve" | "reject";
@@ -135,6 +169,8 @@ const ADMIN_VERIFICATION_REQUESTS_PATH =
 const ADMIN_SESSION_PATH = "/api/nightforce/admin/session";
 const ADMIN_LOGIN_PATH = "/api/nightforce/admin/login";
 const ADMIN_LOGOUT_PATH = "/api/nightforce/admin/logout";
+const ADMIN_USERS_PATH = "/api/nightforce/admin/users";
+const ADMIN_AUDIT_EVENTS_PATH = "/api/nightforce/admin/audit-events";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -222,9 +258,86 @@ export function AdminReview() {
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [adminSessionEmail, setAdminSessionEmail] = useState<string | null>(null);
+  const [adminSessionRole, setAdminSessionRole] = useState<AdminRole | null>(null);
   const [adminSessionLoading, setAdminSessionLoading] = useState(true);
   const [adminLoginLoading, setAdminLoginLoading] = useState(false);
   const [adminLoginError, setAdminLoginError] = useState("");
+  const [adminUsers, setAdminUsers] = useState<AdminUserRecord[]>([]);
+  const [adminAuditEvents, setAdminAuditEvents] = useState<AdminAuditEventRecord[]>([]);
+  const [adminSecurityLoading, setAdminSecurityLoading] = useState(false);
+  const [adminSecurityError, setAdminSecurityError] = useState("");
+  const [adminSecurityActionMessage, setAdminSecurityActionMessage] = useState("");
+  const [adminSecurityActing, setAdminSecurityActing] = useState(false);
+  const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [newAdminPassword, setNewAdminPassword] = useState("");
+  const [resetPasswordByAdminId, setResetPasswordByAdminId] = useState<string | null>(null);
+  const [resetPasswordValue, setResetPasswordValue] = useState("");
+
+  const reloadAdminSecurityData = async (role?: AdminRole | null) => {
+    if (role !== "owner") {
+      setAdminUsers([]);
+      setAdminAuditEvents([]);
+      setAdminSecurityError("");
+      return;
+    }
+
+    setAdminSecurityLoading(true);
+    setAdminSecurityError("");
+
+    try {
+      const [usersResponse, auditResponse] = await Promise.all([
+        fetch(buildNightforceApiUrl(ADMIN_USERS_PATH), {
+          credentials: "include",
+        }),
+        fetch(buildNightforceApiUrl(`${ADMIN_AUDIT_EVENTS_PATH}?limit=10`), {
+          credentials: "include",
+        }),
+      ]);
+
+      let usersPayload: unknown = null;
+      let auditPayload: unknown = null;
+
+      try {
+        usersPayload = await usersResponse.json();
+      } catch {
+        usersPayload = null;
+      }
+
+      try {
+        auditPayload = await auditResponse.json();
+      } catch {
+        auditPayload = null;
+      }
+
+      if (!usersResponse.ok) {
+        throw new Error(
+          getApiErrorMessage(usersPayload, "Failed to load admin users."),
+        );
+      }
+
+      if (!auditResponse.ok) {
+        throw new Error(
+          getApiErrorMessage(auditPayload, "Failed to load admin activity."),
+        );
+      }
+
+      const usersData = usersPayload as AdminUserListResponse;
+      const auditData = auditPayload as AdminAuditEventListResponse;
+
+      setAdminUsers(usersData.adminUsers);
+      setAdminAuditEvents(auditData.auditEvents);
+    } catch (err) {
+      setAdminUsers([]);
+      setAdminAuditEvents([]);
+      setAdminSecurityError(
+        err instanceof Error
+          ? err.message
+          : "Failed to load admin security data.",
+      );
+    } finally {
+      setAdminSecurityLoading(false);
+    }
+  };
 
   const reload = async (selectedId?: string | null) => {
     setLoading(true);
@@ -320,12 +433,19 @@ export function AdminReview() {
       }
 
       const data = payload as AdminSessionResponse;
+      const nextRole = data.role ?? "admin";
 
       setAdminSessionEmail(data.email ?? adminEmail.trim());
+      setAdminSessionRole(nextRole);
       setAdminPassword("");
       await reload();
+      await reloadAdminSecurityData(nextRole);
     } catch (err) {
       setAdminSessionEmail(null);
+      setAdminSessionRole(null);
+      setAdminUsers([]);
+      setAdminAuditEvents([]);
+      setAdminSecurityError("");
       setAdminLoginError(
         err instanceof Error ? err.message : "Failed to log in.",
       );
@@ -345,10 +465,20 @@ export function AdminReview() {
       });
     } finally {
       setAdminSessionEmail(null);
+      setAdminSessionRole(null);
       setAdminPassword("");
       setRequests([]);
       setSelected(null);
       setSelectedRequestIds([]);
+      setAdminUsers([]);
+      setAdminAuditEvents([]);
+      setAdminSecurityError("");
+      setAdminSecurityActionMessage("");
+      setAdminSecurityActing(false);
+      setNewAdminEmail("");
+      setNewAdminPassword("");
+      setResetPasswordByAdminId(null);
+      setResetPasswordValue("");
     }
   };
 
@@ -375,7 +505,10 @@ export function AdminReview() {
         if (!response.ok) {
           if (!cancelled) {
             setAdminSessionEmail(null);
+            setAdminSessionRole(null);
             setRequests([]);
+            setAdminUsers([]);
+            setAdminAuditEvents([]);
           }
 
           return;
@@ -384,8 +517,12 @@ export function AdminReview() {
         const data = payload as AdminSessionResponse;
 
         if (!cancelled && data.authenticated && data.email) {
+          const nextRole = data.role ?? "admin";
+
           setAdminSessionEmail(data.email);
+          setAdminSessionRole(nextRole);
           await reload();
+          await reloadAdminSecurityData(nextRole);
         }
       } catch {
         if (!cancelled) {
@@ -737,6 +874,145 @@ export function AdminReview() {
     downloadCsvFile(filename, rows);
   };
 
+  const handleCreateAdminUser = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    setAdminSecurityActing(true);
+    setAdminSecurityError("");
+    setAdminSecurityActionMessage("");
+
+    try {
+      const response = await fetch(buildNightforceApiUrl(ADMIN_USERS_PATH), {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          email: newAdminEmail.trim(),
+          password: newAdminPassword,
+        }),
+      });
+
+      let payload: unknown = null;
+
+      try {
+        payload = await response.json();
+      } catch {
+        payload = null;
+      }
+
+      if (!response.ok) {
+        throw new Error(getApiErrorMessage(payload, "Failed to create admin."));
+      }
+
+      setNewAdminEmail("");
+      setNewAdminPassword("");
+      setAdminSecurityActionMessage("Admin user created.");
+      await reloadAdminSecurityData(adminSessionRole);
+    } catch (err) {
+      setAdminSecurityError(
+        err instanceof Error ? err.message : "Failed to create admin.",
+      );
+    } finally {
+      setAdminSecurityActing(false);
+    }
+  };
+
+  const handleDisableAdminUser = async (adminUser: AdminUserRecord) => {
+    const confirmed = window.confirm(
+      `Disable admin access for ${adminUser.email}?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setAdminSecurityActing(true);
+    setAdminSecurityError("");
+    setAdminSecurityActionMessage("");
+
+    try {
+      const response = await fetch(
+        buildNightforceApiUrl(`${ADMIN_USERS_PATH}/${encodeURIComponent(adminUser.id)}/disable`),
+        {
+          method: "POST",
+          credentials: "include",
+        },
+      );
+
+      let payload: unknown = null;
+
+      try {
+        payload = await response.json();
+      } catch {
+        payload = null;
+      }
+
+      if (!response.ok) {
+        throw new Error(getApiErrorMessage(payload, "Failed to disable admin."));
+      }
+
+      setAdminSecurityActionMessage("Admin user disabled.");
+      await reloadAdminSecurityData(adminSessionRole);
+    } catch (err) {
+      setAdminSecurityError(
+        err instanceof Error ? err.message : "Failed to disable admin.",
+      );
+    } finally {
+      setAdminSecurityActing(false);
+    }
+  };
+
+  const handleResetAdminPassword = async (adminUser: AdminUserRecord) => {
+    setAdminSecurityActing(true);
+    setAdminSecurityError("");
+    setAdminSecurityActionMessage("");
+
+    try {
+      const response = await fetch(
+        buildNightforceApiUrl(
+          `${ADMIN_USERS_PATH}/${encodeURIComponent(adminUser.id)}/reset-password`,
+        ),
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            password: resetPasswordValue,
+          }),
+        },
+      );
+
+      let payload: unknown = null;
+
+      try {
+        payload = await response.json();
+      } catch {
+        payload = null;
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          getApiErrorMessage(payload, "Failed to reset admin password."),
+        );
+      }
+
+      setResetPasswordByAdminId(null);
+      setResetPasswordValue("");
+      setAdminSecurityActionMessage("Admin password reset.");
+      await reloadAdminSecurityData(adminSessionRole);
+    } catch (err) {
+      setAdminSecurityError(
+        err instanceof Error ? err.message : "Failed to reset admin password.",
+      );
+    } finally {
+      setAdminSecurityActing(false);
+    }
+  };
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 pb-20 pt-8 sm:pt-10">
       <div className="mb-6">
@@ -755,6 +1031,11 @@ export function AdminReview() {
           <span className="text-xs font-mono text-zinc-500">
             Signed in as{" "}
             <span className="text-zinc-300">{adminSessionEmail}</span>
+            {adminSessionRole && (
+              <span className="ml-2 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-emerald-200">
+                {adminSessionRole}
+              </span>
+            )}
           </span>
 
           <button
@@ -765,6 +1046,232 @@ export function AdminReview() {
             Sign out
           </button>
         </div>
+
+        {adminSessionRole === "owner" && (
+          <div className="mt-5 grid gap-4 rounded-3xl border border-emerald-300/15 bg-[linear-gradient(180deg,rgba(16,185,129,0.06),rgba(9,9,11,0.72))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] lg:grid-cols-2">
+            <div>
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-[11px] font-mono uppercase tracking-[0.2em] text-emerald-300/70">
+                    Admin Users
+                  </div>
+                  <p className="mt-1 text-xs font-mono leading-5 text-zinc-500">
+                    Owner-only view of active and disabled admin accounts.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => void reloadAdminSecurityData(adminSessionRole)}
+                  disabled={adminSecurityLoading}
+                  className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-mono font-semibold text-zinc-300 transition-all hover:border-emerald-300/30 hover:bg-emerald-400/10 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {adminSecurityLoading ? "Refreshing..." : "Refresh"}
+                </button>
+              </div>
+
+              {adminSecurityError && (
+                <div className="mb-3 rounded-xl border border-red-900/60 bg-red-950/25 px-3 py-2 text-[11px] font-mono leading-5 text-red-300">
+                  {adminSecurityError}
+                </div>
+              )}
+
+              {adminSecurityActionMessage && (
+                <div className="mb-3 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.06] px-3 py-2 text-[11px] font-mono leading-5 text-emerald-200">
+                  {adminSecurityActionMessage}
+                </div>
+              )}
+
+              <form
+                onSubmit={handleCreateAdminUser}
+                className="mb-3 grid gap-2 rounded-2xl border border-white/10 bg-black/25 p-3"
+              >
+                <div className="text-[11px] font-mono uppercase tracking-[0.16em] text-zinc-500">
+                  Add Admin
+                </div>
+
+                <input
+                  type="email"
+                  value={newAdminEmail}
+                  onChange={(event) => setNewAdminEmail(event.target.value)}
+                  placeholder="admin@example.com"
+                  required
+                  className="w-full rounded-xl border border-white/10 bg-black/35 px-3 py-2.5 text-xs font-mono text-white placeholder:text-zinc-700 transition-all focus:border-emerald-300/35 focus:outline-none focus:ring-2 focus:ring-emerald-400/10"
+                />
+
+                <input
+                  type="password"
+                  value={newAdminPassword}
+                  onChange={(event) => setNewAdminPassword(event.target.value)}
+                  placeholder="Temporary password, minimum 8 characters"
+                  minLength={8}
+                  required
+                  className="w-full rounded-xl border border-white/10 bg-black/35 px-3 py-2.5 text-xs font-mono text-white placeholder:text-zinc-700 transition-all focus:border-emerald-300/35 focus:outline-none focus:ring-2 focus:ring-emerald-400/10"
+                />
+
+                <button
+                  type="submit"
+                  disabled={adminSecurityActing}
+                  className="rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-3 py-2.5 text-xs font-mono font-semibold text-emerald-100 transition-all hover:border-emerald-300/40 hover:bg-emerald-400/15 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {adminSecurityActing ? "Working..." : "Create Admin"}
+                </button>
+              </form>
+
+              {adminUsers.length === 0 ? (
+                <div className="rounded-2xl border border-white/10 bg-black/25 p-3 text-xs font-mono text-zinc-600">
+                  No D1 admins yet.
+                </div>
+              ) : (
+                <div className="grid gap-2">
+                  {adminUsers.map((adminUser) => (
+                    <div
+                      key={adminUser.id}
+                      className="rounded-2xl border border-white/10 bg-black/25 p-3"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="break-all text-xs font-mono text-zinc-200">
+                          {adminUser.email}
+                        </span>
+                        <span
+                          className={`rounded-full border px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.14em] ${
+                            adminUser.status === "active"
+                              ? "border-emerald-300/20 bg-emerald-400/10 text-emerald-200"
+                              : "border-red-300/20 bg-red-400/10 text-red-200"
+                          }`}
+                        >
+                          {adminUser.status}
+                        </span>
+                      </div>
+
+                      <div className="mt-2 grid gap-1 text-[11px] font-mono text-zinc-600">
+                        <div>Role: {adminUser.role}</div>
+                        <div>Created: {formatDate(adminUser.createdAt)}</div>
+                        <div>
+                          Last login:{" "}
+                          {adminUser.lastLoginAt
+                            ? formatDate(adminUser.lastLoginAt)
+                            : "Never"}
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {adminUser.status === "active" && (
+                          <button
+                            type="button"
+                            disabled={adminSecurityActing}
+                            onClick={() => void handleDisableAdminUser(adminUser)}
+                            className="rounded-lg border border-red-300/20 bg-red-400/10 px-2.5 py-1.5 text-[11px] font-mono font-semibold text-red-100 transition-all hover:border-red-300/35 hover:bg-red-400/15 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            Disable
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          disabled={adminSecurityActing}
+                          onClick={() => {
+                            setResetPasswordByAdminId(adminUser.id);
+                            setResetPasswordValue("");
+                            setAdminSecurityError("");
+                            setAdminSecurityActionMessage("");
+                          }}
+                          className="rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[11px] font-mono font-semibold text-zinc-300 transition-all hover:border-emerald-300/30 hover:bg-emerald-400/10 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Reset Password
+                        </button>
+                      </div>
+
+                      {resetPasswordByAdminId === adminUser.id && (
+                        <div className="mt-3 grid gap-2 rounded-xl border border-white/10 bg-black/30 p-2.5">
+                          <input
+                            type="password"
+                            value={resetPasswordValue}
+                            onChange={(event) =>
+                              setResetPasswordValue(event.target.value)
+                            }
+                            placeholder="New password, minimum 8 characters"
+                            minLength={8}
+                            className="w-full rounded-lg border border-white/10 bg-black/35 px-3 py-2 text-xs font-mono text-white placeholder:text-zinc-700 transition-all focus:border-emerald-300/35 focus:outline-none focus:ring-2 focus:ring-emerald-400/10"
+                          />
+
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              disabled={
+                                adminSecurityActing ||
+                                resetPasswordValue.length < 8
+                              }
+                              onClick={() => void handleResetAdminPassword(adminUser)}
+                              className="flex-1 rounded-lg border border-emerald-300/25 bg-emerald-400/10 px-2.5 py-1.5 text-[11px] font-mono font-semibold text-emerald-100 transition-all hover:border-emerald-300/40 hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              Save
+                            </button>
+
+                            <button
+                              type="button"
+                              disabled={adminSecurityActing}
+                              onClick={() => {
+                                setResetPasswordByAdminId(null);
+                                setResetPasswordValue("");
+                              }}
+                              className="flex-1 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[11px] font-mono font-semibold text-zinc-300 transition-all hover:border-white/20 hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div className="mb-2">
+                <div className="text-[11px] font-mono uppercase tracking-[0.2em] text-emerald-300/70">
+                  Recent Admin Activity
+                </div>
+                <p className="mt-1 text-xs font-mono leading-5 text-zinc-500">
+                  Latest owner/admin security events recorded by the Worker.
+                </p>
+              </div>
+
+              {adminAuditEvents.length === 0 ? (
+                <div className="rounded-2xl border border-white/10 bg-black/25 p-3 text-xs font-mono text-zinc-600">
+                  No audit events yet.
+                </div>
+              ) : (
+                <div className="grid gap-2">
+                  {adminAuditEvents.map((event) => (
+                    <div
+                      key={event.id}
+                      className="rounded-2xl border border-white/10 bg-black/25 p-3"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-xs font-mono text-zinc-200">
+                          {event.action.replace(/_/g, " ")}
+                        </span>
+                        <span className="text-[11px] font-mono text-zinc-600">
+                          {formatDate(event.createdAt)}
+                        </span>
+                      </div>
+
+                      <div className="mt-2 grid gap-1 text-[11px] font-mono text-zinc-600">
+                        <div className="break-all">Actor: {event.actorEmail}</div>
+                        <div>
+                          Target: {event.targetType ?? "—"}
+                          {event.targetId ? ` · ${event.targetId}` : ""}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="mb-6 flex flex-wrap gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-1.5">

@@ -1,5 +1,7 @@
 import { and, desc, eq, lt } from "drizzle-orm";
 import {
+  adminAuditEventsTable,
+  adminUsersTable,
   getDb,
   profilesTable,
   verificationRequestsTable,
@@ -263,6 +265,15 @@ const adminLoginInputSchema = z.object({
   password: z.string().min(1),
 });
 
+const createAdminUserInputSchema = z.object({
+  email: z.string().trim().email(),
+  password: z.string().min(8, "Admin password must be at least 8 characters."),
+});
+
+const resetAdminPasswordInputSchema = z.object({
+  password: z.string().min(8, "Admin password must be at least 8 characters."),
+});
+
 const createWalletBindingInputSchema = z.object({
   verificationRequestId: uuidSchema,
   midnightWalletAddress: z.string().trim().min(1),
@@ -368,6 +379,7 @@ const VISITOR_ACTIVITY_MAX_LIMIT = 25;
 
 const ADMIN_SESSION_COOKIE_NAME = "nightforce_admin_session";
 const ADMIN_SESSION_MAX_AGE_SECONDS = 8 * 60 * 60;
+const ADMIN_PASSWORD_ITERATIONS = 100000;
 
 const PROFILE_PROOF_PREPROD_STATE = {
   contractAddress:
@@ -590,8 +602,11 @@ function methodNotAllowed(): Response {
   return json({ error: "Method not allowed" }, 405);
 }
 
+type AdminRole = "owner" | "admin";
+
 type AdminSessionPayload = {
   email: string;
+  role: AdminRole;
   expiresAt: number;
 };
 
@@ -672,9 +687,183 @@ async function signAdminSessionValue(
   return base64UrlEncode(new Uint8Array(signature));
 }
 
+function base64UrlDecodeToArrayBuffer(value: string): ArrayBuffer {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized.padEnd(
+    Math.ceil(normalized.length / 4) * 4,
+    "=",
+  );
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return bytes.buffer.slice(
+    bytes.byteOffset,
+    bytes.byteOffset + bytes.byteLength,
+  ) as ArrayBuffer;
+}
+
+async function hashAdminPassword(
+  password: string,
+  saltBase64Url: string,
+  iterations: number,
+): Promise<string> {
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(password),
+    "PBKDF2",
+    false,
+    ["deriveBits"],
+  );
+
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: base64UrlDecodeToArrayBuffer(saltBase64Url),
+      iterations,
+      hash: "SHA-256",
+    },
+    keyMaterial,
+    256,
+  );
+
+  return base64UrlEncode(new Uint8Array(derivedBits));
+}
+
+async function verifyStoredAdminPassword(args: {
+  password: string;
+  passwordHash: string;
+  passwordSalt: string;
+  passwordIterations: number;
+}): Promise<boolean> {
+  const computedHash = await hashAdminPassword(
+    args.password,
+    args.passwordSalt,
+    args.passwordIterations,
+  );
+
+  return safeStringEqual(computedHash, args.passwordHash);
+}
+
+async function createAdminPasswordRecord(password: string): Promise<{
+  passwordHash: string;
+  passwordSalt: string;
+  passwordIterations: number;
+}> {
+  const saltBytes = new Uint8Array(32);
+  crypto.getRandomValues(saltBytes);
+
+  const passwordSalt = base64UrlEncode(saltBytes);
+  const passwordHash = await hashAdminPassword(
+    password,
+    passwordSalt,
+    ADMIN_PASSWORD_ITERATIONS,
+  );
+
+  return {
+    passwordHash,
+    passwordSalt,
+    passwordIterations: ADMIN_PASSWORD_ITERATIONS,
+  };
+}
+
+function toPublicAdminUser(adminUser: typeof adminUsersTable.$inferSelect) {
+  return {
+    id: adminUser.id,
+    email: adminUser.email,
+    role: adminUser.role,
+    status: adminUser.status,
+    createdBy: adminUser.createdBy,
+    createdAt: adminUser.createdAt,
+    updatedAt: adminUser.updatedAt,
+    lastLoginAt: adminUser.lastLoginAt,
+    disabledAt: adminUser.disabledAt,
+  };
+}
+
+async function logAdminAuditEvent(
+  db: ReturnType<typeof getDb>,
+  input: {
+    actorEmail: string;
+    actorRole?: AdminRole | null;
+    action: string;
+    targetType?: string | null;
+    targetId?: string | null;
+    metadata?: Record<string, unknown>;
+  },
+): Promise<void> {
+  try {
+    await db.insert(adminAuditEventsTable).values({
+      actorEmail: input.actorEmail,
+      actorRole: input.actorRole ?? null,
+      action: input.action,
+      targetType: input.targetType ?? null,
+      targetId: input.targetId ?? null,
+      metadataJson: input.metadata ?? {},
+      createdAt: new Date().toISOString(),
+    });
+  } catch {
+    // Audit logging must not block the main admin action.
+  }
+}
+
+function toPublicAdminAuditEvent(
+  auditEvent: typeof adminAuditEventsTable.$inferSelect,
+) {
+  return {
+    id: auditEvent.id,
+    actorEmail: auditEvent.actorEmail,
+    actorRole: auditEvent.actorRole,
+    action: auditEvent.action,
+    targetType: auditEvent.targetType,
+    targetId: auditEvent.targetId,
+    metadata: auditEvent.metadataJson,
+    createdAt: auditEvent.createdAt,
+  };
+}
+
+function getAdminAuditEventLimit(url: URL): number {
+  const requestedLimit = Number.parseInt(
+    url.searchParams.get("limit") ?? "",
+    10,
+  );
+
+  if (!Number.isFinite(requestedLimit)) {
+    return 25;
+  }
+
+  return Math.min(Math.max(requestedLimit, 1), 50);
+}
+
+async function requireOwnerAdminSession(
+  request: Request,
+  env: Env,
+): Promise<{ session: AdminSessionPayload } | { response: Response }> {
+  const session = await getAdminSession(request, env);
+
+  if (!session) {
+    return {
+      response: json({ error: "Admin login required" }, 401),
+    };
+  }
+
+  if (session.role !== "owner") {
+    return {
+      response: json({ error: "Owner admin access required" }, 403),
+    };
+  }
+
+  return { session };
+}
+
 async function createAdminSessionToken(
   env: Env,
   email: string,
+  role: AdminRole,
 ): Promise<string> {
   const secret = getConfiguredAdminSecret(env.ADMIN_SESSION_SECRET);
 
@@ -684,6 +873,7 @@ async function createAdminSessionToken(
 
   const payload: AdminSessionPayload = {
     email,
+    role,
     expiresAt: Date.now() + ADMIN_SESSION_MAX_AGE_SECONDS * 1000,
   };
 
@@ -722,6 +912,7 @@ async function verifyAdminSessionToken(
 
     if (
       typeof payload.email !== "string" ||
+      (payload.role !== "owner" && payload.role !== "admin") ||
       typeof payload.expiresAt !== "number" ||
       payload.expiresAt < Date.now()
     ) {
@@ -730,6 +921,7 @@ async function verifyAdminSessionToken(
 
     return {
       email: payload.email,
+      role: payload.role,
       expiresAt: payload.expiresAt,
     };
   } catch {
@@ -1196,6 +1388,7 @@ export default {
       return json({
         authenticated: true,
         email: session.email,
+        role: session.role,
         expiresAt: session.expiresAt,
       });
     }
@@ -1217,30 +1410,124 @@ export default {
         const input = adminLoginInputSchema.parse(rawBody);
         const ownerEmail = getConfiguredAdminSecret(env.ADMIN_OWNER_EMAIL);
         const ownerPassword = getConfiguredAdminSecret(env.ADMIN_OWNER_PASSWORD);
+        const normalizedEmail = input.email.trim().toLowerCase();
+        const now = new Date().toISOString();
 
-        if (!ownerEmail || !ownerPassword) {
-          return json(
-            {
-              error: "Admin login is not configured",
-            },
-            500,
+        if (ownerEmail && ownerPassword) {
+          const ownerEmailMatches =
+            normalizedEmail === ownerEmail.toLowerCase();
+          const ownerPasswordMatches = safeStringEqual(
+            input.password,
+            ownerPassword,
           );
+
+          if (ownerEmailMatches && ownerPasswordMatches) {
+            const token = await createAdminSessionToken(
+              env,
+              ownerEmail,
+              "owner",
+            );
+
+            await logAdminAuditEvent(db, {
+              actorEmail: ownerEmail,
+              actorRole: "owner",
+              action: "admin_login_success",
+              targetType: "owner",
+              targetId: ownerEmail,
+              metadata: {
+                source: "owner_secret",
+              },
+            });
+
+            return jsonWithHeaders(
+              {
+                authenticated: true,
+                email: ownerEmail,
+                role: "owner",
+              },
+              200,
+              {
+                "set-cookie": buildAdminSessionCookie(token),
+              },
+            );
+          }
         }
 
-        const emailMatches =
-          input.email.trim().toLowerCase() === ownerEmail.toLowerCase();
-        const passwordMatches = safeStringEqual(input.password, ownerPassword);
+        const matchingAdmins = await db
+          .select()
+          .from(adminUsersTable)
+          .where(eq(adminUsersTable.email, normalizedEmail))
+          .limit(1);
 
-        if (!emailMatches || !passwordMatches) {
+        const adminUser = matchingAdmins[0] ?? null;
+
+        if (!adminUser || adminUser.status !== "active") {
+          await logAdminAuditEvent(db, {
+            actorEmail: normalizedEmail,
+            actorRole: adminUser?.role ?? null,
+            action: "admin_login_failed",
+            targetType: "admin_user",
+            targetId: adminUser?.id ?? normalizedEmail,
+            metadata: {
+              reason: adminUser ? "disabled" : "not_found",
+            },
+          });
+
           return json({ error: "Invalid admin email or password" }, 401);
         }
 
-        const token = await createAdminSessionToken(env, ownerEmail);
+        const passwordMatches = await verifyStoredAdminPassword({
+          password: input.password,
+          passwordHash: adminUser.passwordHash,
+          passwordSalt: adminUser.passwordSalt,
+          passwordIterations: adminUser.passwordIterations,
+        });
+
+        if (!passwordMatches) {
+          await logAdminAuditEvent(db, {
+            actorEmail: adminUser.email,
+            actorRole: adminUser.role,
+            action: "admin_login_failed",
+            targetType: "admin_user",
+            targetId: adminUser.id,
+            metadata: {
+              reason: "password_mismatch",
+            },
+          });
+
+          return json({ error: "Invalid admin email or password" }, 401);
+        }
+
+        await db
+          .update(adminUsersTable)
+          .set({
+            lastLoginAt: now,
+            updatedAt: now,
+          })
+          .where(eq(adminUsersTable.id, adminUser.id));
+
+        const token = await createAdminSessionToken(
+          env,
+          adminUser.email,
+          adminUser.role,
+        );
+
+        await logAdminAuditEvent(db, {
+          actorEmail: adminUser.email,
+          actorRole: adminUser.role,
+          action: "admin_login_success",
+          targetType: "admin_user",
+          targetId: adminUser.id,
+          metadata: {
+            source: "d1_admin_user",
+          },
+        });
 
         return jsonWithHeaders(
           {
             authenticated: true,
-            email: ownerEmail,
+            email: adminUser.email,
+            role: adminUser.role,
           },
           200,
           {
@@ -1273,6 +1560,18 @@ export default {
         return methodNotAllowed();
       }
 
+      const session = await getAdminSession(request, env);
+
+      if (session) {
+        await logAdminAuditEvent(db, {
+          actorEmail: session.email,
+          actorRole: session.role,
+          action: "admin_logout",
+          targetType: "admin_session",
+          targetId: session.email,
+        });
+      }
+
       return jsonWithHeaders(
         {
           authenticated: false,
@@ -1282,6 +1581,326 @@ export default {
           "set-cookie": buildClearAdminSessionCookie(),
         },
       );
+    }
+
+    if (pathname === "/api/nightforce/admin/users") {
+      const ownerSession = await requireOwnerAdminSession(request, env);
+
+      if ("response" in ownerSession) {
+        return ownerSession.response;
+      }
+
+      if (request.method === "GET") {
+        try {
+          const adminUsers = await db.select().from(adminUsersTable);
+
+          return json({
+            adminUsers: adminUsers
+              .map(toPublicAdminUser)
+              .sort((left, right) => left.email.localeCompare(right.email)),
+          });
+        } catch (error) {
+          return json(
+            {
+              error: "Failed to list admin users",
+              details: getErrorMessage(error),
+            },
+            500,
+          );
+        }
+      }
+
+      if (request.method === "POST") {
+        try {
+          let rawBody: unknown;
+
+          try {
+            rawBody = await request.json();
+          } catch {
+            return json({ error: "Invalid JSON body" }, 400);
+          }
+
+          const input = createAdminUserInputSchema.parse(rawBody);
+          const ownerEmail = getConfiguredAdminSecret(env.ADMIN_OWNER_EMAIL);
+          const normalizedEmail = input.email.trim().toLowerCase();
+          const now = new Date().toISOString();
+
+          if (ownerEmail && normalizedEmail === ownerEmail.toLowerCase()) {
+            return json(
+              {
+                error: "Owner email is already managed by owner login secrets",
+              },
+              409,
+            );
+          }
+
+          const passwordRecord = await createAdminPasswordRecord(input.password);
+
+          const [adminUser] = await db
+            .insert(adminUsersTable)
+            .values({
+              email: normalizedEmail,
+              role: "admin",
+              status: "active",
+              passwordHash: passwordRecord.passwordHash,
+              passwordSalt: passwordRecord.passwordSalt,
+              passwordIterations: passwordRecord.passwordIterations,
+              createdBy: ownerSession.session.email,
+              createdAt: now,
+              updatedAt: now,
+              lastLoginAt: null,
+              disabledAt: null,
+            })
+            .returning();
+
+          await logAdminAuditEvent(db, {
+            actorEmail: ownerSession.session.email,
+            actorRole: ownerSession.session.role,
+            action: "admin_created",
+            targetType: "admin_user",
+            targetId: adminUser.id,
+            metadata: {
+              targetEmail: adminUser.email,
+            },
+          });
+
+          return json({ adminUser: toPublicAdminUser(adminUser) }, 201);
+        } catch (error) {
+          if (error instanceof z.ZodError) {
+            return json(
+              {
+                error: "Invalid admin user input",
+                details: error.flatten(),
+              },
+              400,
+            );
+          }
+
+          if (isSqliteUniqueError(error)) {
+            return json(
+              {
+                error: "Admin email already exists",
+                details: getErrorMessage(error),
+              },
+              409,
+            );
+          }
+
+          return json(
+            {
+              error: "Failed to create admin user",
+              details: getErrorMessage(error),
+            },
+            500,
+          );
+        }
+      }
+
+      return methodNotAllowed();
+    }
+
+    if (
+      parts.length === 6 &&
+      parts[0] === "api" &&
+      parts[1] === "nightforce" &&
+      parts[2] === "admin" &&
+      parts[3] === "users" &&
+      parts[5] === "disable"
+    ) {
+      const ownerSession = await requireOwnerAdminSession(request, env);
+
+      if ("response" in ownerSession) {
+        return ownerSession.response;
+      }
+
+      if (request.method !== "POST") {
+        return methodNotAllowed();
+      }
+
+      try {
+        const adminUserId = uuidSchema.parse(parts[4]);
+        const now = new Date().toISOString();
+
+        const [existingAdminUser] = await db
+          .select()
+          .from(adminUsersTable)
+          .where(eq(adminUsersTable.id, adminUserId))
+          .limit(1);
+
+        if (!existingAdminUser) {
+          return json({ error: "Admin user not found" }, 404);
+        }
+
+        if (existingAdminUser.role === "owner") {
+          return json({ error: "Owner admin cannot be disabled" }, 400);
+        }
+
+        const [adminUser] = await db
+          .update(adminUsersTable)
+          .set({
+            status: "disabled",
+            disabledAt: now,
+            updatedAt: now,
+          })
+          .where(eq(adminUsersTable.id, adminUserId))
+          .returning();
+
+        await logAdminAuditEvent(db, {
+          actorEmail: ownerSession.session.email,
+          actorRole: ownerSession.session.role,
+          action: "admin_disabled",
+          targetType: "admin_user",
+          targetId: adminUser.id,
+          metadata: {
+            targetEmail: adminUser.email,
+          },
+        });
+
+        return json({ adminUser: toPublicAdminUser(adminUser) });
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          return json(
+            {
+              error: "Invalid admin user id",
+              details: error.flatten(),
+            },
+            400,
+          );
+        }
+
+        return json(
+          {
+            error: "Failed to disable admin user",
+            details: getErrorMessage(error),
+          },
+          500,
+        );
+      }
+    }
+
+    if (
+      parts.length === 6 &&
+      parts[0] === "api" &&
+      parts[1] === "nightforce" &&
+      parts[2] === "admin" &&
+      parts[3] === "users" &&
+      parts[5] === "reset-password"
+    ) {
+      const ownerSession = await requireOwnerAdminSession(request, env);
+
+      if ("response" in ownerSession) {
+        return ownerSession.response;
+      }
+
+      if (request.method !== "POST") {
+        return methodNotAllowed();
+      }
+
+      try {
+        const adminUserId = uuidSchema.parse(parts[4]);
+        let rawBody: unknown;
+
+        try {
+          rawBody = await request.json();
+        } catch {
+          return json({ error: "Invalid JSON body" }, 400);
+        }
+
+        const input = resetAdminPasswordInputSchema.parse(rawBody);
+        const now = new Date().toISOString();
+
+        const [existingAdminUser] = await db
+          .select()
+          .from(adminUsersTable)
+          .where(eq(adminUsersTable.id, adminUserId))
+          .limit(1);
+
+        if (!existingAdminUser) {
+          return json({ error: "Admin user not found" }, 404);
+        }
+
+        if (existingAdminUser.role === "owner") {
+          return json({ error: "Owner password is managed by Worker secrets" }, 400);
+        }
+
+        const passwordRecord = await createAdminPasswordRecord(input.password);
+
+        const [adminUser] = await db
+          .update(adminUsersTable)
+          .set({
+            passwordHash: passwordRecord.passwordHash,
+            passwordSalt: passwordRecord.passwordSalt,
+            passwordIterations: passwordRecord.passwordIterations,
+            updatedAt: now,
+          })
+          .where(eq(adminUsersTable.id, adminUserId))
+          .returning();
+
+        await logAdminAuditEvent(db, {
+          actorEmail: ownerSession.session.email,
+          actorRole: ownerSession.session.role,
+          action: "admin_password_reset",
+          targetType: "admin_user",
+          targetId: adminUser.id,
+          metadata: {
+            targetEmail: adminUser.email,
+          },
+        });
+
+        return json({ adminUser: toPublicAdminUser(adminUser) });
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          return json(
+            {
+              error: "Invalid admin password reset input",
+              details: error.flatten(),
+            },
+            400,
+          );
+        }
+
+        return json(
+          {
+            error: "Failed to reset admin password",
+            details: getErrorMessage(error),
+          },
+          500,
+        );
+      }
+    }
+
+    if (pathname === "/api/nightforce/admin/audit-events") {
+      const ownerSession = await requireOwnerAdminSession(request, env);
+
+      if ("response" in ownerSession) {
+        return ownerSession.response;
+      }
+
+      if (request.method !== "GET") {
+        return methodNotAllowed();
+      }
+
+      try {
+        const limit = getAdminAuditEventLimit(url);
+
+        const auditEvents = await db
+          .select()
+          .from(adminAuditEventsTable)
+          .orderBy(desc(adminAuditEventsTable.createdAt))
+          .limit(limit);
+
+        return json({
+          auditEvents: auditEvents.map(toPublicAdminAuditEvent),
+        });
+      } catch (error) {
+        return json(
+          {
+            error: "Failed to list admin audit events",
+            details: getErrorMessage(error),
+          },
+          500,
+        );
+      }
     }
 
     if (
@@ -1679,6 +2298,12 @@ export default {
         return adminError;
       }
 
+      const adminSession = await getAdminSession(request, env);
+
+      if (!adminSession) {
+        return json({ error: "Admin login required" }, 401);
+      }
+
       try {
         const id = uuidSchema.parse(parts[4]);
         let rawBody: unknown = {};
@@ -1710,6 +2335,20 @@ export default {
           })
           .where(eq(verificationRequestsTable.id, id))
           .returning();
+
+        await logAdminAuditEvent(db, {
+          actorEmail: adminSession.email,
+          actorRole: adminSession.role,
+          action: "verification_approved",
+          targetType: "verification_request",
+          targetId: updated.id,
+          metadata: {
+            discordHandle: updated.discordHandle,
+            midnightWalletAddress: updated.midnightWalletAddress,
+            previousStatus: existing.status,
+            nextStatus: updated.status,
+          },
+        });
 
         return json({ request: updated });
       } catch (error) {
@@ -1748,6 +2387,12 @@ export default {
         return adminError;
       }
 
+      const adminSession = await getAdminSession(request, env);
+
+      if (!adminSession) {
+        return json({ error: "Admin login required" }, 401);
+      }
+
       try {
         const id = uuidSchema.parse(parts[4]);
         let rawBody: unknown = {};
@@ -1779,6 +2424,20 @@ export default {
           })
           .where(eq(verificationRequestsTable.id, id))
           .returning();
+
+        await logAdminAuditEvent(db, {
+          actorEmail: adminSession.email,
+          actorRole: adminSession.role,
+          action: "verification_rejected",
+          targetType: "verification_request",
+          targetId: updated.id,
+          metadata: {
+            discordHandle: updated.discordHandle,
+            midnightWalletAddress: updated.midnightWalletAddress,
+            previousStatus: existing.status,
+            nextStatus: updated.status,
+          },
+        });
 
         return json({ request: updated });
       } catch (error) {
