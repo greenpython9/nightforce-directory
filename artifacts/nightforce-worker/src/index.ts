@@ -358,6 +358,20 @@ const VISITOR_ACTIVITY_RETENTION_DAYS = 7;
 const VISITOR_ACTIVITY_DEFAULT_LIMIT = 8;
 const VISITOR_ACTIVITY_MAX_LIMIT = 25;
 
+const PROFILE_PROOF_PREPROD_STATE = {
+  contractAddress:
+    "eeac83cd347cbd2f974499872508c0044540aee53aa639fa2183462d9b8c1fa3",
+  network: "preprod",
+  visibility: {
+    name: "PUBLIC",
+    value: 1,
+  },
+  countryCode: {
+    name: "MY",
+    value: 1,
+  },
+};
+
 const PUBLIC_VISITOR_ACTIVITY_PATHS = new Set([
   "/",
   "/directory",
@@ -549,6 +563,22 @@ function notFound(): Response {
 
 function methodNotAllowed(): Response {
   return json({ error: "Method not allowed" }, 405);
+}
+
+function getProfileProofStateResponse(url: URL): Response {
+  const target = url.searchParams.get("target") ?? "preprod";
+
+  if (target !== "preprod") {
+    return json(
+      {
+        error: "Unsupported profile-proof target",
+        details: `Only target=preprod is available in the Cloudflare Worker runtime. Received target=${target}.`,
+      },
+      400,
+    );
+  }
+
+  return json(PROFILE_PROOF_PREPROD_STATE);
 }
 
 function getErrorMessage(error: unknown): string {
@@ -902,6 +932,14 @@ export default {
 
     if (pathname === "/api/healthz") {
       return json({ status: "ok", service: "nightforce-worker" });
+    }
+
+    if (pathname === "/api/profile-proof/state") {
+      if (request.method !== "GET") {
+        return methodNotAllowed();
+      }
+
+      return getProfileProofStateResponse(url);
     }
 
     if (

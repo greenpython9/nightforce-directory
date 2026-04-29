@@ -4,6 +4,12 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-04-22",
   "compatibility_flags": ["nodejs_compat"],
+  "routes": [
+    {
+      "pattern": "nightforce.cc/api/*",
+      "zone_name": "nightforce.cc"
+    }
+  ],
   "d1_databases": [
     {
       "binding": "DB",
