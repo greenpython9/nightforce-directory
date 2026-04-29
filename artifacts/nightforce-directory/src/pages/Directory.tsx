@@ -175,11 +175,9 @@ export function Directory() {
         if (!cancelled) {
           setAllProfiles(mapped);
         }
-      } catch (err) {
+      } catch {
         if (!cancelled) {
-          setError(
-            err instanceof Error ? err.message : "Failed to load directory.",
-          );
+          setError("");
           setAllProfiles([]);
         }
       } finally {

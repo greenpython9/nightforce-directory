@@ -238,13 +238,9 @@ export function Landing() {
         if (!cancelled) {
           setProfiles(previewProfiles);
         }
-      } catch (error) {
+      } catch {
         if (!cancelled) {
-          setDirectoryError(
-            error instanceof Error
-              ? error.message
-              : "Failed to load directory preview.",
-          );
+          setDirectoryError("");
           setProfiles([]);
         }
       } finally {
