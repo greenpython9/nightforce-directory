@@ -224,8 +224,13 @@ export function Landing() {
           throw new Error("Failed to load directory preview.");
         }
 
-        const data = payload as DirectoryResponse;
-        const safeProfiles = Array.isArray(data.profiles) ? data.profiles : [];
+        const safeProfiles =
+          payload &&
+          typeof payload === "object" &&
+          Array.isArray((payload as DirectoryResponse).profiles)
+            ? (payload as DirectoryResponse).profiles
+            : [];
+
         const previewProfiles: DirectoryProfileRecord[] = import.meta.env.DEV
           ? [...safeProfiles, ...MOCK_DIRECTORY_PROFILES]
           : safeProfiles;

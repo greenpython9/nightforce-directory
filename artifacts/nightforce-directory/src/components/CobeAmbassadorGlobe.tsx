@@ -147,38 +147,7 @@ const COUNTRY_COORDINATES: Record<string, { lat: number; lng: number }> = {
 
 };
 
-const FALLBACK_POINTS: CountryPoint[] = [
-  {
-    country: "Malaysia",
-    regionCount: 1,
-    count: 1,
-    publicProfiles: 1,
-    anonymousProfiles: 0,
-    contactEnabledProfiles: 1,
-    lat: 4.21,
-    lng: 101.98,
-  },
-  {
-    country: "United States",
-    regionCount: 1,
-    count: 1,
-    publicProfiles: 1,
-    anonymousProfiles: 0,
-    contactEnabledProfiles: 1,
-    lat: 37.09,
-    lng: -95.71,
-  },
-  {
-    country: "Germany",
-    regionCount: 1,
-    count: 1,
-    publicProfiles: 1,
-    anonymousProfiles: 0,
-    contactEnabledProfiles: 1,
-    lat: 51.17,
-    lng: 10.45,
-  },
-];
+const FALLBACK_POINTS: CountryPoint[] = [];
 
 const NON_GLOBE_COUNTRY_VALUES = new Set([
   "",

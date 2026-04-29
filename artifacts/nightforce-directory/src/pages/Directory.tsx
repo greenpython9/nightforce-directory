@@ -159,10 +159,17 @@ export function Directory() {
           throw new Error(message);
         }
 
-        const data = payload as DirectoryResponse;
+        const safeProfiles =
+          payload &&
+          typeof payload === "object" &&
+          Array.isArray((payload as DirectoryResponse).profiles)
+            ? (payload as DirectoryResponse).profiles
+            : [];
+
         const sourceProfiles: DirectoryProfileRecord[] = import.meta.env.DEV
-          ? [...data.profiles, ...MOCK_DIRECTORY_PROFILES]
-          : data.profiles;
+          ? [...safeProfiles, ...MOCK_DIRECTORY_PROFILES]
+          : safeProfiles;
+
         const mapped = sourceProfiles.map(toPublicProfile);
 
         if (!cancelled) {
