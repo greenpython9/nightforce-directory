@@ -62,6 +62,16 @@ function getLinkedVerificationRequestFromPayload(
   };
 }
 
+function isLaceMidnightWallet(wallet: {
+  providerId: string;
+  providerName: string;
+}): boolean {
+  return (
+    wallet.providerName.toLowerCase().includes("lace") ||
+    wallet.providerId.toLowerCase().includes("lace")
+  );
+}
+
 export function WalletAccess() {
   const {
     walletId,
@@ -629,25 +639,50 @@ export function WalletAccess() {
             {MIDNIGHT_CONNECT_ENABLED && (
               <div className="space-y-2">
                 {availableMidnightWallets.length > 0 ? (
-                  availableMidnightWallets.map((wallet) => (
-                    <button
-                      key={wallet.providerId}
-                      onClick={async () => {
-                        await connectMidnight(wallet.providerId);
-                      }}
-                      disabled={isWalletLoading}
-                      className="flex w-full items-center justify-between gap-3 rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-4 py-3 text-sm font-mono font-semibold text-emerald-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all hover:border-emerald-300/40 hover:bg-emerald-400/15 hover:text-white hover:shadow-[0_0_22px_rgba(52,211,153,0.18),inset_0_1px_0_rgba(255,255,255,0.04)] disabled:opacity-50"
-                    >
-                      <span>
-                        {isWalletLoading
-                          ? "Working..."
-                          : `Connect ${wallet.providerName}`}
-                      </span>
-                      <span className="text-[10px] font-normal text-emerald-200/70">
-                        {wallet.providerId}
-                      </span>
-                    </button>
-                  ))
+                  availableMidnightWallets.map((wallet) => {
+                    const laceComingSoon = isLaceMidnightWallet(wallet);
+
+                    return (
+                      <button
+                        key={wallet.providerId}
+                        onClick={async () => {
+                          if (laceComingSoon) {
+                            return;
+                          }
+
+                          await connectMidnight(wallet.providerId);
+                        }}
+                        disabled={isWalletLoading || laceComingSoon}
+                        className={
+                          laceComingSoon
+                            ? "flex w-full cursor-not-allowed items-center justify-between gap-3 rounded-xl border border-zinc-700/70 bg-zinc-900/80 px-4 py-3 text-sm font-mono font-semibold text-zinc-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] opacity-80"
+                            : "flex w-full items-center justify-between gap-3 rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-4 py-3 text-sm font-mono font-semibold text-emerald-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all hover:border-emerald-300/40 hover:bg-emerald-400/15 hover:text-white hover:shadow-[0_0_22px_rgba(52,211,153,0.18),inset_0_1px_0_rgba(255,255,255,0.04)] disabled:opacity-50"
+                        }
+                        title={
+                          laceComingSoon
+                            ? "Lace Wallet (Midnight) is temporarily disabled while preprod prover testing is being finalized."
+                            : undefined
+                        }
+                      >
+                        <span>
+                          {isWalletLoading && !laceComingSoon
+                            ? "Working..."
+                            : laceComingSoon
+                              ? `${wallet.providerName} — Coming soon`
+                              : `Connect ${wallet.providerName}`}
+                        </span>
+                        <span
+                          className={
+                            laceComingSoon
+                              ? "text-[10px] font-normal text-zinc-600"
+                              : "text-[10px] font-normal text-emerald-200/70"
+                          }
+                        >
+                          {wallet.providerId}
+                        </span>
+                      </button>
+                    );
+                  })
                 ) : (
                   <button
                     disabled
@@ -658,15 +693,14 @@ export function WalletAccess() {
                 )}
 
                 {availableMidnightWallets.some((wallet) =>
-                  wallet.providerName.toLowerCase().includes("lace"),
+                  isLaceMidnightWallet(wallet),
                 ) && (
-                  <div className="rounded-xl border border-cyan-400/15 bg-cyan-400/[0.05] px-3 py-2.5 text-[11px] font-mono leading-5 text-zinc-400">
-                    <span className="font-semibold text-cyan-300">
-                      Lace note:
+                  <div className="rounded-xl border border-zinc-700/70 bg-zinc-900/70 px-3 py-2.5 text-[11px] font-mono leading-5 text-zinc-500">
+                    <span className="font-semibold text-zinc-300">
+                      Lace Wallet (Midnight):
                     </span>{" "}
-                    if Lace does not open an approval window, unlock Lace from
-                    the browser extension first, then return here and click
-                    Connect Lace Wallet again.
+                    coming soon. Lace is detected, but temporarily disabled while
+                    preprod prover reliability is being finalized.
                   </div>
                 )}
               </div>
