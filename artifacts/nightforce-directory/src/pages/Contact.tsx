@@ -108,7 +108,7 @@ export function Contact() {
               </h2>
 
               <p className="mt-4 text-sm leading-7 text-zinc-400">
-                This contact form is intended for directory-related messages
+                This contact page is intended for directory-related messages
                 only. It is not a wallet support channel and should not be used
                 to send sensitive wallet or account secrets.
               </p>
@@ -130,117 +130,52 @@ export function Contact() {
               </div>
             </div>
 
-            <div className="rounded-[28px] border border-zinc-800 bg-[#07090b] p-4 shadow-2xl">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-[10px] font-mono uppercase tracking-wide text-zinc-600">
-                    Contact form
-                  </div>
-                  <div className="mt-1 text-[11px] font-mono text-zinc-500">
-                    static preview · endpoint not connected yet
-                  </div>
+            <div className="rounded-[28px] border border-zinc-800 bg-[#07090b] p-5 shadow-2xl">
+              <div className="rounded-[24px] border border-zinc-800 bg-[#050607] p-5">
+                <div className="text-[10px] font-mono uppercase tracking-wide text-emerald-400">
+                  Email
                 </div>
 
-                <span className="rounded-full border border-yellow-900/70 bg-yellow-950/30 px-2.5 py-1 text-[9px] font-mono uppercase tracking-wide text-yellow-300">
-                  static
-                </span>
-              </div>
+                <h2 className="mt-3 text-2xl font-bold tracking-tight text-white">
+                  Contact the directory team
+                </h2>
 
-              <form className="rounded-[24px] border border-zinc-800 bg-[#050607] p-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label
-                      htmlFor="contact-name"
-                      className="text-[10px] font-mono uppercase tracking-wide text-zinc-600"
-                    >
-                      Name
-                    </label>
-                    <input
-                      id="contact-name"
-                      type="text"
-                      placeholder="Your name"
-                      className="mt-2 h-11 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-[12px] font-mono text-white placeholder:text-zinc-700 outline-none transition-colors focus:border-zinc-500"
-                    />
-                  </div>
+                <p className="mt-4 text-sm leading-7 text-zinc-400">
+                  For directory questions, verification help, public profile
+                  updates, bug reports, or general feedback, send an email to:
+                </p>
 
-                  <div>
-                    <label
-                      htmlFor="contact-email"
-                      className="text-[10px] font-mono uppercase tracking-wide text-zinc-600"
-                    >
-                      Email
-                    </label>
-                    <input
-                      id="contact-email"
-                      type="email"
-                      placeholder="you@example.com"
-                      className="mt-2 h-11 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-[12px] font-mono text-white placeholder:text-zinc-700 outline-none transition-colors focus:border-zinc-500"
-                    />
-                  </div>
-                </div>
+                <a
+                  href="mailto:hello@nightforce.cc"
+                  className="mt-5 flex min-h-12 items-center justify-center rounded-xl border border-emerald-300/25 bg-emerald-400/10 px-4 text-sm font-mono font-semibold text-emerald-100 transition-all hover:border-emerald-300/40 hover:bg-emerald-400/15 hover:text-white"
+                >
+                  hello@nightforce.cc
+                </a>
 
-                <div className="mt-4">
-                  <label
-                    htmlFor="contact-topic"
-                    className="text-[10px] font-mono uppercase tracking-wide text-zinc-600"
-                  >
-                    Topic
-                  </label>
-                  <select
-                    id="contact-topic"
-                    defaultValue=""
-                    className="mt-2 h-11 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-[12px] font-mono text-white outline-none transition-colors focus:border-zinc-500"
-                  >
-                    <option value="" disabled>
-                      Choose a topic
-                    </option>
-                    <option>Verification help</option>
-                    <option>Profile update</option>
-                    <option>Bug report</option>
-                    <option>General feedback</option>
-                  </select>
-                </div>
-
-                <div className="mt-4">
-                  <label
-                    htmlFor="contact-message"
-                    className="text-[10px] font-mono uppercase tracking-wide text-zinc-600"
-                  >
-                    Message
-                  </label>
-                  <textarea
-                    id="contact-message"
-                    rows={7}
-                    placeholder="Write your message..."
-                    className="mt-2 w-full resize-none rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-3 text-[12px] font-mono leading-6 text-white placeholder:text-zinc-700 outline-none transition-colors focus:border-zinc-500"
-                  />
-                </div>
-
-                <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950/70 px-4 py-3">
+                <div className="mt-5 rounded-xl border border-zinc-800 bg-zinc-950/70 px-4 py-3">
                   <p className="text-[11px] leading-6 text-zinc-500">
-                    This form is a static UI placeholder. It does not send
-                    messages yet. A real contact endpoint can be connected in a
-                    later phase.
+                    Please include enough context for us to understand your
+                    request, but do not send wallet seed phrases, private keys,
+                    recovery phrases, passwords, or secret credentials.
                   </p>
                 </div>
 
-                <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <button
-                    type="button"
-                    disabled
-                    className="flex h-10 cursor-not-allowed items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900 px-4 text-[11px] font-mono text-zinc-600"
-                  >
-                    Send Message
-                  </button>
-
+                <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <Link
                     href="/request-verification"
                     className="flex h-10 items-center justify-center rounded-lg border border-zinc-700 bg-white px-4 text-[11px] font-mono font-semibold text-black transition-colors hover:bg-zinc-200"
                   >
-                    Request Verification Instead
+                    Request Verification
+                  </Link>
+
+                  <Link
+                    href="/faq"
+                    className="flex h-10 items-center justify-center rounded-lg border border-zinc-700 bg-zinc-950 px-4 text-[11px] font-mono text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white"
+                  >
+                    Read FAQ
                   </Link>
                 </div>
-              </form>
+              </div>
             </div>
           </section>
 
