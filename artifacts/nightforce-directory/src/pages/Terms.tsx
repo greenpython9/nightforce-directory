@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 
-const lastUpdated = "April 26, 2026";
+const lastUpdated = "April 29, 2026";
 
 export function Terms() {
   return (
@@ -442,10 +442,10 @@ export function Terms() {
             <p className="mt-5">
               If you have questions about these Terms, contact us at{" "}
               <a
-                href="mailto:test@example.com"
+                href="mailto:hello@nightforce.cc"
                 className="text-emerald-300 underline underline-offset-4 transition-colors hover:text-emerald-200"
               >
-                test@example.com
+                hello@nightforce.cc
               </a>
               .
             </p>

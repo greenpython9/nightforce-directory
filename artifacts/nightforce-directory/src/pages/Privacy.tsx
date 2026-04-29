@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 
-const lastUpdated = "April 26, 2026";
+const lastUpdated = "April 29, 2026";
 
 export function Privacy() {
   return (
@@ -61,10 +61,10 @@ export function Privacy() {
               If you have questions about this Privacy Policy, you can contact
               us at{" "}
               <a
-                href="mailto:test@example.com"
+                href="mailto:hello@nightforce.cc"
                 className="text-emerald-300 underline underline-offset-4 transition-colors hover:text-emerald-200"
               >
-                test@example.com
+                hello@nightforce.cc
               </a>
               .
             </p>
@@ -209,10 +209,12 @@ export function Privacy() {
             </p>
 
             <p className="mt-4">
-              We are not currently sure whether the website uses cookies or
-              similar technologies. If cookies, analytics identifiers, or
-              similar tools are used, they will be used to operate the website,
-              measure traffic, improve performance, or understand general usage.
+              At this stage, nightforce.cc does not intentionally use optional
+              analytics cookies. The website may still use browser storage,
+              session storage, wallet-related storage, or service-provider
+              technical logs as needed to operate the site, remember local
+              wallet/profile state, protect the service, measure reliability, or
+              support future analytics.
             </p>
           </section>
 
@@ -394,10 +396,10 @@ export function Privacy() {
               <li>
                 Emailing{" "}
                 <a
-                  href="mailto:test@example.com"
+                  href="mailto:hello@nightforce.cc"
                   className="text-emerald-300 underline underline-offset-4 transition-colors hover:text-emerald-200"
                 >
-                  test@example.com
+                  hello@nightforce.cc
                 </a>
               </li>
               <li>Using the Contact page, once the contact method is active</li>
