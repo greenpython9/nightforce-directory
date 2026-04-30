@@ -105,6 +105,9 @@ export const profilesTable = sqliteTable("profiles", {
   nightDomain: text("night_domain"),
   publicEmail: text("public_email"),
   contactModeContractAddress: text("contact_mode_contract_address"),
+  contactModeNetworkId: text("contact_mode_network_id").$type<
+    "preprod" | "mainnet" | null
+  >(),
   contactModeSyncStatus: text("contact_mode_sync_status")
     .notNull()
     .default("not_created"),

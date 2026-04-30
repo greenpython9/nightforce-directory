@@ -42,6 +42,7 @@ type ProfileRecord = JsonRecord & {
   nightDomain: string | null;
   publicEmail: string | null;
   contactModeContractAddress: string | null;
+  contactModeNetworkId: "preprod" | "mainnet" | null;
   contactModeSyncStatus: "not_created" | "synced" | "failed";
   contactModeLastSyncedAt: string | null;
   contactModeSyncError: string | null;
@@ -645,6 +646,7 @@ router.put("/nightforce/profiles/:verificationRequestId", (req, res) => {
     publicEmail: asString(body.publicEmail),
     contactModeContractAddress:
       existingProfile?.contactModeContractAddress ?? null,
+    contactModeNetworkId: existingProfile?.contactModeNetworkId ?? null,
     contactModeSyncStatus: existingProfile?.contactModeSyncStatus ?? "not_created",
     contactModeLastSyncedAt: existingProfile?.contactModeLastSyncedAt ?? null,
     contactModeSyncError: existingProfile?.contactModeSyncError ?? null,
@@ -692,6 +694,10 @@ router.post("/nightforce/profiles/:verificationRequestId/contact-mode-sync", (re
     return;
   }
 
+  const networkId = asString(body.contactModeNetworkId);
+  const validNetworkId =
+    networkId === "preprod" || networkId === "mainnet" ? networkId : null;
+
   const syncedValue = asString(body.contactModeSyncedValue);
 
   const validSyncedValue =
@@ -708,8 +714,20 @@ router.post("/nightforce/profiles/:verificationRequestId/contact-mode-sync", (re
     return;
   }
 
+  if (syncStatus === "synced" && !validNetworkId) {
+    res.status(400).json({
+      error: "contactModeNetworkId is required when contactModeSyncStatus is synced.",
+    });
+    return;
+  }
+
   profile.contactModeContractAddress =
     asString(body.contactModeContractAddress) ?? null;
+  profile.contactModeNetworkId =
+    validNetworkId ??
+    (profile.contactModeContractAddress
+      ? profile.contactModeNetworkId ?? "preprod"
+      : null);
   profile.contactModeSyncStatus = syncStatus;
   profile.contactModeLastSyncedAt =
     asString(body.contactModeLastSyncedAt) ?? null;

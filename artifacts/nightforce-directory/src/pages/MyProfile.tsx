@@ -1,11 +1,17 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useWallet } from "../hooks/useWallet";
-import { getConnectedMidnightApi, NIGHTFORCE_APP_MODE } from "../services/walletService";
+import {
+  getConnectedMidnightApi,
+  MIDNIGHT_NETWORK_ID,
+  NIGHTFORCE_APP_MODE,
+} from "../services/walletService";
 import { ProfileCard } from "../components/ProfileCard";
 import type { ContactMode, ProfileVisibility, PublicProfile } from "../types";
 import { buildNightforceApiUrl } from "../lib/nightforceApi";
 
 const AVATAR_MAX_BYTES = 500 * 1024;
+
+type ContactModeNetworkId = "preprod" | "mainnet";
 const AVATAR_ALLOWED_TYPES = new Set([
   "image/jpeg",
   "image/png",
@@ -342,6 +348,7 @@ type ProfileResponse = {
     nightDomain: string | null;
     publicEmail: string | null;
     contactModeContractAddress: string | null;
+    contactModeNetworkId: ContactModeNetworkId | null;
     contactModeSyncStatus: "not_created" | "synced" | "failed";
     contactModeLastSyncedAt: string | null;
     contactModeSyncError: string | null;
@@ -440,9 +447,18 @@ function deriveContactModeForSync(args: {
   return "NO_CONTACT";
 }
 
+function getActiveContactModeNetworkId(): ContactModeNetworkId | null {
+  if (MIDNIGHT_NETWORK_ID === "preprod" || MIDNIGHT_NETWORK_ID === "mainnet") {
+    return MIDNIGHT_NETWORK_ID;
+  }
+
+  return null;
+}
+
 async function updateContactModeSyncMetadata(args: {
   verificationRequestId: string;
   contactModeContractAddress: string | null;
+  contactModeNetworkId: ContactModeNetworkId | null;
   contactModeSyncStatus: "not_created" | "synced" | "failed";
   contactModeLastSyncedAt: string | null;
   contactModeSyncError: string | null;
@@ -459,6 +475,7 @@ async function updateContactModeSyncMetadata(args: {
       },
       body: JSON.stringify({
         contactModeContractAddress: args.contactModeContractAddress,
+        contactModeNetworkId: args.contactModeNetworkId,
         contactModeSyncStatus: args.contactModeSyncStatus,
         contactModeLastSyncedAt: args.contactModeLastSyncedAt,
         contactModeSyncError: args.contactModeSyncError,
@@ -1090,6 +1107,8 @@ export function MyProfile() {
   const [lastPublishedFingerprint, setLastPublishedFingerprint] = useState<string | null>(null);
   const [contactModeContractAddress, setContactModeContractAddress] =
     useState<string | null>(null);
+  const [contactModeNetworkId, setContactModeNetworkId] =
+    useState<ContactModeNetworkId | null>(null);
   const [savedEncryptedHiddenPayload, setSavedEncryptedHiddenPayload] =
     useState<EncryptedHiddenPayload | null>(null);
   const [hasSavedShieldedEmail, setHasSavedShieldedEmail] = useState(false);
@@ -1142,6 +1161,7 @@ export function MyProfile() {
     setShowTelegram(true);
     setLastPublishedFingerprint(null);
     setContactModeContractAddress(null);
+    setContactModeNetworkId(null);
     setSavedEncryptedHiddenPayload(null);
     setHasSavedShieldedEmail(false);
     setSavedContactMode(null);
@@ -1242,6 +1262,7 @@ export function MyProfile() {
       const parsedSocials = parseSocials(profile.socials ?? []);
 
       setContactModeContractAddress(profile.contactModeContractAddress ?? null);
+      setContactModeNetworkId(profile.contactModeNetworkId ?? null);
 
       setPublicId(profile.publicId ?? "");
       setDisplayName(profile.displayName ?? "");
@@ -1808,6 +1829,7 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
       await updateContactModeSyncMetadata({
         verificationRequestId,
         contactModeContractAddress: updateResult.contractAddress,
+        contactModeNetworkId: getActiveContactModeNetworkId(),
         contactModeSyncStatus: matched ? "synced" : "failed",
         contactModeLastSyncedAt: matched ? checkedAt : null,
         contactModeSyncError: matched
@@ -1968,6 +1990,7 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
           await updateContactModeSyncMetadata({
             verificationRequestId,
             contactModeContractAddress: updateResult.contractAddress,
+            contactModeNetworkId: getActiveContactModeNetworkId(),
             contactModeSyncStatus: "synced",
             contactModeLastSyncedAt: syncedAt,
             contactModeSyncError: null,
@@ -1975,6 +1998,7 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
           });
 
           setContactModeContractAddress(updateResult.contractAddress);
+          setContactModeNetworkId(getActiveContactModeNetworkId());
           setSavedContactMode(nextMode);
         } catch (syncError) {
           const syncMessage = getReadablePublishError(
@@ -1988,6 +2012,8 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
             await updateContactModeSyncMetadata({
               verificationRequestId,
               contactModeContractAddress: existingContactModeAddress,
+              contactModeNetworkId:
+                contactModeNetworkId ?? getActiveContactModeNetworkId(),
               contactModeSyncStatus: "failed",
               contactModeLastSyncedAt:
                 data.profile.contactModeLastSyncedAt ?? null,
@@ -2299,6 +2325,7 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
           await updateContactModeSyncMetadata({
             verificationRequestId,
             contactModeContractAddress: updateResult.contractAddress,
+            contactModeNetworkId: getActiveContactModeNetworkId(),
             contactModeSyncStatus: "synced",
             contactModeLastSyncedAt: syncedAt,
             contactModeSyncError: null,
@@ -2306,6 +2333,7 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
           });
 
           setContactModeContractAddress(updateResult.contractAddress);
+          setContactModeNetworkId(getActiveContactModeNetworkId());
           setSavedContactMode(nextMode);
         } catch (syncError) {
           const syncMessage =
@@ -2317,6 +2345,8 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
             await updateContactModeSyncMetadata({
               verificationRequestId,
               contactModeContractAddress: existingContactModeAddress,
+              contactModeNetworkId:
+                contactModeNetworkId ?? getActiveContactModeNetworkId(),
               contactModeSyncStatus: "failed",
               contactModeLastSyncedAt:
                 data.profile.contactModeLastSyncedAt ?? null,
@@ -2346,6 +2376,7 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
         await updateContactModeSyncMetadata({
           verificationRequestId,
           contactModeContractAddress: deployResult.contractAddress,
+          contactModeNetworkId: getActiveContactModeNetworkId(),
           contactModeSyncStatus: "synced",
           contactModeLastSyncedAt: new Date().toISOString(),
           contactModeSyncError: null,
@@ -2353,6 +2384,7 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
         });
 
         setContactModeContractAddress(deployResult.contractAddress);
+        setContactModeNetworkId(getActiveContactModeNetworkId());
         setSavedContactMode(initialMode);
       } catch (syncError) {
         const syncMessage = getReadablePublishError(
@@ -2364,6 +2396,7 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
           await updateContactModeSyncMetadata({
             verificationRequestId,
             contactModeContractAddress: null,
+            contactModeNetworkId: getActiveContactModeNetworkId(),
             contactModeSyncStatus: "failed",
             contactModeLastSyncedAt: null,
             contactModeSyncError: syncMessage,

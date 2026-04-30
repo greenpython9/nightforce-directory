@@ -334,9 +334,12 @@ const contactModeSchema = z.enum([
   "PUBLIC_CONTACT_ALLOWED",
 ]);
 
+const contactModeNetworkSchema = z.enum(["preprod", "mainnet"]);
+
 const updateContactModeSyncInputSchema = z
   .object({
     contactModeContractAddress: z.string().trim().min(1).nullable().optional(),
+    contactModeNetworkId: contactModeNetworkSchema.nullable().optional(),
     contactModeSyncStatus: z.enum(["not_created", "synced", "failed"]),
     contactModeLastSyncedAt: z.string().trim().min(1).nullable().optional(),
     contactModeSyncError: z.string().trim().optional().nullable(),
@@ -349,6 +352,15 @@ const updateContactModeSyncInputSchema = z
         path: ["contactModeSyncedValue"],
         message:
           "contactModeSyncedValue is required when contactModeSyncStatus is synced.",
+      });
+    }
+
+    if (input.contactModeSyncStatus === "synced" && !input.contactModeNetworkId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["contactModeNetworkId"],
+        message:
+          "contactModeNetworkId is required when contactModeSyncStatus is synced.",
       });
     }
   });
@@ -2825,6 +2837,7 @@ export default {
             nightDomain: nextNightDomain,
             publicEmail: nextPublicEmail,
             contactModeContractAddress: null,
+            contactModeNetworkId: null,
             contactModeSyncStatus: "not_created",
             contactModeLastSyncedAt: null,
             contactModeSyncError: null,
@@ -2906,6 +2919,11 @@ export default {
           .update(profilesTable)
           .set({
             contactModeContractAddress: input.contactModeContractAddress ?? null,
+            contactModeNetworkId:
+              input.contactModeNetworkId ??
+              (input.contactModeContractAddress
+                ? existingProfile.contactModeNetworkId ?? "preprod"
+                : null),
             contactModeSyncStatus: input.contactModeSyncStatus,
             contactModeLastSyncedAt: input.contactModeLastSyncedAt ?? null,
             contactModeSyncError: input.contactModeSyncError ?? null,
