@@ -455,6 +455,10 @@ function getActiveContactModeNetworkId(): ContactModeNetworkId | null {
   return null;
 }
 
+function isContactModeOnchainWriteEnabled(): boolean {
+  return NIGHTFORCE_APP_MODE === "preprod-write" && MIDNIGHT_NETWORK_ID === "preprod";
+}
+
 function contactModeNetworkMatchesActiveNetwork(
   networkId: ContactModeNetworkId | null,
 ): boolean {
@@ -1089,7 +1093,7 @@ export function MyProfile() {
     readContactMode,
   } = useWallet();
 
-  const canVerifyContactModeSync = getActiveContactModeNetworkId() !== null;
+  const canVerifyContactModeSync = isContactModeOnchainWriteEnabled();
   const publishInFlightRef = useRef(false);
 
   const [verificationRequestId, setVerificationRequestId] = useState<string | null>(null);
@@ -1584,6 +1588,8 @@ export function MyProfile() {
       ? contactModeContractAddress
       : null;
 
+  const contactModeOnchainWriteEnabled = isContactModeOnchainWriteEnabled();
+
   const nextContactModeForImpact = derivePreviewContactMode({
   hasEmailValue,
   showEmail,
@@ -1600,6 +1606,7 @@ const privateContactSignatureExpected =
 
 const contactModeTransactionExpected =
   hasChangesToPublish &&
+  contactModeOnchainWriteEnabled &&
   (!usableContactModeContractAddress ||
     savedContactMode !== nextContactModeForImpact);
 
@@ -2337,6 +2344,21 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
       setSavedPublicEmail(nextSavedPublicEmail);
       setSavedEncryptedHiddenPayload(nextSavedEncryptedHiddenPayload);
       setHasSavedShieldedEmail(Boolean(nextSavedEncryptedHiddenPayload));
+
+      if (!contactModeOnchainWriteEnabled) {
+        const nextMode = deriveContactModeForSync({
+          publicEmail: nextSavedPublicEmail,
+          encryptedHiddenPayload: nextSavedEncryptedHiddenPayload,
+        });
+
+        setContactModeContractAddress(existingContactModeAddress);
+        setContactModeNetworkId(data.profile.contactModeNetworkId ?? contactModeNetworkId);
+        setSavedContactMode(nextMode);
+
+        await settleAfterProfileWrite("Changes published.");
+        return;
+      }
+
       setSaveMsg("Profile saved. Syncing profile state...");
 
       if (existingContactModeAddress) {
