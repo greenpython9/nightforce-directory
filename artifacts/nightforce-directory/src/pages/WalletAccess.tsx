@@ -2,14 +2,9 @@ import { Link } from "wouter";
 import { useWallet } from "../hooks/useWallet";
 import { StatusBadge } from "../components/StatusBadge";
 import {
-  MOCK_WALLETS,
-  ADMIN_WALLET_ID,
   NIGHTFORCE_APP_MODE,
   MIDNIGHT_CONNECT_ENABLED,
   MIDNIGHT_NETWORK_ID,
-  PROFILE_PROOF_WRITE_ENABLED,
-  getProfileProofState,
-  type ProfileProofState,
 } from "../services/walletService";
 import { useEffect, useMemo, useState } from "react";
 import { buildNightforceApiUrl } from "../lib/nightforceApi";
@@ -84,20 +79,10 @@ export function WalletAccess() {
     availableMidnightWallets,
     walletError,
     isWalletLoading,
-    connect,
     connectMidnight,
-    writeProfileProof,
     disconnect,
     refreshStatus,
   } = useWallet();
-
-  const [showMockPicker, setShowMockPicker] = useState(false);
-  const [profileProofState, setProfileProofState] =
-    useState<ProfileProofState | null>(null);
-  const [isProfileProofLoading, setIsProfileProofLoading] = useState(false);
-  const [profileProofError, setProfileProofError] = useState<string | null>(null);
-  const [profileProofWriteMessage, setProfileProofWriteMessage] =
-    useState<string | null>(null);
 
   const [requestIdToBind, setRequestIdToBind] = useState("");
   const [bindError, setBindError] = useState<string | null>(null);
@@ -108,25 +93,6 @@ export function WalletAccess() {
   const [isLinkedRequestLoading, setIsLinkedRequestLoading] = useState(false);
   const [linkedRequestError, setLinkedRequestError] = useState<string | null>(null);
   const [copyRequestMessage, setCopyRequestMessage] = useState<string | null>(null);
-
-  async function reloadProfileProofState() {
-    setIsProfileProofLoading(true);
-    setProfileProofError(null);
-
-    try {
-      const data = await getProfileProofState();
-      setProfileProofState(data);
-    } catch (error) {
-      setProfileProofState(null);
-      setProfileProofError(
-        error instanceof Error
-          ? error.message
-          : "Failed to load profile-proof state.",
-      );
-    } finally {
-      setIsProfileProofLoading(false);
-    }
-  }
 
   useEffect(() => {
     let cancelled = false;
@@ -215,42 +181,6 @@ export function WalletAccess() {
     };
   }, [connectionMode, walletId]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadProfileProofState() {
-      setIsProfileProofLoading(true);
-      setProfileProofError(null);
-
-      try {
-        const data = await getProfileProofState();
-
-        if (!cancelled) {
-          setProfileProofState(data);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setProfileProofState(null);
-          setProfileProofError(
-            error instanceof Error
-              ? error.message
-              : "Failed to load profile-proof state.",
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setIsProfileProofLoading(false);
-        }
-      }
-    }
-
-    void loadProfileProofState();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   const isPreprodWriteMode = NIGHTFORCE_APP_MODE === "preprod-write";
   const isMainnetWriteMode = NIGHTFORCE_APP_MODE === "mainnet-write";
   const isMidnightWriteMode = isPreprodWriteMode || isMainnetWriteMode;
@@ -267,15 +197,16 @@ export function WalletAccess() {
     : "Midnight Wallet (Local)";
 
   const midnightModeHelpText = isMainnetWriteMode
-    ? "Mainnet mode is enabled for wallet connection prep. Profile Proof remains preprod-only until a mainnet deployment exists; Contact Mode mainnet writes are enabled in a later batch."
+    ? "Mainnet mode is enabled for Midnight wallet connection. Contact Mode uses active-network metadata to avoid mixing preprod and mainnet contracts."
     : isPreprodWriteMode
       ? "Preprod mode is enabled. Browser wallet connection is intended for the first real app-side write flow."
-      : "Injected Midnight browser wallets currently reject the local undeployed network in this app flow. The live read-only Profile Proof State panel below is still connected to the local contract.";
+      : "Injected Midnight browser wallets currently reject the local undeployed network in this app flow.";
 
   const connectedLabel = useMemo(() => {
     if (connectionMode === "midnight" && midnightSnapshot) {
       return midnightSnapshot.providerName;
     }
+
     return walletId;
   }, [connectionMode, midnightSnapshot, walletId]);
 
@@ -357,9 +288,9 @@ export function WalletAccess() {
         <div className="absolute left-1/2 top-[-260px] h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-zinc-700/10 blur-3xl" />
         <div className="absolute left-[15%] top-[28%] h-80 w-80 rounded-full bg-emerald-950/10 blur-3xl" />
         <div className="absolute right-[10%] top-[36%] h-96 w-96 rounded-full bg-zinc-800/10 blur-3xl" />
-    </div>
+      </div>
 
-    <div className="relative z-10 mx-auto flex w-full max-w-lg flex-col px-4 pb-16 pt-28 sm:pt-32">
+      <div className="relative z-10 mx-auto flex w-full max-w-lg flex-col px-4 pb-16 pt-28 sm:pt-32">
         <div className="mb-7 text-center">
           <h1 className="mb-3 text-3xl font-mono font-bold tracking-wider text-white">
             nightforce.cc
@@ -392,19 +323,14 @@ export function WalletAccess() {
               {connectedLabel ?? "—"}
             </div>
 
-            {connectionMode === "mock" ? (
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono text-zinc-500">Status:</span>
-                <StatusBadge status={verificationStatus} />
-              </div>
-            ) : (
+            {connectionMode === "midnight" && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs font-mono text-zinc-500">Mode:</span>
                   <span className="text-xs font-mono text-cyan-300">Midnight Wallet</span>
                   <span className="text-xs font-mono text-zinc-600">•</span>
                   <span className="text-xs font-mono text-emerald-300">
-                     {(midnightSnapshot?.networkId ?? MIDNIGHT_NETWORK_ID).toUpperCase()}
+                    {(midnightSnapshot?.networkId ?? MIDNIGHT_NETWORK_ID).toUpperCase()}
                   </span>
                 </div>
 
@@ -471,137 +397,103 @@ export function WalletAccess() {
                   </div>
                 </div>
 
-                {connectionMode === "midnight" &&
-                  verificationStatus !== "approved" && (
-                    <div className="mt-4 border-t border-zinc-800 pt-4">
-                      <div className="mb-2 text-xs font-mono font-semibold text-emerald-300">
-                        Bind Approved Request to This Midnight Wallet
-                      </div>
-                      <p className="mb-3 text-[11px] font-mono leading-relaxed text-zinc-500">
-                        After admin approval, your approved request ID can be detected from this
-                        connected Midnight wallet and used for binding.
-                      </p>
-
-                      {isLinkedRequestLoading && (
-                        <div className="mb-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[11px] font-mono text-zinc-400">
-                          Checking for a wallet-linked verification request...
-                        </div>
-                      )}
-
-                      {linkedRequestError && (
-                        <div className="mb-3 rounded-xl border border-red-900/60 bg-red-950/25 px-3 py-2.5 text-[11px] font-mono leading-5 text-red-300">
-                          {linkedRequestError}
-                        </div>
-                      )}
-
-                      {linkedVerificationRequest?.status === "pending" && (
-                        <div className="mb-3 rounded-xl border border-yellow-500/20 bg-yellow-400/10 px-3 py-2.5 text-[11px] font-mono leading-5 text-yellow-200">
-                          Your verification request is pending admin review. Once approved, the
-                          request ID will appear here automatically.
-                        </div>
-                      )}
-
-                      {linkedVerificationRequest?.status === "approved" && (
-                        <div className="mb-3 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.06] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
-                          <div className="mb-1 text-[11px] font-mono font-semibold text-emerald-300">
-                            Approved request found
-                          </div>
-                          <div className="mb-3 break-all rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-[11px] font-mono leading-5 text-zinc-300">
-                            {linkedVerificationRequest.id}
-                          </div>
-                          <div className="flex flex-col gap-2 sm:flex-row">
-                            <button
-                              type="button"
-                              onClick={() => void handleCopyRequestId()}
-                              className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] font-mono font-semibold text-zinc-300 transition-all hover:border-emerald-300/30 hover:bg-emerald-400/10 hover:text-emerald-100"
-                            >
-                              Copy Request ID
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setRequestIdToBind(linkedVerificationRequest.id)
-                              }
-                              className="rounded-lg border border-emerald-300/25 bg-emerald-400/10 px-3 py-2 text-[11px] font-mono font-semibold text-emerald-100 transition-all hover:border-emerald-300/40 hover:bg-emerald-400/15 hover:text-white"
-                            >
-                              Use This ID
-                            </button>
-                          </div>
-                          {copyRequestMessage && (
-                            <div className="mt-2 text-[11px] font-mono text-zinc-400">
-                              {copyRequestMessage}
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {linkedVerificationRequest?.status === "rejected" && (
-                        <div className="mb-3 rounded-xl border border-red-900/60 bg-red-950/25 px-3 py-2.5 text-[11px] font-mono leading-5 text-red-300">
-                          This wallet has a rejected verification request. Contact the team if you
-                          believe this should be reviewed again.
-                        </div>
-                      )}
-
-                      <input
-                        type="text"
-                        value={requestIdToBind}
-                        onChange={(e) => setRequestIdToBind(e.target.value)}
-                        placeholder="Paste approved verification request ID"
-                        className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-xs font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 mb-3"
-                      />
-
-                      {bindError && (
-                        <div className="mb-3 text-[11px] font-mono text-red-300">
-                          {bindError}
-                        </div>
-                      )}
-
-                      {bindSuccess && (
-                        <div className="mb-3 text-[11px] font-mono text-emerald-300">
-                          {bindSuccess}
-                        </div>
-                      )}
-
-                      <button
-                        onClick={() => void handleBindWallet()}
-                        disabled={isBinding || !walletId}
-                        className="w-full font-mono text-sm bg-cyan-950/40 hover:bg-cyan-950/60 text-cyan-300 border border-cyan-900 px-4 py-3 rounded-lg transition-colors disabled:opacity-50"
-                      >
-                        {isBinding ? "Binding Wallet..." : "Bind Wallet"}
-                      </button>
-                    </div>
-                  )}
-
-                {PROFILE_PROOF_WRITE_ENABLED && verificationStatus === "approved" && (
+                {verificationStatus !== "approved" && (
                   <div className="mt-4 border-t border-zinc-800 pt-4">
-                    <button
-                      onClick={async () => {
-                        setProfileProofWriteMessage(null);
+                    <div className="mb-2 text-xs font-mono font-semibold text-emerald-300">
+                      Bind Approved Request to This Midnight Wallet
+                    </div>
+                    <p className="mb-3 text-[11px] font-mono leading-relaxed text-zinc-500">
+                      After admin approval, your approved request ID can be detected from this
+                      connected Midnight wallet and used for binding.
+                    </p>
 
-                        try {
-                          const result = await writeProfileProof();
-                          await reloadProfileProofState();
-
-                          setProfileProofWriteMessage(
-                            `Write submitted on ${result.networkId}. Profile Proof state panel reloaded.`,
-                          );
-                        } catch {
-                          // walletError is already surfaced by the wallet hook
-                        }
-                      }}
-                      disabled={isWalletLoading}
-                      className="w-full font-mono text-sm bg-emerald-950/40 hover:bg-emerald-950/60 text-emerald-300 border border-emerald-900 px-4 py-3 rounded-lg transition-colors disabled:opacity-50"
-                    >
-                      {isWalletLoading
-                        ? "Writing Profile Proof..."
-                        : "Write Profile Proof (PUBLIC / MY)"}
-                    </button>
-
-                    {profileProofWriteMessage && (
-                      <div className="mt-3 text-[11px] font-mono text-emerald-300">
-                        {profileProofWriteMessage}
+                    {isLinkedRequestLoading && (
+                      <div className="mb-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-[11px] font-mono text-zinc-400">
+                        Checking for a wallet-linked verification request...
                       </div>
                     )}
+
+                    {linkedRequestError && (
+                      <div className="mb-3 rounded-xl border border-red-900/60 bg-red-950/25 px-3 py-2.5 text-[11px] font-mono leading-5 text-red-300">
+                        {linkedRequestError}
+                      </div>
+                    )}
+
+                    {linkedVerificationRequest?.status === "pending" && (
+                      <div className="mb-3 rounded-xl border border-yellow-500/20 bg-yellow-400/10 px-3 py-2.5 text-[11px] font-mono leading-5 text-yellow-200">
+                        Your verification request is pending admin review. Once approved, the
+                        request ID will appear here automatically.
+                      </div>
+                    )}
+
+                    {linkedVerificationRequest?.status === "approved" && (
+                      <div className="mb-3 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.06] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
+                        <div className="mb-1 text-[11px] font-mono font-semibold text-emerald-300">
+                          Approved request found
+                        </div>
+                        <div className="mb-3 break-all rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-[11px] font-mono leading-5 text-zinc-300">
+                          {linkedVerificationRequest.id}
+                        </div>
+                        <div className="flex flex-col gap-2 sm:flex-row">
+                          <button
+                            type="button"
+                            onClick={() => void handleCopyRequestId()}
+                            className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] font-mono font-semibold text-zinc-300 transition-all hover:border-emerald-300/30 hover:bg-emerald-400/10 hover:text-emerald-100"
+                          >
+                            Copy Request ID
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setRequestIdToBind(linkedVerificationRequest.id)
+                            }
+                            className="rounded-lg border border-emerald-300/25 bg-emerald-400/10 px-3 py-2 text-[11px] font-mono font-semibold text-emerald-100 transition-all hover:border-emerald-300/40 hover:bg-emerald-400/15 hover:text-white"
+                          >
+                            Use This ID
+                          </button>
+                        </div>
+                        {copyRequestMessage && (
+                          <div className="mt-2 text-[11px] font-mono text-zinc-400">
+                            {copyRequestMessage}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {linkedVerificationRequest?.status === "rejected" && (
+                      <div className="mb-3 rounded-xl border border-red-900/60 bg-red-950/25 px-3 py-2.5 text-[11px] font-mono leading-5 text-red-300">
+                        This wallet has a rejected verification request. Contact the team if you
+                        believe this should be reviewed again.
+                      </div>
+                    )}
+
+                    <input
+                      type="text"
+                      value={requestIdToBind}
+                      onChange={(event) => setRequestIdToBind(event.target.value)}
+                      placeholder="Paste approved verification request ID"
+                      className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-xs font-mono text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500 mb-3"
+                    />
+
+                    {bindError && (
+                      <div className="mb-3 text-[11px] font-mono text-red-300">
+                        {bindError}
+                      </div>
+                    )}
+
+                    {bindSuccess && (
+                      <div className="mb-3 text-[11px] font-mono text-emerald-300">
+                        {bindSuccess}
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => void handleBindWallet()}
+                      disabled={isBinding || !walletId}
+                      className="w-full font-mono text-sm bg-cyan-950/40 hover:bg-cyan-950/60 text-cyan-300 border border-cyan-900 px-4 py-3 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {isBinding ? "Binding Wallet..." : "Bind Wallet"}
+                    </button>
                   </div>
                 )}
               </div>
@@ -609,43 +501,6 @@ export function WalletAccess() {
           </div>
         ) : (
           <div className="mb-8 space-y-3 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(24,24,27,0.92),rgba(9,9,11,0.96))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setShowMockPicker((prev) => !prev);
-                }}
-                disabled={isWalletLoading}
-                className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-mono font-semibold text-zinc-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all hover:border-emerald-300/30 hover:bg-emerald-400/10 hover:text-emerald-100 hover:shadow-[0_0_18px_rgba(52,211,153,0.16),inset_0_1px_0_rgba(255,255,255,0.04)] disabled:opacity-50"
-              >
-                {isWalletLoading ? "Working..." : "Connect Mock Wallet"}
-              </button>
-
-              {showMockPicker && (
-                <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-white/10 bg-zinc-950 shadow-2xl">
-                  <div className="border-b border-white/10 px-3 py-2">
-                    <span className="text-xs font-mono text-zinc-500">
-                      Select mock wallet
-                    </span>
-                  </div>
-                  {MOCK_WALLETS.map((wId) => (
-                    <button
-                      key={wId}
-                      onClick={async () => {
-                        await connect(wId);
-                        setShowMockPicker(false);
-                      }}
-                      className="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm font-mono text-zinc-300 transition-colors hover:bg-emerald-400/10 hover:text-emerald-100"
-                    >
-                      <span>{wId}</span>
-                      {wId === ADMIN_WALLET_ID && (
-                        <span className="text-xs text-zinc-500">[admin]</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
             {MIDNIGHT_CONNECT_ENABLED && (
               <div className="space-y-2">
                 {availableMidnightWallets.length > 0 ? (
@@ -670,7 +525,7 @@ export function WalletAccess() {
                         }
                         title={
                           laceComingSoon
-                            ? "Lace Wallet (Midnight) is temporarily disabled while preprod prover testing is being finalized."
+                            ? "Lace Wallet (Midnight) is temporarily disabled while wallet compatibility testing is finalized."
                             : undefined
                         }
                       >
@@ -709,8 +564,8 @@ export function WalletAccess() {
                     <span className="font-semibold text-zinc-300">
                       Lace Wallet (Midnight):
                     </span>{" "}
-                    coming soon. Lace is detected, but temporarily disabled while
-                    preprod prover reliability is being finalized.
+                    coming soon. Lace is detected, but temporarily disabled while wallet
+                    compatibility testing is finalized.
                   </div>
                 )}
               </div>
@@ -729,71 +584,11 @@ export function WalletAccess() {
 
             <p className="mt-3 px-1 text-[11px] font-mono leading-5 text-zinc-600">
               {isMidnightWriteMode
-                ? "Mock wallet stays available for the existing proof-of-life UI flow. Midnight wallet mode is active for the selected network."
-                : "Mock wallet keeps the existing proof-of-life UI flow. Local Midnight contract state is shown below through the API bridge while app-side write remains blocked."}
+                ? "Midnight wallet mode is active for the selected network."
+                : "Local read-only mode is active. Use the live site with a supported Midnight wallet for profile access."}
             </p>
           </div>
         )}
-
-        <div className="mb-6 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
-          <div className="text-xs font-mono text-emerald-300 mb-2">
-            {PROFILE_PROOF_WRITE_ENABLED
-              ? "Profile Proof State (Current Preprod Source)"
-              : "Profile Proof State"}
-          </div>
-
-          {isProfileProofLoading ? (
-            <div className="text-[11px] font-mono text-zinc-400">
-              Loading contract state...
-            </div>
-          ) : profileProofError ? (
-            <div className="text-[11px] font-mono text-red-300">
-              {profileProofError}
-            </div>
-          ) : profileProofState ? (
-            <div className="grid gap-2">
-              <div>
-                <div className="text-[11px] font-mono text-zinc-500 mb-1">
-                  Contract Address
-                </div>
-                <div className="text-xs font-mono text-zinc-200 break-all">
-                  {profileProofState.contractAddress}
-                </div>
-              </div>
-
-              <div>
-                <div className="text-[11px] font-mono text-zinc-500 mb-1">
-                  Network
-                </div>
-                <div className="text-xs font-mono text-zinc-200">
-                  {profileProofState.network}
-                </div>
-              </div>
-
-              <div>
-                <div className="text-[11px] font-mono text-zinc-500 mb-1">
-                  Visibility
-                </div>
-                <div className="text-xs font-mono text-zinc-200">
-                  {profileProofState.visibility.name} ({profileProofState.visibility.value})
-                </div>
-              </div>
-
-              <div>
-                <div className="text-[11px] font-mono text-zinc-500 mb-1">
-                  Country Code
-                </div>
-                <div className="text-xs font-mono text-zinc-200">
-                  {profileProofState.countryCode.name} ({profileProofState.countryCode.value})
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="text-[11px] font-mono text-zinc-500">
-              No profile-proof state loaded.
-            </div>
-          )}
-        </div>
 
         <div className="flex flex-col gap-3">
           <Link
@@ -826,7 +621,7 @@ export function WalletAccess() {
               </div>
               <div className="text-[11px] font-mono text-zinc-400">
                 {isMainnetWriteMode
-                  ? "Mainnet mode active: browser wallet connection is enabled. Contact Mode mainnet writes are enabled in a later batch."
+                  ? "Mainnet mode active: browser wallet connection is enabled. Contact Mode uses the active mainnet metadata path."
                   : isPreprodWriteMode
                     ? "Preprod mode active: browser wallet connection is enabled for app-side write."
                     : "Local read-only mode active: browser wallet write is currently unavailable."}
