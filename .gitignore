@@ -76,3 +76,8 @@ LOG.old
 
 # macOS archive metadata
 __MACOSX/
+
+# Replit local/config artifacts
+.replit
+.replitignore
+replit.md
