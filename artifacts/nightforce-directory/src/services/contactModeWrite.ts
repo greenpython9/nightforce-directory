@@ -336,9 +336,9 @@ export async function deployContactModePublic(
   networkId: string;
   initialMode: ContactModeWriteValue;
 }> {
-  if (MIDNIGHT_NETWORK_ID !== "preprod") {
+  if (MIDNIGHT_NETWORK_ID !== "preprod" && MIDNIGHT_NETWORK_ID !== "mainnet") {
     throw new Error(
-      `Contact-mode deploy is only enabled in preprod-write mode. Current network: ${MIDNIGHT_NETWORK_ID}`,
+      `Contact-mode read requires preprod or mainnet. Current network: ${MIDNIGHT_NETWORK_ID}`,
     );
   }
 
@@ -490,9 +490,9 @@ export async function updateContactModePublic(
   networkId: string;
   nextMode: ContactModeWriteValue;
 }> {
-  if (MIDNIGHT_NETWORK_ID !== "preprod") {
+  if (MIDNIGHT_NETWORK_ID !== "preprod" && MIDNIGHT_NETWORK_ID !== "mainnet") {
     throw new Error(
-      `Contact-mode update is only enabled in preprod-write mode. Current network: ${MIDNIGHT_NETWORK_ID}`,
+      `Contact-mode update requires preprod or mainnet. Current network: ${MIDNIGHT_NETWORK_ID}`,
     );
   }
 
@@ -648,9 +648,9 @@ export async function readContactModePublic(contractAddress: string): Promise<{
   contactMode: ContactModeWriteValue;
   rawValue: number | string;
 }> {
-  if (MIDNIGHT_NETWORK_ID !== "preprod") {
+  if (MIDNIGHT_NETWORK_ID !== "preprod" && MIDNIGHT_NETWORK_ID !== "mainnet") {
     throw new Error(
-      `Contact-mode read is only enabled in preprod-write mode. Current network: ${MIDNIGHT_NETWORK_ID}`,
+      `Contact-mode deploy requires preprod or mainnet. Current network: ${MIDNIGHT_NETWORK_ID}`,
     );
   }
 

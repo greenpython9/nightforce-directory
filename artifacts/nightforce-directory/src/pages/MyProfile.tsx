@@ -455,6 +455,31 @@ function getActiveContactModeNetworkId(): ContactModeNetworkId | null {
   return null;
 }
 
+function contactModeNetworkMatchesActiveNetwork(
+  networkId: ContactModeNetworkId | null,
+): boolean {
+  const activeNetworkId = getActiveContactModeNetworkId();
+
+  return Boolean(activeNetworkId && networkId === activeNetworkId);
+}
+
+function getContactModeAddressForActiveNetwork(args: {
+  contractAddress: string | null;
+  networkId: ContactModeNetworkId | null;
+  fallbackContractAddress: string | null;
+  fallbackNetworkId: ContactModeNetworkId | null;
+}): string | null {
+  if (contactModeNetworkMatchesActiveNetwork(args.networkId)) {
+    return args.contractAddress;
+  }
+
+  if (contactModeNetworkMatchesActiveNetwork(args.fallbackNetworkId)) {
+    return args.fallbackContractAddress;
+  }
+
+  return null;
+}
+
 async function updateContactModeSyncMetadata(args: {
   verificationRequestId: string;
   contactModeContractAddress: string | null;
@@ -1064,7 +1089,7 @@ export function MyProfile() {
     readContactMode,
   } = useWallet();
 
-  const canVerifyContactModeSync = NIGHTFORCE_APP_MODE === "preprod-write";
+  const canVerifyContactModeSync = getActiveContactModeNetworkId() !== null;
   const publishInFlightRef = useRef(false);
 
   const [verificationRequestId, setVerificationRequestId] = useState<string | null>(null);
@@ -1554,6 +1579,11 @@ export function MyProfile() {
     socialUrlsAreValid &&
     hasChangesToPublish;
 
+  const usableContactModeContractAddress =
+    contactModeNetworkMatchesActiveNetwork(contactModeNetworkId)
+      ? contactModeContractAddress
+      : null;
+
   const nextContactModeForImpact = derivePreviewContactMode({
   hasEmailValue,
   showEmail,
@@ -1570,7 +1600,7 @@ const privateContactSignatureExpected =
 
 const contactModeTransactionExpected =
   hasChangesToPublish &&
-  (!contactModeContractAddress ||
+  (!usableContactModeContractAddress ||
     savedContactMode !== nextContactModeForImpact);
 
 const publishImpact = !hasChangesToPublish
@@ -1760,6 +1790,13 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
 
       const data = payload as ProfileResponse;
       const contractAddress = data.profile.contactModeContractAddress;
+      const contractNetworkId = data.profile.contactModeNetworkId ?? null;
+
+      if (contractAddress && !contactModeNetworkMatchesActiveNetwork(contractNetworkId)) {
+        throw new Error(
+          `Stored Contact Mode contract belongs to ${contractNetworkId ?? "unknown"} but the app is running on ${MIDNIGHT_NETWORK_ID}. Publish again to create a contract for the active network.`,
+        );
+      }
 
       if (!contractAddress) {
         throw new Error("No Contact Mode contract address is stored for this profile.");
@@ -1839,6 +1876,7 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
       });
 
       setContactModeContractAddress(updateResult.contractAddress);
+      setContactModeNetworkId(getActiveContactModeNetworkId());
       setSavedContactMode(mismatch.backendMode);
       setContactModeCompareResult({
         backendMode: mismatch.backendMode,
@@ -1973,8 +2011,12 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
       }
 
       const data = payload as ProfileResponse;
-      const existingContactModeAddress =
-        data.profile.contactModeContractAddress ?? contactModeContractAddress ?? null;
+      const existingContactModeAddress = getContactModeAddressForActiveNetwork({
+        contractAddress: data.profile.contactModeContractAddress ?? null,
+        networkId: data.profile.contactModeNetworkId ?? null,
+        fallbackContractAddress: contactModeContractAddress,
+        fallbackNetworkId: contactModeNetworkId,
+      });
       const nextMode: ContactMode = "NO_CONTACT";
 
       let syncPending = false;
@@ -2284,8 +2326,12 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
 
       const data = payload as ProfileResponse;
       const nextSavedEncryptedHiddenPayload = encryptedHiddenPayload ?? null;
-      const existingContactModeAddress =
-        data.profile.contactModeContractAddress ?? contactModeContractAddress ?? null;
+      const existingContactModeAddress = getContactModeAddressForActiveNetwork({
+        contractAddress: data.profile.contactModeContractAddress ?? null,
+        networkId: data.profile.contactModeNetworkId ?? null,
+        fallbackContractAddress: contactModeContractAddress,
+        fallbackNetworkId: contactModeNetworkId,
+      });
 
       setPublicId(data.profile.publicId ?? "");
       setSavedPublicEmail(nextSavedPublicEmail);
@@ -2654,7 +2700,7 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
                     disabled={
                       contactModeCompareLoading ||
                       contactModeRepairLoading ||
-                      !contactModeContractAddress
+                      !usableContactModeContractAddress
                     }
                     className="font-mono text-[11px] bg-zinc-950 hover:bg-zinc-800 text-zinc-200 border border-zinc-700 px-3 py-2 rounded-lg transition-colors disabled:opacity-50"
                   >
@@ -2668,7 +2714,7 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
                       disabled={
                         contactModeCompareLoading ||
                         contactModeRepairLoading ||
-                        !contactModeContractAddress
+                        !usableContactModeContractAddress
                       }
                       className="font-mono text-[11px] bg-red-950/40 hover:bg-red-950/70 text-red-200 border border-red-500/40 px-3 py-2 rounded-lg transition-colors disabled:opacity-50"
                     >
@@ -2703,9 +2749,11 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
                       ? contactModeCompareResult.matched
                         ? "Verified"
                         : "Mismatch"
-                      : contactModeContractAddress
+                      : usableContactModeContractAddress
                         ? "Ready to verify"
-                        : "No contract yet"}
+                        : contactModeContractAddress
+                          ? "Wrong network"
+                          : "No contract yet"}
                   </span>
                 </div>
               )}
