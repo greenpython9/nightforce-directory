@@ -66,8 +66,25 @@ type WalletBindingResponse = {
     boundAt: string;
     isActive: "true" | "false";
     updatedAt: string;
-  };
+  } | null;
 };
+
+function isWalletBindingResponse(value: unknown): value is WalletBindingResponse {
+  if (typeof value !== "object" || value === null || !("binding" in value)) {
+    return false;
+  }
+
+  const binding = (value as WalletBindingResponse).binding;
+
+  return (
+    binding === null ||
+    (typeof binding === "object" &&
+      typeof binding.id === "string" &&
+      typeof binding.verificationRequestId === "string" &&
+      typeof binding.midnightWalletAddress === "string" &&
+      typeof binding.isActive === "string")
+  );
+}
 
 function resolveMidnightWalletAddress(
   snapshot: MidnightWalletSnapshot | null,
@@ -119,9 +136,11 @@ async function fetchBackendVerificationStatus(
     throw new Error(message);
   }
 
-  const data = payload as WalletBindingResponse;
+  if (!isWalletBindingResponse(payload) || !payload.binding) {
+    return "not_verified";
+  }
 
-  if (data.binding.isActive === "true") {
+  if (payload.binding.isActive === "true") {
     return "approved";
   }
 
