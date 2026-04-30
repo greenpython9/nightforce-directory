@@ -101,19 +101,57 @@ export type ContactModeWriteValue =
   | "PRIVATE_CONTACT_AVAILABLE"
   | "PUBLIC_CONTACT_ALLOWED";
 
-const CONTACT_MODE_ZK_BASE_PATH =
-  "/midnight-contact-mode/contracts/managed/contact-mode/";
+const CONTACT_MODE_ZK_BASE_URL = new URL(
+  "../../midnight-contact-mode/contracts/managed/contact-mode/",
+  import.meta.url,
+).href;
 
 function getContactModeZkBaseUrl(): string {
-  return new URL(CONTACT_MODE_ZK_BASE_PATH, window.location.origin).href;
+  return CONTACT_MODE_ZK_BASE_URL;
 }
 
 const CONTACT_MODE_PRIVATE_STATE_ID = "contactModeStateBrowser";
+const CONTACT_MODE_LOCAL_SECRET_KEY_STORAGE_KEY =
+  "nightforce:contact-mode:local-secret-key:v1";
+
+function getOrCreateContactModeLocalSecretKey(): Uint8Array {
+  if (typeof window === "undefined" || !window.localStorage) {
+    throw new Error("localStorage is not available for Contact Mode witnesses.");
+  }
+
+  const existing = window.localStorage.getItem(
+    CONTACT_MODE_LOCAL_SECRET_KEY_STORAGE_KEY,
+  );
+
+  if (existing) {
+    const bytes = hexToUint8Array(existing);
+
+    if (bytes.length === 32) {
+      return bytes;
+    }
+  }
+
+  const bytes = new Uint8Array(32);
+  window.crypto.getRandomValues(bytes);
+
+  window.localStorage.setItem(
+    CONTACT_MODE_LOCAL_SECRET_KEY_STORAGE_KEY,
+    uint8ArrayToHex(bytes),
+  );
+
+  return bytes;
+}
+
+const contactModeWitnesses = {
+  localSecretKey(context: { privateState: unknown }) {
+    return [context.privateState, getOrCreateContactModeLocalSecretKey()];
+  },
+};
 
 const compiledContract = CompiledContract.make(
   "contact-mode",
   (ContactModeContract as any).Contract,
-).pipe(CompiledContract.withVacantWitnesses) as any;
+).pipe(CompiledContract.withWitnesses(contactModeWitnesses as any)) as any;
 
 function uint8ArrayToHex(bytes: Uint8Array): string {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");

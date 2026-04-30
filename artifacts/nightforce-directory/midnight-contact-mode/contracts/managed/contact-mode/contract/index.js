@@ -10,23 +10,9 @@ export var ContactMode;
 
 const _descriptor_0 = new __compactRuntime.CompactTypeBytes(32);
 
-class _ZswapCoinPublicKey_0 {
-  alignment() {
-    return _descriptor_0.alignment();
-  }
-  fromValue(value_0) {
-    return {
-      bytes: _descriptor_0.fromValue(value_0)
-    }
-  }
-  toValue(value_0) {
-    return _descriptor_0.toValue(value_0.bytes);
-  }
-}
+const _descriptor_1 = new __compactRuntime.CompactTypeEnum(2, 1);
 
-const _descriptor_1 = new _ZswapCoinPublicKey_0();
-
-const _descriptor_2 = new __compactRuntime.CompactTypeEnum(2, 1);
+const _descriptor_2 = new __compactRuntime.CompactTypeVector(2, _descriptor_0);
 
 const _descriptor_3 = new __compactRuntime.CompactTypeUnsignedInteger(18446744073709551615n, 8);
 
@@ -80,6 +66,9 @@ export class Contract {
     if (typeof(witnesses_0) !== 'object') {
       throw new __compactRuntime.CompactError('first (witnesses) argument to Contract constructor is not an object');
     }
+    if (typeof(witnesses_0.localSecretKey) !== 'function') {
+      throw new __compactRuntime.CompactError('first (witnesses) argument to Contract constructor does not contain a function-valued field named localSecretKey');
+    }
     this.witnesses = witnesses_0;
     this.circuits = {
       setContactMode: (...args_1) => {
@@ -91,22 +80,22 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('setContactMode',
                                      'argument 1 (as invoked from Typescript)',
-                                     'contact-mode.compact line 19 char 1',
+                                     'contact-mode.compact line 24 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
         if (!(typeof(nextMode_0) === 'number' && nextMode_0 >= 0 && nextMode_0 <= 2)) {
           __compactRuntime.typeError('setContactMode',
                                      'argument 1 (argument 2 as invoked from Typescript)',
-                                     'contact-mode.compact line 19 char 1',
+                                     'contact-mode.compact line 24 char 1',
                                      'Enum<ContactMode, NO_CONTACT, PRIVATE_CONTACT_AVAILABLE, PUBLIC_CONTACT_ALLOWED>',
                                      nextMode_0)
         }
         const context = { ...contextOrig_0, gasCost: __compactRuntime.emptyRunningCost() };
         const partialProofData = {
           input: {
-            value: _descriptor_2.toValue(nextMode_0),
-            alignment: _descriptor_2.alignment()
+            value: _descriptor_1.toValue(nextMode_0),
+            alignment: _descriptor_1.alignment()
           },
           output: undefined,
           publicTranscript: [],
@@ -117,6 +106,9 @@ export class Contract {
                                                 nextMode_0);
         partialProofData.output = { value: [], alignment: [] };
         return { result: result_0, context: context, proofData: partialProofData, gasCost: context.gasCost };
+      },
+      getOwnerCommitment(context, ...args_1) {
+        return { result: pureCircuits.getOwnerCommitment(...args_1), context };
       }
     };
     this.impureCircuits = { setContactMode: this.circuits.setContactMode };
@@ -131,6 +123,9 @@ export class Contract {
     if (typeof(constructorContext_0) !== 'object') {
       throw new __compactRuntime.CompactError(`Contract state constructor: expected 'constructorContext' in argument 1 (as invoked from Typescript) to be an object`);
     }
+    if (!('initialPrivateState' in constructorContext_0)) {
+      throw new __compactRuntime.CompactError(`Contract state constructor: expected 'initialPrivateState' in argument 1 (as invoked from Typescript)`);
+    }
     if (!('initialZswapLocalState' in constructorContext_0)) {
       throw new __compactRuntime.CompactError(`Contract state constructor: expected 'initialZswapLocalState' in argument 1 (as invoked from Typescript)`);
     }
@@ -140,7 +135,7 @@ export class Contract {
     if (!(typeof(initialMode_0) === 'number' && initialMode_0 >= 0 && initialMode_0 <= 2)) {
       __compactRuntime.typeError('Contract state constructor',
                                  'argument 1 (argument 2 as invoked from Typescript)',
-                                 'contact-mode.compact line 14 char 1',
+                                 'contact-mode.compact line 16 char 1',
                                  'Enum<ContactMode, NO_CONTACT, PRIVATE_CONTACT_AVAILABLE, PUBLIC_CONTACT_ALLOWED>',
                                  initialMode_0)
     }
@@ -164,8 +159,8 @@ export class Contract {
                                                  value: __compactRuntime.StateValue.newCell({ value: _descriptor_8.toValue(0n),
                                                                                               alignment: _descriptor_8.alignment() }).encode() } },
                                        { push: { storage: true,
-                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_1.toValue({ bytes: new Uint8Array(32) }),
-                                                                                              alignment: _descriptor_1.alignment() }).encode() } },
+                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_0.toValue(new Uint8Array(32)),
+                                                                                              alignment: _descriptor_0.alignment() }).encode() } },
                                        { ins: { cached: false, n: 1 } }]);
     __compactRuntime.queryLedgerState(context,
                                       partialProofData,
@@ -174,10 +169,11 @@ export class Contract {
                                                  value: __compactRuntime.StateValue.newCell({ value: _descriptor_8.toValue(1n),
                                                                                               alignment: _descriptor_8.alignment() }).encode() } },
                                        { push: { storage: true,
-                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_2.toValue(0),
-                                                                                              alignment: _descriptor_2.alignment() }).encode() } },
+                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_1.toValue(0),
+                                                                                              alignment: _descriptor_1.alignment() }).encode() } },
                                        { ins: { cached: false, n: 1 } }]);
-    const tmp_0 = this._ownPublicKey_0(context, partialProofData);
+    const _sk_0 = this._localSecretKey_0(context, partialProofData);
+    const commitment_0 = this._getOwnerCommitment_0(_sk_0);
     __compactRuntime.queryLedgerState(context,
                                       partialProofData,
                                       [
@@ -185,8 +181,8 @@ export class Contract {
                                                  value: __compactRuntime.StateValue.newCell({ value: _descriptor_8.toValue(0n),
                                                                                               alignment: _descriptor_8.alignment() }).encode() } },
                                        { push: { storage: true,
-                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_1.toValue(tmp_0),
-                                                                                              alignment: _descriptor_1.alignment() }).encode() } },
+                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_0.toValue(commitment_0),
+                                                                                              alignment: _descriptor_0.alignment() }).encode() } },
                                        { ins: { cached: false, n: 1 } }]);
     __compactRuntime.queryLedgerState(context,
                                       partialProofData,
@@ -195,8 +191,8 @@ export class Contract {
                                                  value: __compactRuntime.StateValue.newCell({ value: _descriptor_8.toValue(1n),
                                                                                               alignment: _descriptor_8.alignment() }).encode() } },
                                        { push: { storage: true,
-                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_2.toValue(initialMode_0),
-                                                                                              alignment: _descriptor_2.alignment() }).encode() } },
+                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_1.toValue(initialMode_0),
+                                                                                              alignment: _descriptor_1.alignment() }).encode() } },
                                        { ins: { cached: false, n: 1 } }]);
     state_0.data = new __compactRuntime.ChargedState(context.currentQueryContext.state.state);
     return {
@@ -205,16 +201,31 @@ export class Contract {
       currentZswapLocalState: context.currentZswapLocalState
     }
   }
-  _ownPublicKey_0(context, partialProofData) {
-    const result_0 = __compactRuntime.ownPublicKey(context);
+  _persistentHash_0(value_0) {
+    const result_0 = __compactRuntime.persistentHash(_descriptor_2, value_0);
+    return result_0;
+  }
+  _localSecretKey_0(context, partialProofData) {
+    const witnessContext_0 = __compactRuntime.createWitnessContext(ledger(context.currentQueryContext.state), context.currentPrivateState, context.currentQueryContext.address);
+    const [nextPrivateState_0, result_0] = this.witnesses.localSecretKey(witnessContext_0);
+    context.currentPrivateState = nextPrivateState_0;
+    if (!(result_0.buffer instanceof ArrayBuffer && result_0.BYTES_PER_ELEMENT === 1 && result_0.length === 32)) {
+      __compactRuntime.typeError('localSecretKey',
+                                 'return value',
+                                 'contact-mode.compact line 14 char 1',
+                                 'Bytes<32>',
+                                 result_0)
+    }
     partialProofData.privateTranscriptOutputs.push({
-      value: _descriptor_1.toValue(result_0),
-      alignment: _descriptor_1.alignment()
+      value: _descriptor_0.toValue(result_0),
+      alignment: _descriptor_0.alignment()
     });
     return result_0;
   }
   _setContactMode_0(context, partialProofData, nextMode_0) {
-    __compactRuntime.assert(this._equal_0(_descriptor_1.fromValue(__compactRuntime.queryLedgerState(context,
+    const _sk_0 = this._localSecretKey_0(context, partialProofData);
+    const commitment_0 = this._getOwnerCommitment_0(_sk_0);
+    __compactRuntime.assert(this._equal_0(_descriptor_0.fromValue(__compactRuntime.queryLedgerState(context,
                                                                                                     partialProofData,
                                                                                                     [
                                                                                                      { dup: { n: 0 } },
@@ -226,8 +237,7 @@ export class Contract {
                                                                                                                                 alignment: _descriptor_8.alignment() } }] } },
                                                                                                      { popeq: { cached: false,
                                                                                                                 result: undefined } }]).value),
-                                          this._ownPublicKey_0(context,
-                                                               partialProofData)),
+                                          commitment_0),
                             'You are not the owner');
     __compactRuntime.queryLedgerState(context,
                                       partialProofData,
@@ -236,17 +246,17 @@ export class Contract {
                                                  value: __compactRuntime.StateValue.newCell({ value: _descriptor_8.toValue(1n),
                                                                                               alignment: _descriptor_8.alignment() }).encode() } },
                                        { push: { storage: true,
-                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_2.toValue(nextMode_0),
-                                                                                              alignment: _descriptor_2.alignment() }).encode() } },
+                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_1.toValue(nextMode_0),
+                                                                                              alignment: _descriptor_1.alignment() }).encode() } },
                                        { ins: { cached: false, n: 1 } }]);
     return [];
   }
+  _getOwnerCommitment_0(_sk_0) {
+    return this._persistentHash_0([new Uint8Array([110, 105, 103, 104, 116, 102, 111, 114, 99, 101, 58, 99, 111, 110, 116, 97, 99, 116, 45, 111, 119, 110, 101, 114, 58, 0, 0, 0, 0, 0, 0, 0]),
+                                   _sk_0]);
+  }
   _equal_0(x0, y0) {
-    {
-      let x1 = x0.bytes;
-      let y1 = y0.bytes;
-      if (!x1.every((x, i) => y1[i] === x)) { return false; }
-    }
+    if (!x0.every((x, i) => y0[i] === x)) { return false; }
     return true;
   }
 }
@@ -264,8 +274,8 @@ export function ledger(stateOrChargedState) {
     privateTranscriptOutputs: []
   };
   return {
-    get owner() {
-      return _descriptor_1.fromValue(__compactRuntime.queryLedgerState(context,
+    get ownerCommitment() {
+      return _descriptor_0.fromValue(__compactRuntime.queryLedgerState(context,
                                                                        partialProofData,
                                                                        [
                                                                         { dup: { n: 0 } },
@@ -279,7 +289,7 @@ export function ledger(stateOrChargedState) {
                                                                                    result: undefined } }]).value);
     },
     get contactMode() {
-      return _descriptor_2.fromValue(__compactRuntime.queryLedgerState(context,
+      return _descriptor_1.fromValue(__compactRuntime.queryLedgerState(context,
                                                                        partialProofData,
                                                                        [
                                                                         { dup: { n: 0 } },
@@ -297,8 +307,23 @@ export function ledger(stateOrChargedState) {
 const _emptyContext = {
   currentQueryContext: new __compactRuntime.QueryContext(new __compactRuntime.ContractState().data, __compactRuntime.dummyContractAddress())
 };
-const _dummyContract = new Contract({ });
-export const pureCircuits = {};
+const _dummyContract = new Contract({ localSecretKey: (...args) => undefined });
+export const pureCircuits = {
+  getOwnerCommitment: (...args_0) => {
+    if (args_0.length !== 1) {
+      throw new __compactRuntime.CompactError(`getOwnerCommitment: expected 1 argument (as invoked from Typescript), received ${args_0.length}`);
+    }
+    const _sk_0 = args_0[0];
+    if (!(_sk_0.buffer instanceof ArrayBuffer && _sk_0.BYTES_PER_ELEMENT === 1 && _sk_0.length === 32)) {
+      __compactRuntime.typeError('getOwnerCommitment',
+                                 'argument 1',
+                                 'contact-mode.compact line 33 char 1',
+                                 'Bytes<32>',
+                                 _sk_0)
+    }
+    return _dummyContract._getOwnerCommitment_0(_sk_0);
+  }
+};
 export const contractReferenceLocations =
   { tag: 'publicLedgerArray', indices: { } };
 //# sourceMappingURL=index.js.map

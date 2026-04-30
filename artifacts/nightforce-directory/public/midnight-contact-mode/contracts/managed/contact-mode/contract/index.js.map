@@ -1,8 +1,0 @@
-{
-  "version": 3,
-  "file": "index.js",
-  "sourceRoot": "../../../../",
-  "sources": ["contracts/contact-mode.compact", "compiler/standard-library.compact"],
-  "names": [],
-  "mappings": ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;EAaA;;;;;;;;;;MAKA,AAAA,cAGC;;;;;cAH6B,UAAqB;;;;;;;;;;;;;;;;;;yCAArB,UAAqB;;;;;;;;;gDAArB,UAAqB;;;OAGlD;;;;GALA;EAHD;;;;;UAAY,aAAwB;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;IAHpC;;;;;;;;;yEAA+C;IAC/C;;;;;;;;;yEAAuC;UAGrC,KAAK;IAAL;;;;;;;2HAAA,KAAK;;yEAAA;IACL;;;;;;;2HAAuB,aAAW;;yEAAvB;;;;;;;GACZ;EChBD,AAAA;;;;;;;;EDkBA,AAAA,iBAGC,4BAH6B,UAAqB;kEAC1C;;;;;;;;;;;uIAAK;;;;IACZ;;;;;;;2HAAuB,UAAQ;;yEAApB;;GACZ;;;;;;;;;;;;;;;;;;;;;;;;IAXD;qCAAA;;;;;;;;;;;0GAA+C;KAAA;IAC/C;qCAAA;;;;;;;;;;;0GAAuC;KAAA;;;;;;;;;;"
-}

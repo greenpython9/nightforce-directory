@@ -26,9 +26,36 @@
         "types": [
         ]
       }
+    },
+    {
+      "name": "getOwnerCommitment",
+      "pure": true,
+      "proof": false,
+      "arguments": [
+        {
+          "name": "_sk",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
     }
   ],
   "witnesses": [
+    {
+      "name": "localSecretKey",
+      "arguments": [
+      ],
+      "result type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    }
   ],
   "contracts": [
   ]

@@ -6,6 +6,7 @@ export enum ContactMode { NO_CONTACT = 0,
 }
 
 export type Witnesses<PS> = {
+  localSecretKey(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
 }
 
 export type ImpureCircuits<PS> = {
@@ -19,15 +20,18 @@ export type ProvableCircuits<PS> = {
 }
 
 export type PureCircuits = {
+  getOwnerCommitment(_sk_0: Uint8Array): Uint8Array;
 }
 
 export type Circuits<PS> = {
   setContactMode(context: __compactRuntime.CircuitContext<PS>,
                  nextMode_0: ContactMode): __compactRuntime.CircuitResults<PS, []>;
+  getOwnerCommitment(context: __compactRuntime.CircuitContext<PS>,
+                     _sk_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
 }
 
 export type Ledger = {
-  readonly owner: { bytes: Uint8Array };
+  readonly ownerCommitment: Uint8Array;
   readonly contactMode: ContactMode;
 }
 

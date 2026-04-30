@@ -8,15 +8,28 @@ export enum ContactMode {
   PUBLIC_CONTACT_ALLOWED
 }
 
-export sealed ledger owner: ZswapCoinPublicKey;
+export ledger ownerCommitment: Bytes<32>;
 export ledger contactMode: ContactMode;
 
+witness localSecretKey(): Bytes<32>;
+
 constructor(initialMode: ContactMode) {
-  owner = ownPublicKey();
+  const _sk = localSecretKey();
+  const commitment = getOwnerCommitment(_sk);
+
+  ownerCommitment = disclose(commitment);
   contactMode = disclose(initialMode);
 }
 
 export circuit setContactMode(nextMode: ContactMode): [] {
-  assert(owner == ownPublicKey(), "You are not the owner");
+  const _sk = localSecretKey();
+  const commitment = getOwnerCommitment(_sk);
+
+  assert(ownerCommitment == disclose(commitment), "You are not the owner");
+
   contactMode = disclose(nextMode);
+}
+
+export circuit getOwnerCommitment(_sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "nightforce:contact-owner:"), _sk]);
 }
