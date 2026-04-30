@@ -28,9 +28,48 @@ if (!basePath) {
   );
 }
 
+function patchMidnightWalletAddressFormat() {
+  return {
+    name: "nightforce-patch-midnight-wallet-address-format",
+    enforce: "pre" as const,
+    transform(code: string, id: string) {
+      if (
+        !id.includes("@midnight-ntwrk/wallet-sdk-address-format") ||
+        !id.includes("/dist/index.js")
+      ) {
+        return null;
+      }
+
+      const patched = code
+        .replace(
+          "static [Bech32mSymbol] = ShieldedAddress.codec;",
+          "static { this[Bech32mSymbol] = this.codec; }",
+        )
+        .replace(
+          "static [Bech32mSymbol] = UnshieldedAddress.codec;",
+          "static { this[Bech32mSymbol] = this.codec; }",
+        )
+        .replace(
+          "static [Bech32mSymbol] = DustAddress.codec;",
+          "static { this[Bech32mSymbol] = this.codec; }",
+        );
+
+      if (patched === code) {
+        return null;
+      }
+
+      return {
+        code: patched,
+        map: null,
+      };
+    },
+  };
+}
+
 export default defineConfig({
   base: basePath,
   plugins: [
+    patchMidnightWalletAddressFormat(),
     wasm(),
     topLevelAwait(),
     react(),
@@ -50,16 +89,34 @@ export default defineConfig({
         ]
       : []),
   ],
+  esbuild: {
+    target: "es2022",
+    keepNames: true,
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      target: "es2022",
+      keepNames: true,
+    },
+  },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
       "@assets": path.resolve(import.meta.dirname, "..", "..", "attached_assets"),
     },
-    dedupe: ["react", "react-dom"],
+    dedupe: [
+      "react",
+      "react-dom",
+      "@midnight-ntwrk/compact-runtime",
+      "@midnight-ntwrk/onchain-runtime-v3",
+      "@midnight-ntwrk/wallet-sdk-address-format",
+      "@midnight-ntwrk/dapp-connector-api",
+    ],
   },
   root: path.resolve(import.meta.dirname),
   build: {
-    target: "esnext",
+    target: "es2022",
+    minify: "esbuild",
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
   },

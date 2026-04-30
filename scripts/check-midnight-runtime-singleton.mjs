@@ -1,7 +1,9 @@
 import { existsSync } from "node:fs";
-import { relative, resolve } from "node:path";
+import { dirname, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = process.cwd();
+const scriptDir = dirname(fileURLToPath(import.meta.url));
+const root = resolve(scriptDir, "..");
 
 const forbiddenPaths = [
   "artifacts/nightforce-directory/midnight-contact-mode/node_modules/@midnight-ntwrk/compact-runtime",
@@ -18,7 +20,8 @@ if (found.length > 0) {
   console.error("");
   console.error("❌ Duplicate Midnight runtime copies detected.");
   console.error("");
-  console.error("These nested runtime installs can break browser deployContract(...) with:");
+  console.error("These nested runtime installs can break browser Midnight SDK flows with:");
+  console.error("  Cannot read properties of undefined (reading 'codec')");
   console.error("  expected instance of _ContractMaintenanceAuthority");
   console.error("");
   console.error("Remove these folders before running the frontend:");
