@@ -101,10 +101,12 @@ export type ContactModeWriteValue =
   | "PRIVATE_CONTACT_AVAILABLE"
   | "PUBLIC_CONTACT_ALLOWED";
 
-const CONTACT_MODE_ZK_BASE_URL = new URL(
-  "../../midnight-contact-mode/contracts/managed/contact-mode/",
-  import.meta.url,
-).href;
+const CONTACT_MODE_ZK_BASE_PATH =
+  "/midnight-contact-mode/contracts/managed/contact-mode/";
+
+function getContactModeZkBaseUrl(): string {
+  return new URL(CONTACT_MODE_ZK_BASE_PATH, window.location.origin).href;
+}
 
 const CONTACT_MODE_PRIVATE_STATE_ID = "contactModeStateBrowser";
 
@@ -381,7 +383,7 @@ export async function deployContactModePublic(
   const browserFetch: typeof fetch = (...args) => window.fetch(...args);
 
   const zkConfigProvider = new FetchZkConfigProvider(
-    CONTACT_MODE_ZK_BASE_URL,
+    getContactModeZkBaseUrl(),
     browserFetch,
   );
 
@@ -539,7 +541,7 @@ export async function updateContactModePublic(
   const browserFetch: typeof fetch = (...args) => window.fetch(...args);
 
   const zkConfigProvider = new FetchZkConfigProvider(
-    CONTACT_MODE_ZK_BASE_URL,
+    getContactModeZkBaseUrl(),
     browserFetch,
   );
 
