@@ -88,32 +88,79 @@ type MidnightConnectedApiLike = {
 };
 
 
-export type NightforceAppMode = "local-readonly" | "preprod-write";
+export type MidnightNetworkId = "undeployed" | "preprod" | "mainnet";
+export type NightforceAppMode =
+  | "local-readonly"
+  | "preprod-write"
+  | "mainnet-write";
 
-const APP_MODE =
-  ((import.meta.env.VITE_NIGHTFORCE_APP_MODE as string | undefined) ??
-    "local-readonly") as NightforceAppMode;
+function normalizeAppMode(value: string | undefined): NightforceAppMode {
+  if (value === "preprod-write" || value === "mainnet-write") {
+    return value;
+  }
 
-function getDefaultNetworkId(mode: NightforceAppMode): string {
-  return mode === "preprod-write" ? "preprod" : "undeployed";
+  return "local-readonly";
+}
+
+function getDefaultNetworkId(mode: NightforceAppMode): MidnightNetworkId {
+  if (mode === "preprod-write") {
+    return "preprod";
+  }
+
+  if (mode === "mainnet-write") {
+    return "mainnet";
+  }
+
+  return "undeployed";
+}
+
+function normalizeMidnightNetworkId(
+  value: string | undefined,
+  fallback: MidnightNetworkId,
+): MidnightNetworkId {
+  if (value === "undeployed" || value === "preprod" || value === "mainnet") {
+    return value;
+  }
+
+  return fallback;
 }
 
 function getDefaultProfileProofStateUrl(mode: NightforceAppMode): string {
-  return mode === "preprod-write"
-    ? "http://127.0.0.1:4000/api/profile-proof/state?target=preprod"
-    : "http://127.0.0.1:4000/api/profile-proof/state?target=local";
+  if (mode === "local-readonly") {
+    return "http://127.0.0.1:4000/api/profile-proof/state?target=local";
+  }
+
+  /**
+   * Profile Proof remains preprod-only until a real mainnet deployment artifact
+   * and Worker state endpoint exist.
+   */
+  return "http://127.0.0.1:4000/api/profile-proof/state?target=preprod";
 }
 
+const APP_MODE = normalizeAppMode(
+  import.meta.env.VITE_NIGHTFORCE_APP_MODE as string | undefined,
+);
+
+const DEFAULT_MIDNIGHT_NETWORK_ID = getDefaultNetworkId(APP_MODE);
+
 export const NIGHTFORCE_APP_MODE: NightforceAppMode = APP_MODE;
-export const MIDNIGHT_NETWORK_ID =
-  (import.meta.env.VITE_MIDNIGHT_NETWORK_ID as string | undefined) ??
-  getDefaultNetworkId(NIGHTFORCE_APP_MODE);
+export const MIDNIGHT_NETWORK_ID = normalizeMidnightNetworkId(
+  import.meta.env.VITE_MIDNIGHT_NETWORK_ID as string | undefined,
+  DEFAULT_MIDNIGHT_NETWORK_ID,
+);
 
 export const PROFILE_PROOF_STATE_URL =
   (import.meta.env.VITE_PROFILE_PROOF_STATE_URL as string | undefined) ??
   getDefaultProfileProofStateUrl(NIGHTFORCE_APP_MODE);
 
-export const MIDNIGHT_CONNECT_ENABLED = NIGHTFORCE_APP_MODE === "preprod-write";
+export const MIDNIGHT_WRITE_ENABLED =
+  NIGHTFORCE_APP_MODE === "preprod-write" ||
+  NIGHTFORCE_APP_MODE === "mainnet-write";
+
+export const PROFILE_PROOF_WRITE_ENABLED =
+  NIGHTFORCE_APP_MODE === "preprod-write";
+
+export const MIDNIGHT_CONNECT_ENABLED = MIDNIGHT_WRITE_ENABLED;
 
 
 export interface ProfileProofState {
@@ -150,15 +197,17 @@ export async function getProfileProofState(): Promise<ProfileProofState> {
 // MOCK WALLET IMPLEMENTATION
 // Keep this for the local proof-of-life flow.
 //
-// MIDNIGHT BATCH D1
+// MIDNIGHT STEP 11
 // App-side environment split.
 // Supports:
 //   - local-readonly mode
 //   - preprod-write mode
+//   - mainnet-write mode
 //
 // Mock flow stays intact.
 // Local mode keeps the API-bridge read-only proof.
-// Preprod mode is the future path for real app-side wallet write.
+// Preprod mode keeps Profile Proof write available.
+// Mainnet mode is prepared for wallet connection and later Contact Mode migration.
 // ============================================================
 
 export const MOCK_WALLETS = [

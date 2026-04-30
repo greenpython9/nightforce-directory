@@ -1,6 +1,4 @@
-import { createDefaultProvider, getDefaultProvider } from "@midnames/sdk";
-
-import { MIDNAMES_NETWORK_ID } from "./midnamesConfig";
+import { createDefaultProvider } from "@midnames/sdk";
 
 let cachedProvider: ReturnType<typeof createDefaultProvider> | null = null;
 
@@ -9,18 +7,15 @@ export function getMidnamesProvider(): ReturnType<typeof createDefaultProvider> 
     return cachedProvider;
   }
 
-  cachedProvider =
-    MIDNAMES_NETWORK_ID === "preprod"
-      ? createDefaultProvider({ networkId: "preprod" })
-      : (getDefaultProvider() as ReturnType<typeof createDefaultProvider>);
+  cachedProvider = createDefaultProvider({ networkId: "preprod" });
 
   return cachedProvider;
 }
 
 export function getMidnamesNetworkLabel(): string {
-  return MIDNAMES_NETWORK_ID === "preprod" ? "preprod" : "mainnet";
+  return "preprod";
 }
 
 export function isMidnamesPreprod(): boolean {
-  return MIDNAMES_NETWORK_ID === "preprod";
+  return true;
 }

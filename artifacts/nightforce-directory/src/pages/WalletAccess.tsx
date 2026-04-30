@@ -6,6 +6,8 @@ import {
   ADMIN_WALLET_ID,
   NIGHTFORCE_APP_MODE,
   MIDNIGHT_CONNECT_ENABLED,
+  MIDNIGHT_NETWORK_ID,
+  PROFILE_PROOF_WRITE_ENABLED,
   getProfileProofState,
   type ProfileProofState,
 } from "../services/walletService";
@@ -250,14 +252,25 @@ export function WalletAccess() {
   }, []);
 
   const isPreprodWriteMode = NIGHTFORCE_APP_MODE === "preprod-write";
+  const isMainnetWriteMode = NIGHTFORCE_APP_MODE === "mainnet-write";
+  const isMidnightWriteMode = isPreprodWriteMode || isMainnetWriteMode;
 
-  const midnightModeLabel = isPreprodWriteMode
-    ? "Midnight Wallet (Preprod)"
+  const midnightNetworkLabel =
+    MIDNIGHT_NETWORK_ID === "mainnet"
+      ? "Mainnet"
+      : MIDNIGHT_NETWORK_ID === "preprod"
+        ? "Preprod"
+        : "Local";
+
+  const midnightModeLabel = isMidnightWriteMode
+    ? `Midnight Wallet (${midnightNetworkLabel})`
     : "Midnight Wallet (Local)";
 
-  const midnightModeHelpText = isPreprodWriteMode
-    ? "Preprod mode is enabled. Browser wallet connection is intended for the first real app-side write flow."
-    : "Injected Midnight browser wallets currently reject the local undeployed network in this app flow. The live read-only Profile Proof State panel below is still connected to the local contract.";
+  const midnightModeHelpText = isMainnetWriteMode
+    ? "Mainnet mode is enabled for wallet connection prep. Profile Proof remains preprod-only until a mainnet deployment exists; Contact Mode mainnet writes are enabled in a later batch."
+    : isPreprodWriteMode
+      ? "Preprod mode is enabled. Browser wallet connection is intended for the first real app-side write flow."
+      : "Injected Midnight browser wallets currently reject the local undeployed network in this app flow. The live read-only Profile Proof State panel below is still connected to the local contract.";
 
   const connectedLabel = useMemo(() => {
     if (connectionMode === "midnight" && midnightSnapshot) {
@@ -391,10 +404,7 @@ export function WalletAccess() {
                   <span className="text-xs font-mono text-cyan-300">Midnight Wallet</span>
                   <span className="text-xs font-mono text-zinc-600">•</span>
                   <span className="text-xs font-mono text-emerald-300">
-                    {(
-                      midnightSnapshot?.networkId ??
-                      (isPreprodWriteMode ? "preprod" : "undeployed")
-                    ).toUpperCase()}
+                     {(midnightSnapshot?.networkId ?? MIDNIGHT_NETWORK_ID).toUpperCase()}
                   </span>
                 </div>
 
@@ -562,7 +572,7 @@ export function WalletAccess() {
                     </div>
                   )}
 
-                {isPreprodWriteMode && verificationStatus === "approved" && (
+                {PROFILE_PROOF_WRITE_ENABLED && verificationStatus === "approved" && (
                   <div className="mt-4 border-t border-zinc-800 pt-4">
                     <button
                       onClick={async () => {
@@ -718,8 +728,8 @@ export function WalletAccess() {
             </div>
 
             <p className="mt-3 px-1 text-[11px] font-mono leading-5 text-zinc-600">
-              {isPreprodWriteMode
-                ? "Mock wallet stays available for the existing proof-of-life UI flow. Preprod mode is the next path for real app-side write."
+              {isMidnightWriteMode
+                ? "Mock wallet stays available for the existing proof-of-life UI flow. Midnight wallet mode is active for the selected network."
                 : "Mock wallet keeps the existing proof-of-life UI flow. Local Midnight contract state is shown below through the API bridge while app-side write remains blocked."}
             </p>
           </div>
@@ -727,8 +737,8 @@ export function WalletAccess() {
 
         <div className="mb-6 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
           <div className="text-xs font-mono text-emerald-300 mb-2">
-            {isPreprodWriteMode
-              ? "Profile Proof State (Current Source)"
+            {PROFILE_PROOF_WRITE_ENABLED
+              ? "Profile Proof State (Current Preprod Source)"
               : "Profile Proof State"}
           </div>
 
@@ -812,14 +822,14 @@ export function WalletAccess() {
           {connectionMode === "midnight" && midnightSnapshot && (
             <div className="border border-cyan-950 bg-cyan-950/20 rounded-lg px-4 py-3">
               <div className="text-xs font-mono text-cyan-300 mb-1">
-                {isPreprodWriteMode
-                  ? "Midnight Preprod connection active"
-                  : "Midnight local connection active"}
+                {`Midnight ${midnightNetworkLabel} connection active`}
               </div>
               <div className="text-[11px] font-mono text-zinc-400">
-                {isPreprodWriteMode
-                  ? "Preprod mode active: browser wallet connection is enabled for future app-side write."
-                  : "Local read-only mode active: browser wallet write is currently unavailable."}
+                {isMainnetWriteMode
+                  ? "Mainnet mode active: browser wallet connection is enabled. Contact Mode mainnet writes are enabled in a later batch."
+                  : isPreprodWriteMode
+                    ? "Preprod mode active: browser wallet connection is enabled for app-side write."
+                    : "Local read-only mode active: browser wallet write is currently unavailable."}
               </div>
               <div className="text-[11px] font-mono text-zinc-500 mt-2">
                 Active address:{" "}

@@ -1,17 +1,21 @@
 export type MidnamesNetworkId = "preprod" | "mainnet";
 
 const rawFeatureFlag = import.meta.env.VITE_FEATURE_MIDNAMES;
-const rawNetworkId = import.meta.env.VITE_MIDNAMES_NETWORK_ID;
 
 export const MIDNAMES_ENABLED = rawFeatureFlag !== "false";
 
-export const MIDNAMES_NETWORK_ID: MidnamesNetworkId =
-  rawNetworkId === "mainnet" ? "mainnet" : "preprod";
+/**
+ * nightforce.cc intentionally keeps .night / Midnames resolution on preprod
+ * during the Midnight mainnet migration.
+ *
+ * Do not wire this to VITE_MIDNAMES_NETWORK_ID yet.
+ */
+export const MIDNAMES_NETWORK_ID: MidnamesNetworkId = "preprod";
 
 export function getMidnamesNetworkLabel(): string {
-  return MIDNAMES_NETWORK_ID === "preprod" ? "preprod" : "mainnet";
+  return "preprod";
 }
 
 export function isMidnamesPreprod(): boolean {
-  return MIDNAMES_NETWORK_ID === "preprod";
+  return true;
 }
