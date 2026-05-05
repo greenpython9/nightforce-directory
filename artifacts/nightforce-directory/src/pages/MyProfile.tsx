@@ -15,6 +15,7 @@ import {
 import {
   registerOrRotateGlobalContactModeEntry,
   updateGlobalContactMode,
+  verifyGlobalContactModeSync,
   type ContactModeGlobalValue,
 } from "../services/contactModeGlobalWrite";
 
@@ -1255,12 +1256,17 @@ export function MyProfile() {
   const [contactModeRepairLoading, setContactModeRepairLoading] = useState(false);
   const [contactModeEntryPreparing, setContactModeEntryPreparing] = useState(false);
   const [contactModeCompareResult, setContactModeCompareResult] = useState<{
+    architecture: "per_profile" | "global";
     backendMode: ContactMode;
-    midnightMode: ContactMode;
+    midnightMode: ContactMode | null;
     contractAddress: string;
-    rawValue: number | string;
+    rawValue: number | string | null;
     matched: boolean;
     checkedAt: string;
+    registered?: boolean;
+    profileKey?: string | null;
+    ownerCommitment?: string | null;
+    entryVersion?: number;
   } | null>(null);
   const [contactModeCompareError, setContactModeCompareError] = useState("");
   const [saveMsg, setSaveMsg] = useState("");
@@ -2232,6 +2238,59 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
       }
 
       const data = payload as ProfileResponse;
+      const backendMode = deriveContactModeForSync({
+        publicEmail: data.profile.publicEmail,
+        encryptedHiddenPayload: parseEncryptedHiddenPayload(
+          data.profile.encryptedHiddenPayload,
+        ),
+      });
+      const checkedAt = new Date().toISOString();
+
+      const profileArchitecture =
+        data.profile.contactModeArchitecture ?? contactModeArchitecture;
+      const globalConfigContractAddress =
+        data.profile.contactModeGlobalContractAddress ??
+        globalContactModeContractAddress;
+      const globalProfileKey =
+        data.profile.contactModeProfileKey ?? contactModeProfileKey;
+
+      if (
+        profileArchitecture === "global" ||
+        (globalContactModeConfigured && Boolean(globalConfigContractAddress))
+      ) {
+        if (!globalConfigContractAddress) {
+          throw new Error("Global Contact Mode contract is not configured.");
+        }
+
+        if (!globalProfileKey) {
+          throw new Error(
+            "No global Contact Mode profile entry key is stored for this profile.",
+          );
+        }
+
+        const midnightResult = await verifyGlobalContactModeSync({
+          contractAddress: globalConfigContractAddress,
+          profileKey: globalProfileKey,
+          expectedMode: backendMode as ContactModeGlobalValue,
+        });
+
+        setContactModeCompareResult({
+          architecture: "global",
+          backendMode,
+          midnightMode: midnightResult.contactMode,
+          contractAddress: midnightResult.contractAddress,
+          rawValue: midnightResult.rawValue,
+          matched: midnightResult.matches,
+          checkedAt,
+          registered: midnightResult.registered,
+          profileKey: midnightResult.profileKey,
+          ownerCommitment: midnightResult.ownerCommitment,
+          entryVersion: data.profile.contactModeEntryVersion ?? contactModeEntryVersion,
+        });
+
+        return;
+      }
+
       const contractAddress = data.profile.contactModeContractAddress;
       const contractNetworkId = data.profile.contactModeNetworkId ?? null;
 
@@ -2245,23 +2304,17 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
         throw new Error("No Contact Mode contract address is stored for this profile.");
       }
 
-      const backendMode = deriveContactModeForSync({
-        publicEmail: data.profile.publicEmail,
-        encryptedHiddenPayload: parseEncryptedHiddenPayload(
-          data.profile.encryptedHiddenPayload,
-        ),
-      });
-
       const midnightResult = await readContactMode(contractAddress);
-      const checkedAt = new Date().toISOString();
 
       setContactModeCompareResult({
+        architecture: "per_profile",
         backendMode,
         midnightMode: midnightResult.contactMode,
         contractAddress: midnightResult.contractAddress,
         rawValue: midnightResult.rawValue,
         matched: backendMode === midnightResult.contactMode,
         checkedAt,
+        registered: true,
       });
     } catch (err) {
       setContactModeCompareError(
@@ -2294,6 +2347,110 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
     setContactModeRepairLoading(true);
     setContactModeCompareError("");
     setError("");
+
+    if (mismatch.architecture === "global") {
+      setSaveMsg("Retrying global Contact Mode sync...");
+
+      try {
+        if (!mismatch.profileKey) {
+          throw new Error("No global Contact Mode profile entry key is available.");
+        }
+
+        const writeResult =
+          mismatch.registered === false
+            ? await registerOrRotateGlobalContactModeEntry({
+                contractAddress: mismatch.contractAddress,
+                profileKey: mismatch.profileKey,
+                nextMode: mismatch.backendMode as ContactModeGlobalValue,
+              })
+            : await updateGlobalContactMode({
+                contractAddress: mismatch.contractAddress,
+                profileKey: mismatch.profileKey,
+                nextMode: mismatch.backendMode as ContactModeGlobalValue,
+              });
+
+        const midnightResult = await verifyGlobalContactModeSync({
+          contractAddress: writeResult.contractAddress,
+          profileKey: writeResult.profileKey,
+          expectedMode: mismatch.backendMode as ContactModeGlobalValue,
+        });
+        const checkedAt = new Date().toISOString();
+        const matched = midnightResult.matches;
+        const activeNetworkId = getActiveContactModeNetworkId();
+
+        await updateContactModeSyncMetadata({
+          verificationRequestId,
+          contactModeContractAddress: contactModeContractAddress,
+          contactModeNetworkId: activeNetworkId,
+          contactModeSyncStatus: matched ? "synced" : "failed",
+          contactModeLastSyncedAt: matched ? checkedAt : null,
+          contactModeSyncError: matched
+            ? null
+            : `Midnight still reports ${
+                midnightResult.contactMode ?? "not registered"
+              } instead of ${mismatch.backendMode}.`,
+          contactModeSyncedValue: matched ? mismatch.backendMode : null,
+
+          contactModeArchitecture: "global",
+          contactModeProfileKey: writeResult.profileKey,
+          contactModeOwnerCommitment: writeResult.ownerCommitment,
+          contactModeEntryStatus: matched ? "registered" : "failed",
+          contactModeEntryVersion: mismatch.entryVersion ?? contactModeEntryVersion,
+          contactModeGlobalContractAddress: writeResult.contractAddress,
+          contactModeGlobalNetworkId: activeNetworkId,
+        });
+
+        setContactModeArchitecture("global");
+        setContactModeProfileKey(writeResult.profileKey);
+        setContactModeOwnerCommitment(writeResult.ownerCommitment);
+        setContactModeEntryStatus(matched ? "registered" : "failed");
+        setContactModeEntryVersion(mismatch.entryVersion ?? contactModeEntryVersion);
+        setContactModeGlobalContractAddress(writeResult.contractAddress);
+        setContactModeGlobalNetworkId(activeNetworkId);
+        setContactModeNetworkId(activeNetworkId);
+        setSavedContactMode(matched ? mismatch.backendMode : savedContactMode);
+
+        setContactModeCompareResult({
+          architecture: "global",
+          backendMode: mismatch.backendMode,
+          midnightMode: midnightResult.contactMode,
+          contractAddress: midnightResult.contractAddress,
+          rawValue: midnightResult.rawValue,
+          matched,
+          checkedAt,
+          registered: midnightResult.registered,
+          profileKey: midnightResult.profileKey,
+          ownerCommitment: midnightResult.ownerCommitment,
+          entryVersion: mismatch.entryVersion,
+        });
+
+        await load({ preserveSaveMsg: true });
+
+        if (!matched) {
+          throw new Error(
+            `Global Contact Mode retry finished, but sync still mismatched. Midnight reports ${
+              midnightResult.contactMode ?? "not registered"
+            } instead of ${mismatch.backendMode}.`,
+          );
+        }
+
+        setSaveMsg("Global Contact Mode sync repaired.");
+        window.setTimeout(() => setSaveMsg(""), 2500);
+      } catch (err) {
+        const message = getReadablePublishError(
+          err,
+          "Failed to retry global Contact Mode sync.",
+        );
+
+        setError(`Global contact-mode retry failed: ${message}`);
+        setSaveMsg("");
+      } finally {
+        setContactModeRepairLoading(false);
+      }
+
+      return;
+    }
+
     setSaveMsg("Retrying Contact Mode sync...");
 
     try {
@@ -2322,12 +2479,14 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
       setContactModeNetworkId(getActiveContactModeNetworkId());
       setSavedContactMode(mismatch.backendMode);
       setContactModeCompareResult({
+        architecture: "per_profile",
         backendMode: mismatch.backendMode,
         midnightMode: midnightResult.contactMode,
         contractAddress: updateResult.contractAddress,
         rawValue: midnightResult.rawValue,
         matched,
         checkedAt,
+        registered: true,
       });
 
       await load({ preserveSaveMsg: true });
@@ -3343,7 +3502,10 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
                 <div>
                   Midnight synced value:{" "}
                   <span className="text-white">
-                    {contactModeCompareResult.midnightMode}
+                    {contactModeCompareResult.midnightMode ??
+                      (contactModeCompareResult.registered === false
+                        ? "not registered"
+                        : "unknown")}
                   </span>
                   <span className="text-zinc-600">
                     {" "}
