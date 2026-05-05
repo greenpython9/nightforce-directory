@@ -384,6 +384,14 @@ type ProfileResponse = {
   };
 };
 
+type ContactModeEntryResponse = {
+  profile: ProfileResponse["profile"] | null;
+  contactModeProfileKey: string;
+  contactModeEntryVersion: number;
+  issuedNewProfileKey: boolean;
+  rotated: boolean;
+};
+
 const HIDDEN_EMAIL_SIGNATURE_CONTEXT = "nightforce:hidden-email:v1";
 const HIDDEN_EMAIL_KDF_ITERATIONS = 250_000;
 
@@ -551,6 +559,50 @@ async function updateContactModeSyncMetadata(args: {
 
     throw new Error(message);
   }
+}
+
+async function issueGlobalContactModeEntryMetadata(args: {
+  verificationRequestId: string;
+  midnightWalletAddress: string;
+  rotate: boolean;
+}): Promise<ContactModeEntryResponse> {
+  const response = await fetch(
+    buildNightforceApiUrl(
+      `/api/nightforce/profiles/${args.verificationRequestId}/contact-mode-entry`,
+    ),
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        midnightWalletAddress: args.midnightWalletAddress,
+        rotate: args.rotate,
+      }),
+    },
+  );
+
+  let payload: unknown = null;
+
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    const message =
+      typeof payload === "object" &&
+      payload !== null &&
+      "error" in payload &&
+      typeof payload.error === "string"
+        ? payload.error
+        : "Failed to prepare global Contact Mode entry metadata.";
+
+    throw new Error(message);
+  }
+
+  return payload as ContactModeEntryResponse;
 }
 
 async function getHiddenEmailSecret(signingScope: string): Promise<string> {
@@ -1180,6 +1232,7 @@ export function MyProfile() {
   const [savedContactMode, setSavedContactMode] = useState<ContactMode | null>(null);
   const [contactModeCompareLoading, setContactModeCompareLoading] = useState(false);
   const [contactModeRepairLoading, setContactModeRepairLoading] = useState(false);
+  const [contactModeEntryPreparing, setContactModeEntryPreparing] = useState(false);
   const [contactModeCompareResult, setContactModeCompareResult] = useState<{
     backendMode: ContactMode;
     midnightMode: ContactMode;
@@ -1240,6 +1293,7 @@ export function MyProfile() {
     setContactModeCompareResult(null);
     setContactModeCompareError("");
     setContactModeRepairLoading(false);
+    setContactModeEntryPreparing(false);
     setPublishSettling(false);
   }, []);
 
@@ -1691,6 +1745,20 @@ export function MyProfile() {
     ? `${contactModeOwnerCommitment.slice(0, 8)}…${contactModeOwnerCommitment.slice(-8)}`
     : "not stored yet";
 
+  const contactModeEntryActionLabel =
+    contactModeProfileKey && contactModeOwnerCommitment
+      ? "Rotate Contact Mode entry"
+      : contactModeProfileKey
+        ? "Refresh Contact Mode entry"
+        : "Prepare Contact Mode entry";
+  const contactModeEntryActionHelp = contactModeProfileKey
+    ? "Request a new backend profile entry key only if you are recovering from a lost local Contact Mode secret."
+    : "Prepare the backend entry key used by the global Contact Mode contract. This does not submit a Midnight transaction yet.";
+  const canPrepareGlobalContactModeEntry =
+    Boolean(walletId && verificationRequestId && walletBindingId) &&
+    connectionMode === "midnight" &&
+    verificationStatus === "approved";
+
   const contactModeOnchainWriteEnabled = isContactModeOnchainWriteEnabled();
 
   const nextContactModeForImpact = derivePreviewContactMode({
@@ -1856,6 +1924,71 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
       );
     } finally {
       setAvatarUploading(false);
+    }
+  };
+
+  const prepareGlobalContactModeEntry = async (options?: { rotate?: boolean }) => {
+    if (contactModeEntryPreparing) {
+      return;
+    }
+
+    if (!verificationRequestId || !walletId) {
+      setContactModeCompareError(
+        "Connect the approved Midnight wallet before preparing a Contact Mode entry.",
+      );
+      return;
+    }
+
+    setContactModeEntryPreparing(true);
+    setContactModeCompareError("");
+    setSaveMsg("Preparing global Contact Mode entry metadata...");
+
+    try {
+      const entry = await issueGlobalContactModeEntryMetadata({
+        verificationRequestId,
+        midnightWalletAddress: walletId,
+        rotate: Boolean(options?.rotate),
+      });
+
+      setContactModeArchitecture("global");
+      setContactModeProfileKey(entry.contactModeProfileKey);
+      setContactModeEntryVersion(entry.contactModeEntryVersion);
+
+      if (entry.profile) {
+        setContactModeOwnerCommitment(entry.profile.contactModeOwnerCommitment ?? null);
+        setContactModeEntryStatus(
+          entry.profile.contactModeEntryStatus ?? "not_registered",
+        );
+        setContactModeGlobalContractAddress(
+          entry.profile.contactModeGlobalContractAddress ?? null,
+        );
+        setContactModeGlobalNetworkId(entry.profile.contactModeGlobalNetworkId ?? null);
+        setContactModeNetworkId(entry.profile.contactModeNetworkId ?? null);
+        setContactModeContractAddress(
+          entry.profile.contactModeContractAddress ?? null,
+        );
+      } else {
+        setContactModeOwnerCommitment(null);
+        setContactModeEntryStatus("not_registered");
+      }
+
+      setSaveMsg(
+        entry.issuedNewProfileKey
+          ? entry.rotated
+            ? "Prepared a new Contact Mode recovery entry. No Midnight transaction has been submitted yet."
+            : "Prepared a global Contact Mode entry. No Midnight transaction has been submitted yet."
+          : "Global Contact Mode entry metadata is already prepared.",
+      );
+    } catch (err) {
+      const message = getReadablePublishError(
+        err,
+        "Failed to prepare global Contact Mode entry metadata.",
+      );
+
+      setContactModeCompareError(message);
+      setSaveMsg("");
+    } finally {
+      setContactModeEntryPreparing(false);
     }
   };
 
@@ -2910,6 +3043,30 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
                       </span>
                       <span className="block">
                         Network: {globalContactModeNetworkLabel}
+                      </span>
+                      <span className="mt-3 block space-y-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void prepareGlobalContactModeEntry({
+                              rotate: Boolean(contactModeProfileKey),
+                            })
+                          }
+                          disabled={
+                            !canPrepareGlobalContactModeEntry ||
+                            contactModeEntryPreparing ||
+                            publishing ||
+                            publishSettling
+                          }
+                          className="rounded-full border border-emerald-400/40 px-3 py-1.5 text-xs font-semibold text-emerald-100 transition hover:border-emerald-300 hover:bg-emerald-400/10 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {contactModeEntryPreparing
+                            ? "Preparing..."
+                            : contactModeEntryActionLabel}
+                        </button>
+                        <span className="block text-[11px] text-slate-500">
+                          {contactModeEntryActionHelp}
+                        </span>
                       </span>
                     </span>
                   ) : (
