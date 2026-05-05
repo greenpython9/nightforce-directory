@@ -61,6 +61,35 @@ function getNightBalance(state: any): bigint {
   return (state?.unshielded?.balances?.[tokenKey] ?? 0n) as bigint;
 }
 
+function getDustBalance(state: any): bigint {
+  return (state?.dust?.balance?.(new Date()) ?? 0n) as bigint;
+}
+
+function getUnregisteredNightUtxos(state: any): any[] {
+  return (state.unshielded?.availableCoins ?? []).filter(
+    (coin: any) => !coin?.meta?.registeredForDustGeneration,
+  );
+}
+
+async function logSyncedWalletSnapshot(
+  walletCtx: Awaited<ReturnType<typeof createWallet>>,
+  label: string,
+): Promise<any> {
+  const state = await getSyncedWalletState(walletCtx.wallet);
+  const nightBalance = getNightBalance(state);
+  const dustBalance = getDustBalance(state);
+  const availableCoins = state.unshielded?.availableCoins?.length ?? 0;
+  const unregisteredNightUtxos = getUnregisteredNightUtxos(state);
+
+  console.log(`  ${label}`);
+  console.log(`    NIGHT balance: ${nightBalance.toLocaleString()} tNight`);
+  console.log(`    DUST balance: ${dustBalance.toLocaleString()}`);
+  console.log(`    Available NIGHT coins: ${availableCoins}`);
+  console.log(`    Unregistered NIGHT UTXOs: ${unregisteredNightUtxos.length}\n`);
+
+  return state;
+}
+
 async function createGlobalProviders(
   walletCtx: Awaited<ReturnType<typeof createWallet>>,
 ): Promise<any> {
@@ -72,6 +101,11 @@ async function createGlobalProviders(
       state.shielded.encryptionPublicKey.toHexString(),
 
     async balanceTx(tx: any, ttl?: Date) {
+      await logSyncedWalletSnapshot(
+        walletCtx,
+        "Fresh synced wallet snapshot immediately before balanceTx",
+      );
+
       const recipe = await walletCtx.wallet.balanceUnboundTransaction(
         tx,
         {
@@ -191,30 +225,41 @@ async function main() {
 
       console.log("─── Step 3: DUST Token Setup ───────────────────────────────────\n");
 
-      const dustState = await getSyncedWalletState(walletCtx.wallet);
+      const dustState = await logSyncedWalletSnapshot(
+        walletCtx,
+        "Initial DUST setup wallet snapshot",
+      );
 
-      if ((dustState.dust?.balance?.(new Date()) ?? 0n) === 0n) {
-        const nightUtxos = (dustState.unshielded?.availableCoins ?? []).filter(
-          (c: any) => !c?.meta?.registeredForDustGeneration,
+      const nightUtxos = getUnregisteredNightUtxos(dustState);
+
+      if (nightUtxos.length > 0) {
+        console.log("  Registering unregistered NIGHT UTXOs for DUST generation...");
+
+        const recipe =
+          await walletCtx.wallet.registerNightUtxosForDustGeneration(
+            nightUtxos,
+            walletCtx.unshieldedKeystore.getPublicKey(),
+            (payload: Uint8Array) =>
+              walletCtx.unshieldedKeystore.signData(payload),
+          );
+
+        await walletCtx.wallet.submitTransaction(
+          await walletCtx.wallet.finalizeRecipe(recipe),
         );
 
-        if (nightUtxos.length > 0) {
-          console.log("  Registering for DUST generation...");
+        await logSyncedWalletSnapshot(
+          walletCtx,
+          "Wallet snapshot after DUST registration transaction",
+        );
+      }
 
-          const recipe =
-            await walletCtx.wallet.registerNightUtxosForDustGeneration(
-              nightUtxos,
-              walletCtx.unshieldedKeystore.getPublicKey(),
-              (payload: Uint8Array) =>
-                walletCtx.unshieldedKeystore.signData(payload),
-            );
+      const postRegistrationState = await logSyncedWalletSnapshot(
+        walletCtx,
+        "Post-registration synced wallet snapshot",
+      );
 
-          await walletCtx.wallet.submitTransaction(
-            await walletCtx.wallet.finalizeRecipe(recipe),
-          );
-        }
-
-        console.log("  Waiting for DUST tokens...");
+      if (getDustBalance(postRegistrationState) === 0n || nightUtxos.length > 0) {
+        console.log("  Waiting for fresh DUST tokens...");
 
         await Rx.firstValueFrom(
           walletCtx.wallet.state().pipe(
@@ -225,6 +270,11 @@ async function main() {
           ),
         );
       }
+
+      await logSyncedWalletSnapshot(
+        walletCtx,
+        "Final synced wallet snapshot immediately before deploy",
+      );
 
       console.log("  DUST tokens ready!\n");
 
@@ -237,6 +287,8 @@ async function main() {
 
       const deployed = await (deployContract as any)(providers, {
         compiledContract: compiledGlobalContract as any,
+        privateStateId: CONTACT_MODE_GLOBAL_PRIVATE_STATE_ID,
+        initialPrivateState: {},
         args: [],
       });
 
