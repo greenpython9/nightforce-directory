@@ -12,6 +12,11 @@ import {
   fetchGlobalContactModeConfig,
   type ContactModeGlobalConfig,
 } from "../services/contactModeGlobalConfig";
+import {
+  registerOrRotateGlobalContactModeEntry,
+  updateGlobalContactMode,
+  type ContactModeGlobalValue,
+} from "../services/contactModeGlobalWrite";
 
 const AVATAR_MAX_BYTES = 500 * 1024;
 
@@ -519,6 +524,14 @@ async function updateContactModeSyncMetadata(args: {
   contactModeLastSyncedAt: string | null;
   contactModeSyncError: string | null;
   contactModeSyncedValue: ContactMode | null;
+
+  contactModeArchitecture?: ContactModeArchitecture;
+  contactModeProfileKey?: string | null;
+  contactModeOwnerCommitment?: string | null;
+  contactModeEntryStatus?: ContactModeEntryStatus;
+  contactModeEntryVersion?: number;
+  contactModeGlobalContractAddress?: string | null;
+  contactModeGlobalNetworkId?: ContactModeNetworkId | null;
 }): Promise<void> {
   const response = await fetch(
     buildNightforceApiUrl(
@@ -536,6 +549,14 @@ async function updateContactModeSyncMetadata(args: {
         contactModeLastSyncedAt: args.contactModeLastSyncedAt,
         contactModeSyncError: args.contactModeSyncError,
         contactModeSyncedValue: args.contactModeSyncedValue,
+
+        contactModeArchitecture: args.contactModeArchitecture,
+        contactModeProfileKey: args.contactModeProfileKey,
+        contactModeOwnerCommitment: args.contactModeOwnerCommitment,
+        contactModeEntryStatus: args.contactModeEntryStatus,
+        contactModeEntryVersion: args.contactModeEntryVersion,
+        contactModeGlobalContractAddress: args.contactModeGlobalContractAddress,
+        contactModeGlobalNetworkId: args.contactModeGlobalNetworkId,
       }),
     },
   );
@@ -1992,6 +2013,102 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
     }
   };
 
+  const syncGlobalContactModeForPublishedProfile = async (args: {
+    profile: ProfileResponse["profile"];
+    nextMode: ContactMode;
+  }) => {
+    if (!verificationRequestId || !walletId) {
+      throw new Error("Connect the approved Midnight wallet before syncing Contact Mode.");
+    }
+
+    const contractAddress = globalContactModeContractAddress;
+
+    if (!contractAddress) {
+      throw new Error("Global Contact Mode contract is not configured.");
+    }
+
+    let activeProfileKey =
+      args.profile.contactModeProfileKey ?? contactModeProfileKey;
+    let activeEntryVersion =
+      args.profile.contactModeEntryVersion ?? contactModeEntryVersion;
+    let activeOwnerCommitment =
+      args.profile.contactModeOwnerCommitment ?? contactModeOwnerCommitment;
+    let activeEntryStatus =
+      args.profile.contactModeEntryStatus ?? contactModeEntryStatus;
+
+    if (!activeProfileKey) {
+      const entry = await issueGlobalContactModeEntryMetadata({
+        verificationRequestId,
+        midnightWalletAddress: walletId,
+        rotate: false,
+      });
+
+      activeProfileKey = entry.contactModeProfileKey;
+      activeEntryVersion = entry.contactModeEntryVersion;
+      activeOwnerCommitment = entry.profile?.contactModeOwnerCommitment ?? null;
+      activeEntryStatus = entry.profile?.contactModeEntryStatus ?? "not_registered";
+
+      setContactModeArchitecture("global");
+      setContactModeProfileKey(activeProfileKey);
+      setContactModeEntryVersion(activeEntryVersion);
+      setContactModeOwnerCommitment(activeOwnerCommitment);
+      setContactModeEntryStatus(activeEntryStatus);
+    }
+
+    const shouldRegisterEntry =
+      !activeOwnerCommitment || activeEntryStatus !== "registered";
+    const shouldUpdateEntry =
+      !shouldRegisterEntry && savedContactMode !== args.nextMode;
+
+    if (!shouldRegisterEntry && !shouldUpdateEntry) {
+      setSavedContactMode(args.nextMode);
+      return;
+    }
+
+    const writeResult = shouldRegisterEntry
+      ? await registerOrRotateGlobalContactModeEntry({
+          contractAddress,
+          profileKey: activeProfileKey,
+          nextMode: args.nextMode as ContactModeGlobalValue,
+        })
+      : await updateGlobalContactMode({
+          contractAddress,
+          profileKey: activeProfileKey,
+          nextMode: args.nextMode as ContactModeGlobalValue,
+        });
+
+    const syncedAt = new Date().toISOString();
+    const activeNetworkId = getActiveContactModeNetworkId();
+
+    await updateContactModeSyncMetadata({
+      verificationRequestId,
+      contactModeContractAddress: args.profile.contactModeContractAddress ?? null,
+      contactModeNetworkId: activeNetworkId,
+      contactModeSyncStatus: "synced",
+      contactModeLastSyncedAt: syncedAt,
+      contactModeSyncError: null,
+      contactModeSyncedValue: args.nextMode,
+
+      contactModeArchitecture: "global",
+      contactModeProfileKey: activeProfileKey,
+      contactModeOwnerCommitment: writeResult.ownerCommitment,
+      contactModeEntryStatus: "registered",
+      contactModeEntryVersion: activeEntryVersion,
+      contactModeGlobalContractAddress: writeResult.contractAddress,
+      contactModeGlobalNetworkId: activeNetworkId,
+    });
+
+    setContactModeArchitecture("global");
+    setContactModeProfileKey(activeProfileKey);
+    setContactModeOwnerCommitment(writeResult.ownerCommitment);
+    setContactModeEntryStatus("registered");
+    setContactModeEntryVersion(activeEntryVersion);
+    setContactModeGlobalContractAddress(writeResult.contractAddress);
+    setContactModeGlobalNetworkId(activeNetworkId);
+    setContactModeNetworkId(activeNetworkId);
+    setSavedContactMode(args.nextMode);
+  };
+
   const compareContactModeSync = async () => {
     if (contactModeCompareLoading) {
       return;
@@ -2596,6 +2713,56 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
       }
 
       setSaveMsg("Profile saved. Syncing profile state...");
+
+      const globalNextMode = deriveContactModeForSync({
+        publicEmail: nextSavedPublicEmail,
+        encryptedHiddenPayload: nextSavedEncryptedHiddenPayload,
+      });
+
+      if (globalContactModeConfigured && globalContactModeContractAddress) {
+        try {
+          await syncGlobalContactModeForPublishedProfile({
+            profile: data.profile,
+            nextMode: globalNextMode,
+          });
+        } catch (syncError) {
+          const syncMessage = getReadablePublishError(
+            syncError,
+            "Failed to sync global Contact Mode. The wallet or Midnight SDK returned no readable error.",
+          );
+
+          try {
+            await updateContactModeSyncMetadata({
+              verificationRequestId,
+              contactModeContractAddress: data.profile.contactModeContractAddress ?? null,
+              contactModeNetworkId: getActiveContactModeNetworkId(),
+              contactModeSyncStatus: "failed",
+              contactModeLastSyncedAt: data.profile.contactModeLastSyncedAt ?? null,
+              contactModeSyncError: syncMessage,
+              contactModeSyncedValue: null,
+
+              contactModeArchitecture: "global",
+              contactModeProfileKey:
+                data.profile.contactModeProfileKey ?? contactModeProfileKey,
+              contactModeOwnerCommitment:
+                data.profile.contactModeOwnerCommitment ?? contactModeOwnerCommitment,
+              contactModeEntryStatus: "failed",
+              contactModeEntryVersion:
+                data.profile.contactModeEntryVersion ?? contactModeEntryVersion,
+              contactModeGlobalContractAddress: globalContactModeContractAddress,
+              contactModeGlobalNetworkId: getActiveContactModeNetworkId(),
+            });
+          } catch {
+            // Keep the original wallet/transaction error as the visible publish failure.
+          }
+
+          setContactModeEntryStatus("failed");
+          throw new Error(`Contact-mode sync failed: ${syncMessage}`);
+        }
+
+        await settleAfterProfileWrite("Changes published.");
+        return;
+      }
 
       if (existingContactModeAddress) {
         const nextMode = deriveContactModeForSync({
