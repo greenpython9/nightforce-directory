@@ -116,6 +116,24 @@ export const profilesTable = sqliteTable("profiles", {
   contactModeSyncedValue: text("contact_mode_synced_value").$type<
     "NO_CONTACT" | "PRIVATE_CONTACT_AVAILABLE" | "PUBLIC_CONTACT_ALLOWED" | null
   >(),
+
+  contactModeArchitecture: text("contact_mode_architecture")
+    .$type<"per_profile" | "global">()
+    .notNull()
+    .default("per_profile"),
+  contactModeProfileKey: text("contact_mode_profile_key"),
+  contactModeOwnerCommitment: text("contact_mode_owner_commitment"),
+  contactModeEntryStatus: text("contact_mode_entry_status")
+    .$type<"not_registered" | "registered" | "failed" | "rotated">()
+    .notNull()
+    .default("not_registered"),
+  contactModeEntryVersion: integer("contact_mode_entry_version")
+    .notNull()
+    .default(0),
+  contactModeGlobalContractAddress: text("contact_mode_global_contract_address"),
+  contactModeGlobalNetworkId: text("contact_mode_global_network_id").$type<
+    "preprod" | "mainnet" | null
+  >(),
   socials: text("socials", { mode: "json" })
     .$type<string[]>()
     .notNull()
