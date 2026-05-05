@@ -35,6 +35,8 @@ interface Env extends DatabaseEnv {
   ADMIN_OWNER_EMAIL?: string;
   ADMIN_OWNER_PASSWORD?: string;
   ADMIN_SESSION_SECRET?: string;
+  CONTACT_MODE_GLOBAL_PREPROD_CONTRACT_ADDRESS?: string;
+  CONTACT_MODE_GLOBAL_MAINNET_CONTRACT_ADDRESS?: string;
 }
 
 const uuidSchema = z.string().uuid();
@@ -436,6 +438,57 @@ const PROFILE_PROOF_PREPROD_STATE = {
     value: 1,
   },
 };
+
+type ContactModeGlobalNetworkId = "preprod" | "mainnet";
+
+function isContactModeGlobalNetworkId(
+  value: string,
+): value is ContactModeGlobalNetworkId {
+  return value === "preprod" || value === "mainnet";
+}
+
+function getGlobalContactModeContractAddress(
+  env: Env,
+  networkId: ContactModeGlobalNetworkId,
+): string | null {
+  const rawValue =
+    networkId === "mainnet"
+      ? env.CONTACT_MODE_GLOBAL_MAINNET_CONTRACT_ADDRESS
+      : env.CONTACT_MODE_GLOBAL_PREPROD_CONTRACT_ADDRESS;
+
+  const normalized = rawValue?.trim();
+
+  return normalized && normalized.length > 0 ? normalized : null;
+}
+
+function getGlobalContactModeConfigResponse(env: Env, url: URL): Response {
+  const requestedNetworkId =
+    url.searchParams.get("networkId") ??
+    url.searchParams.get("network") ??
+    "preprod";
+
+  if (!isContactModeGlobalNetworkId(requestedNetworkId)) {
+    return json(
+      {
+        error: "Unsupported global Contact Mode network",
+        details: `Expected networkId=preprod or networkId=mainnet. Received ${requestedNetworkId}.`,
+      },
+      400,
+    );
+  }
+
+  const contractAddress = getGlobalContactModeContractAddress(
+    env,
+    requestedNetworkId,
+  );
+
+  return json({
+    architecture: "global",
+    enabled: Boolean(contractAddress),
+    networkId: requestedNetworkId,
+    contractAddress,
+  });
+}
 
 const PUBLIC_VISITOR_ACTIVITY_PATHS = new Set([
   "/",
@@ -1421,6 +1474,14 @@ export default {
       }
 
       return getProfileProofStateResponse(url);
+    }
+
+    if (pathname === "/api/nightforce/contact-mode/global-config") {
+      if (request.method !== "GET") {
+        return methodNotAllowed();
+      }
+
+      return getGlobalContactModeConfigResponse(env, url);
     }
 
     if (pathname === "/api/nightforce/admin/session") {

@@ -80,6 +80,27 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+type ContactModeGlobalNetworkId = "preprod" | "mainnet";
+
+function isContactModeGlobalNetworkId(
+  value: string,
+): value is ContactModeGlobalNetworkId {
+  return value === "preprod" || value === "mainnet";
+}
+
+function getGlobalContactModeContractAddress(
+  networkId: ContactModeGlobalNetworkId,
+): string | null {
+  const rawValue =
+    networkId === "mainnet"
+      ? process.env.CONTACT_MODE_GLOBAL_MAINNET_CONTRACT_ADDRESS
+      : process.env.CONTACT_MODE_GLOBAL_PREPROD_CONTRACT_ADDRESS;
+
+  const normalized = rawValue?.trim();
+
+  return normalized && normalized.length > 0 ? normalized : null;
+}
+
 function asRecord(value: unknown): JsonRecord {
   if (typeof value === "object" && value !== null && !Array.isArray(value)) {
     return value as JsonRecord;
@@ -382,6 +403,28 @@ function listVerificationRequests(_req: Request, res: Response) {
 
 router.get("/nightforce/verification-requests", listVerificationRequests);
 router.get("/nightforce/admin/verification-requests", listVerificationRequests);
+
+router.get("/nightforce/contact-mode/global-config", (req, res) => {
+  const requestedNetworkId =
+    asString(req.query.networkId) ?? asString(req.query.network) ?? "preprod";
+
+  if (!isContactModeGlobalNetworkId(requestedNetworkId)) {
+    res.status(400).json({
+      error: "Unsupported global Contact Mode network",
+      details: `Expected networkId=preprod or networkId=mainnet. Received ${requestedNetworkId}.`,
+    });
+    return;
+  }
+
+  const contractAddress = getGlobalContactModeContractAddress(requestedNetworkId);
+
+  res.json({
+    architecture: "global",
+    enabled: Boolean(contractAddress),
+    networkId: requestedNetworkId,
+    contractAddress,
+  });
+});
 
 router.get("/nightforce/verification-requests/by-wallet/:walletAddress", (req, res) => {
   const walletAddress = asString(req.params.walletAddress);
