@@ -80,6 +80,81 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+const ADMIN_SESSION_COOKIE_NAME = "nightforce_admin_session";
+const ADMIN_SESSION_TOKEN = randomUUID();
+
+function getLocalAdminEmail(): string {
+  return (
+    process.env.ADMIN_OWNER_EMAIL ??
+    process.env.NIGHTFORCE_ADMIN_EMAIL ??
+    "admin@nightforce.local"
+  ).trim();
+}
+
+function getLocalAdminPassword(): string {
+  return (
+    process.env.ADMIN_OWNER_PASSWORD ??
+    process.env.NIGHTFORCE_ADMIN_PASSWORD ??
+    "nightforce-local-admin"
+  ).trim();
+}
+
+function parseCookies(cookieHeader: string | undefined): Record<string, string> {
+  if (!cookieHeader) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    cookieHeader
+      .split(";")
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((part) => {
+        const separatorIndex = part.indexOf("=");
+
+        if (separatorIndex === -1) {
+          return [part, ""];
+        }
+
+        return [
+          decodeURIComponent(part.slice(0, separatorIndex)),
+          decodeURIComponent(part.slice(separatorIndex + 1)),
+        ];
+      }),
+  );
+}
+
+function hasAdminSession(req: Request): boolean {
+  return (
+    parseCookies(req.headers.cookie)[ADMIN_SESSION_COOKIE_NAME] ===
+    ADMIN_SESSION_TOKEN
+  );
+}
+
+function getAdminUserPayload() {
+  return {
+    id: "local-owner",
+    email: getLocalAdminEmail(),
+    role: "owner",
+  };
+}
+
+function setAdminSessionCookie(res: Response): void {
+  res.setHeader(
+    "Set-Cookie",
+    `${ADMIN_SESSION_COOKIE_NAME}=${encodeURIComponent(
+      ADMIN_SESSION_TOKEN,
+    )}; Path=/api/nightforce/admin; HttpOnly; SameSite=Lax; Max-Age=86400`,
+  );
+}
+
+function clearAdminSessionCookie(res: Response): void {
+  res.setHeader(
+    "Set-Cookie",
+    `${ADMIN_SESSION_COOKIE_NAME}=; Path=/api/nightforce/admin; HttpOnly; SameSite=Lax; Max-Age=0`,
+  );
+}
+
 type ContactModeGlobalNetworkId = "preprod" | "mainnet";
 
 function isContactModeGlobalNetworkId(
@@ -402,6 +477,71 @@ function listVerificationRequests(_req: Request, res: Response) {
 }
 
 router.get("/nightforce/verification-requests", listVerificationRequests);
+
+router.get("/nightforce/admin/session", (req, res) => {
+  if (!hasAdminSession(req)) {
+    res.json({
+      authenticated: false,
+      user: null,
+      adminUser: null,
+    });
+    return;
+  }
+
+  const adminUser = getAdminUserPayload();
+
+  res.json({
+    authenticated: true,
+    user: adminUser,
+    adminUser,
+  });
+});
+
+router.post("/nightforce/admin/login", (req, res) => {
+  const body = asRecord(req.body);
+  const email = asString(body.email);
+  const password = asString(body.password);
+
+  if (email !== getLocalAdminEmail() || password !== getLocalAdminPassword()) {
+    res.status(401).json({
+      error: "Invalid admin email or password.",
+    });
+    return;
+  }
+
+  setAdminSessionCookie(res);
+
+  const adminUser = getAdminUserPayload();
+
+  res.json({
+    ok: true,
+    authenticated: true,
+    user: adminUser,
+    adminUser,
+  });
+});
+
+router.post("/nightforce/admin/logout", (_req, res) => {
+  clearAdminSessionCookie(res);
+
+  res.json({
+    ok: true,
+    authenticated: false,
+  });
+});
+
+router.get("/nightforce/admin/users", (_req, res) => {
+  res.json({
+    users: [getAdminUserPayload()],
+  });
+});
+
+router.get("/nightforce/admin/audit-events", (_req, res) => {
+  res.json({
+    auditEvents: [],
+  });
+});
+
 router.get("/nightforce/admin/verification-requests", listVerificationRequests);
 
 router.get("/nightforce/contact-mode/global-config", (req, res) => {

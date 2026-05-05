@@ -1755,6 +1755,15 @@ export function MyProfile() {
     globalContactModeConfig?.contractAddress ??
     null;
   const globalContactModeConfigured = Boolean(globalContactModeContractAddress);
+  const globalContactModeVerifyReady =
+    globalContactModeConfigured && Boolean(contactModeProfileKey);
+  const perProfileContactModeVerifyReady = Boolean(
+    usableContactModeContractAddress,
+  );
+  const contactModeVerifyReady =
+    contactModeArchitecture === "global"
+      ? globalContactModeVerifyReady
+      : perProfileContactModeVerifyReady;
   const globalContactModeNetworkLabel =
     contactModeGlobalNetworkId ?? globalContactModeConfig?.networkId ?? MIDNIGHT_NETWORK_ID;
   const globalContactModeEntryLabel =
@@ -1827,7 +1836,7 @@ const globalContactModeUpdateExpected =
 const perProfileContactModeTransactionExpected =
   !globalContactModePublishEnabled &&
   contactModeOnchainWriteEnabled &&
-  (!usableContactModeContractAddress ||
+  (!contactModeVerifyReady ||
     savedContactMode !== nextContactModeForImpact);
 
 const contactModeTransactionExpected =
@@ -3367,7 +3376,7 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
                     disabled={
                       contactModeCompareLoading ||
                       contactModeRepairLoading ||
-                      !usableContactModeContractAddress
+                      !contactModeVerifyReady
                     }
                     className="font-mono text-[11px] bg-zinc-950 hover:bg-zinc-800 text-zinc-200 border border-zinc-700 px-3 py-2 rounded-lg transition-colors disabled:opacity-50"
                   >
@@ -3381,7 +3390,7 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
                       disabled={
                         contactModeCompareLoading ||
                         contactModeRepairLoading ||
-                        !usableContactModeContractAddress
+                        !contactModeVerifyReady
                       }
                       className="font-mono text-[11px] bg-red-950/40 hover:bg-red-950/70 text-red-200 border border-red-500/40 px-3 py-2 rounded-lg transition-colors disabled:opacity-50"
                     >
