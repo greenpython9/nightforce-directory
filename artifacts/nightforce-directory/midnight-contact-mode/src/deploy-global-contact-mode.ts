@@ -51,9 +51,10 @@ const deployWitnesses = {
 const compiledGlobalContract = CompiledContract.make(
   "contact-mode-global",
   (ContactModeGlobalContract as any).Contract,
-)
-  .pipe(CompiledContract.withWitnesses(deployWitnesses as any))
-  .pipe(CompiledContract.withCompiledFileAssets(globalZkConfigPath)) as any;
+).pipe(
+  CompiledContract.withWitnesses(deployWitnesses as any),
+  CompiledContract.withCompiledFileAssets(globalZkConfigPath),
+) as any;
 
 function getNightBalance(state: any): bigint {
   const tokenKey = String((unshieldedToken() as any).raw);
