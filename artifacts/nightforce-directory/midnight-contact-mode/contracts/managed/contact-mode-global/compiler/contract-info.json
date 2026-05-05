@@ -1,0 +1,158 @@
+{
+  "compiler-version": "0.30.0",
+  "language-version": "0.22.0",
+  "runtime-version": "0.15.0",
+  "circuits": [
+    {
+      "name": "registerEntry",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "profileKey",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        },
+        {
+          "name": "initialMode",
+          "type": {
+            "type-name": "Enum",
+            "name": "ContactMode",
+            "elements": [
+              "NO_CONTACT",
+              "PRIVATE_CONTACT_AVAILABLE",
+              "PUBLIC_CONTACT_ALLOWED"
+            ]
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Tuple",
+        "types": [
+        ]
+      }
+    },
+    {
+      "name": "setContactMode",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "profileKey",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        },
+        {
+          "name": "nextMode",
+          "type": {
+            "type-name": "Enum",
+            "name": "ContactMode",
+            "elements": [
+              "NO_CONTACT",
+              "PRIVATE_CONTACT_AVAILABLE",
+              "PUBLIC_CONTACT_ALLOWED"
+            ]
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Tuple",
+        "types": [
+        ]
+      }
+    },
+    {
+      "name": "isEntryRegistered",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "profileKey",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Boolean"
+      }
+    },
+    {
+      "name": "getContactMode",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "profileKey",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Enum",
+        "name": "ContactMode",
+        "elements": [
+          "NO_CONTACT",
+          "PRIVATE_CONTACT_AVAILABLE",
+          "PUBLIC_CONTACT_ALLOWED"
+        ]
+      }
+    },
+    {
+      "name": "getEntryOwnerCommitment",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "profileKey",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
+      "name": "getOwnerCommitment",
+      "pure": true,
+      "proof": false,
+      "arguments": [
+        {
+          "name": "_sk",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    }
+  ],
+  "witnesses": [
+    {
+      "name": "localSecretKey",
+      "arguments": [
+      ],
+      "result type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    }
+  ],
+  "contracts": [
+  ]
+}

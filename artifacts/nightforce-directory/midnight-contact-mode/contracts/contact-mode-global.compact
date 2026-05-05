@@ -1,0 +1,85 @@
+pragma language_version 0.22;
+
+import CompactStandardLibrary;
+
+export enum ContactMode {
+  NO_CONTACT,
+  PRIVATE_CONTACT_AVAILABLE,
+  PUBLIC_CONTACT_ALLOWED
+}
+
+export ledger ownerCommitments: Map<Bytes<32>, Bytes<32>>;
+export ledger contactModes: Map<Bytes<32>, ContactMode>;
+
+witness localSecretKey(): Bytes<32>;
+
+constructor() {}
+
+export circuit registerEntry(profileKey: Bytes<32>, initialMode: ContactMode): [] {
+  const disclosedProfileKey = disclose(profileKey);
+
+  assert(
+    !ownerCommitments.member(disclosedProfileKey),
+    "Contact Mode entry already registered"
+  );
+
+  const _sk = localSecretKey();
+  const commitment = getOwnerCommitment(_sk);
+
+  ownerCommitments.insert(disclosedProfileKey, disclose(commitment));
+  contactModes.insert(disclosedProfileKey, disclose(initialMode));
+}
+
+export circuit setContactMode(profileKey: Bytes<32>, nextMode: ContactMode): [] {
+  const disclosedProfileKey = disclose(profileKey);
+
+  assert(
+    ownerCommitments.member(disclosedProfileKey),
+    "Contact Mode entry is not registered"
+  );
+
+  const _sk = localSecretKey();
+  const commitment = getOwnerCommitment(_sk);
+
+  assert(
+    ownerCommitments.lookup(disclosedProfileKey) == disclose(commitment),
+    "You are not the owner"
+  );
+
+  contactModes.insert(disclosedProfileKey, disclose(nextMode));
+}
+
+export circuit isEntryRegistered(profileKey: Bytes<32>): Boolean {
+  const disclosedProfileKey = disclose(profileKey);
+
+  return ownerCommitments.member(disclosedProfileKey);
+}
+
+export circuit getContactMode(profileKey: Bytes<32>): ContactMode {
+  const disclosedProfileKey = disclose(profileKey);
+
+  assert(
+    contactModes.member(disclosedProfileKey),
+    "Contact Mode entry is not registered"
+  );
+
+  return contactModes.lookup(disclosedProfileKey);
+}
+
+export circuit getEntryOwnerCommitment(profileKey: Bytes<32>): Bytes<32> {
+  const disclosedProfileKey = disclose(profileKey);
+
+  assert(
+    ownerCommitments.member(disclosedProfileKey),
+    "Contact Mode entry is not registered"
+  );
+
+  return ownerCommitments.lookup(disclosedProfileKey);
+}
+
+export circuit getOwnerCommitment(_sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([
+    pad(32, "nightforce:cm-global-owner:"),
+    _sk
+  ]);
+}
