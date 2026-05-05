@@ -1796,11 +1796,61 @@ const privateContactSignatureExpected =
     savedContactMode !== "PRIVATE_CONTACT_AVAILABLE" ||
     email.trim() !== (savedPublicEmail ?? ""));
 
-const contactModeTransactionExpected =
-  hasChangesToPublish &&
+const globalContactModePublishEnabled =
+  globalContactModeConfigured && Boolean(globalContactModeContractAddress);
+
+const globalContactModeEntryMissing =
+  globalContactModePublishEnabled &&
+  (!contactModeProfileKey ||
+    !contactModeOwnerCommitment ||
+    contactModeEntryStatus !== "registered");
+
+const globalContactModeRecoveryExpected =
+  globalContactModeEntryMissing &&
+  Boolean(contactModeProfileKey) &&
+  contactModeEntryVersion > 1;
+
+const globalContactModeRegistrationExpected =
+  globalContactModeEntryMissing && !globalContactModeRecoveryExpected;
+
+const globalContactModeUpdateExpected =
+  globalContactModePublishEnabled &&
+  !globalContactModeEntryMissing &&
+  savedContactMode !== nextContactModeForImpact;
+
+const perProfileContactModeTransactionExpected =
+  !globalContactModePublishEnabled &&
   contactModeOnchainWriteEnabled &&
   (!usableContactModeContractAddress ||
     savedContactMode !== nextContactModeForImpact);
+
+const contactModeTransactionExpected =
+  hasChangesToPublish &&
+  contactModeOnchainWriteEnabled &&
+  (globalContactModeRegistrationExpected ||
+    globalContactModeRecoveryExpected ||
+    globalContactModeUpdateExpected ||
+    perProfileContactModeTransactionExpected);
+
+const contactModeImpactTitle = globalContactModePublishEnabled
+  ? globalContactModeRecoveryExpected
+    ? "Rotate Contact Mode owner commitment"
+    : globalContactModeRegistrationExpected
+      ? "Register Contact Mode entry"
+      : "Update Contact Mode entry"
+  : usableContactModeContractAddress
+    ? "Contact Mode update"
+    : "Deploy Contact Mode contract";
+
+const contactModeImpactExpectation = globalContactModePublishEnabled
+  ? globalContactModeRecoveryExpected
+    ? "Expect a Midnight tx approval to register a new active Contact Mode entry."
+    : globalContactModeRegistrationExpected
+      ? "Expect a Midnight tx approval to register your Contact Mode entry."
+      : "Expect a Midnight tx approval to update your Contact Mode entry."
+  : usableContactModeContractAddress
+    ? "Expect a Midnight tx approval."
+    : "Expect a Midnight tx approval to deploy your Contact Mode contract.";
 
 const publishImpact = !hasChangesToPublish
   ? {
@@ -1810,7 +1860,7 @@ const publishImpact = !hasChangesToPublish
     }
   : privateContactSignatureExpected && contactModeTransactionExpected
     ? {
-        title: "Private contact + Contact Mode update",
+        title: `Private contact + ${contactModeImpactTitle}`,
         expectation: "Expect a wallet signature and a Midnight tx approval.",
         tone: "strong",
       }
@@ -1822,8 +1872,8 @@ const publishImpact = !hasChangesToPublish
         }
       : contactModeTransactionExpected
         ? {
-            title: "Contact Mode update",
-            expectation: "Expect a Midnight tx approval.",
+            title: contactModeImpactTitle,
+            expectation: contactModeImpactExpectation,
             tone: "transaction",
           }
         : {
@@ -1841,28 +1891,61 @@ const publishImpactCardClass =
         ? "border-amber-800 bg-amber-950/20"
         : "border-zinc-800 bg-zinc-900";
 
-const publishImpactGuideItems = [
-  {
-    title: "Profile update only",
-    badge: "No wallet prompt",
-    desc: "Profile fields, disclosure toggles, socials, website, bio, and profile visibility.",
-  },
-  {
-    title: "Private contact encryption",
-    badge: "Wallet signature",
-    desc: "Saving or replacing a private email while keeping Show email publicly OFF.",
-  },
-  {
-    title: "Contact Mode update",
-    badge: "Midnight tx",
-    desc: "Changing between Public, Private, and Unavailable contact modes.",
-  },
-  {
-    title: "Private contact + Contact Mode",
-    badge: "Signature + tx",
-    desc: "Making an email private when Contact Mode also needs to change.",
-  },
-];
+const publishImpactGuideItems = globalContactModePublishEnabled
+  ? [
+      {
+        title: "Profile update only",
+        badge: "No wallet prompt",
+        desc: "Profile fields, disclosure toggles, socials, website, bio, and profile visibility when Contact Mode is already synced.",
+      },
+      {
+        title: "Private contact encryption",
+        badge: "Wallet signature",
+        desc: "Saving or replacing a private email while keeping Show email publicly OFF.",
+      },
+      {
+        title: "Register Contact Mode entry",
+        badge: "Midnight tx",
+        desc: "First global Contact Mode sync for this profile entry.",
+      },
+      {
+        title: "Update Contact Mode entry",
+        badge: "Midnight tx",
+        desc: "Changing between Public, Private, and Unavailable contact modes after the entry is registered.",
+      },
+      {
+        title: "Rotate Contact Mode owner commitment",
+        badge: "Recovery tx",
+        desc: "Registering a new active entry after preparing recovery for a lost local Contact Mode secret.",
+      },
+    ]
+  : [
+      {
+        title: "Profile update only",
+        badge: "No wallet prompt",
+        desc: "Profile fields, disclosure toggles, socials, website, bio, and profile visibility.",
+      },
+      {
+        title: "Private contact encryption",
+        badge: "Wallet signature",
+        desc: "Saving or replacing a private email while keeping Show email publicly OFF.",
+      },
+      {
+        title: "Deploy Contact Mode contract",
+        badge: "Midnight tx",
+        desc: "First on-chain Contact Mode sync for the old per-profile contract flow.",
+      },
+      {
+        title: "Contact Mode update",
+        badge: "Midnight tx",
+        desc: "Changing between Public, Private, and Unavailable contact modes.",
+      },
+      {
+        title: "Private contact + Contact Mode",
+        badge: "Signature + tx",
+        desc: "Making an email private when Contact Mode also needs to change.",
+      },
+    ];
 
 const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
   setProfileVisibility(nextVisibility);
