@@ -51,6 +51,15 @@ type ProfileRecord = JsonRecord & {
     | "PRIVATE_CONTACT_AVAILABLE"
     | "PUBLIC_CONTACT_ALLOWED"
     | null;
+
+  contactModeArchitecture: "per_profile" | "global";
+  contactModeProfileKey: string | null;
+  contactModeOwnerCommitment: string | null;
+  contactModeEntryStatus: "not_registered" | "registered" | "failed" | "rotated";
+  contactModeEntryVersion: number;
+  contactModeGlobalContractAddress: string | null;
+  contactModeGlobalNetworkId: "preprod" | "mainnet" | null;
+
   socials: string[];
   fieldVisibility: unknown;
   encryptedHiddenPayload: unknown;
@@ -651,6 +660,20 @@ router.put("/nightforce/profiles/:verificationRequestId", (req, res) => {
     contactModeLastSyncedAt: existingProfile?.contactModeLastSyncedAt ?? null,
     contactModeSyncError: existingProfile?.contactModeSyncError ?? null,
     contactModeSyncedValue: existingProfile?.contactModeSyncedValue ?? null,
+
+    contactModeArchitecture:
+      existingProfile?.contactModeArchitecture ?? "per_profile",
+    contactModeProfileKey: existingProfile?.contactModeProfileKey ?? null,
+    contactModeOwnerCommitment:
+      existingProfile?.contactModeOwnerCommitment ?? null,
+    contactModeEntryStatus:
+      existingProfile?.contactModeEntryStatus ?? "not_registered",
+    contactModeEntryVersion: existingProfile?.contactModeEntryVersion ?? 0,
+    contactModeGlobalContractAddress:
+      existingProfile?.contactModeGlobalContractAddress ?? null,
+    contactModeGlobalNetworkId:
+      existingProfile?.contactModeGlobalNetworkId ?? null,
+
     socials: asStringArray(body.socials),
     fieldVisibility: body.fieldVisibility ?? {},
     encryptedHiddenPayload: body.encryptedHiddenPayload ?? null,
@@ -707,6 +730,34 @@ router.post("/nightforce/profiles/:verificationRequestId/contact-mode-sync", (re
       ? syncedValue
       : null;
 
+  const architecture = asString(body.contactModeArchitecture);
+  const validArchitecture =
+    architecture === "per_profile" || architecture === "global"
+      ? architecture
+      : null;
+
+  const entryStatus = asString(body.contactModeEntryStatus);
+  const validEntryStatus =
+    entryStatus === "not_registered" ||
+    entryStatus === "registered" ||
+    entryStatus === "failed" ||
+    entryStatus === "rotated"
+      ? entryStatus
+      : null;
+
+  const entryVersion =
+    typeof body.contactModeEntryVersion === "number" &&
+    Number.isInteger(body.contactModeEntryVersion) &&
+    body.contactModeEntryVersion >= 0
+      ? body.contactModeEntryVersion
+      : null;
+
+  const globalNetworkId = asString(body.contactModeGlobalNetworkId);
+  const validGlobalNetworkId =
+    globalNetworkId === "preprod" || globalNetworkId === "mainnet"
+      ? globalNetworkId
+      : null;
+
   if (syncStatus === "synced" && !validSyncedValue) {
     res.status(400).json({
       error: "contactModeSyncedValue is required when contactModeSyncStatus is synced.",
@@ -736,6 +787,30 @@ router.post("/nightforce/profiles/:verificationRequestId/contact-mode-sync", (re
     syncStatus === "synced"
       ? validSyncedValue
       : profile.contactModeSyncedValue ?? null;
+
+  profile.contactModeArchitecture =
+    validArchitecture ?? profile.contactModeArchitecture ?? "per_profile";
+  profile.contactModeProfileKey =
+    body.contactModeProfileKey === undefined
+      ? profile.contactModeProfileKey ?? null
+      : asString(body.contactModeProfileKey);
+  profile.contactModeOwnerCommitment =
+    body.contactModeOwnerCommitment === undefined
+      ? profile.contactModeOwnerCommitment ?? null
+      : asString(body.contactModeOwnerCommitment);
+  profile.contactModeEntryStatus =
+    validEntryStatus ?? profile.contactModeEntryStatus ?? "not_registered";
+  profile.contactModeEntryVersion =
+    entryVersion ?? profile.contactModeEntryVersion ?? 0;
+  profile.contactModeGlobalContractAddress =
+    body.contactModeGlobalContractAddress === undefined
+      ? profile.contactModeGlobalContractAddress ?? null
+      : asString(body.contactModeGlobalContractAddress);
+  profile.contactModeGlobalNetworkId =
+    body.contactModeGlobalNetworkId === undefined
+      ? profile.contactModeGlobalNetworkId ?? null
+      : validGlobalNetworkId;
+
   profile.updatedAt = nowIso();
 
   profilesByVerificationRequestId.set(verificationRequestId, profile);

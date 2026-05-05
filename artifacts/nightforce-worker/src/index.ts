@@ -335,6 +335,18 @@ const contactModeSchema = z.enum([
 ]);
 
 const contactModeNetworkSchema = z.enum(["preprod", "mainnet"]);
+const contactModeArchitectureSchema = z.enum(["per_profile", "global"]);
+const contactModeEntryStatusSchema = z.enum([
+  "not_registered",
+  "registered",
+  "failed",
+  "rotated",
+]);
+const contactModeHex32Schema = z
+  .string()
+  .trim()
+  .regex(/^[0-9a-fA-F]{64}$/, "Expected a 32-byte hex value.")
+  .transform((value) => value.toLowerCase());
 
 const updateContactModeSyncInputSchema = z
   .object({
@@ -344,6 +356,19 @@ const updateContactModeSyncInputSchema = z
     contactModeLastSyncedAt: z.string().trim().min(1).nullable().optional(),
     contactModeSyncError: z.string().trim().optional().nullable(),
     contactModeSyncedValue: contactModeSchema.nullable().optional(),
+
+    contactModeArchitecture: contactModeArchitectureSchema.optional(),
+    contactModeProfileKey: contactModeHex32Schema.nullable().optional(),
+    contactModeOwnerCommitment: contactModeHex32Schema.nullable().optional(),
+    contactModeEntryStatus: contactModeEntryStatusSchema.optional(),
+    contactModeEntryVersion: z.number().int().nonnegative().optional(),
+    contactModeGlobalContractAddress: z
+      .string()
+      .trim()
+      .min(1)
+      .nullable()
+      .optional(),
+    contactModeGlobalNetworkId: contactModeNetworkSchema.nullable().optional(),
   })
   .superRefine((input, ctx) => {
     if (input.contactModeSyncStatus === "synced" && !input.contactModeSyncedValue) {
@@ -2842,6 +2867,14 @@ export default {
             contactModeLastSyncedAt: null,
             contactModeSyncError: null,
             contactModeSyncedValue: null,
+
+            contactModeArchitecture: "per_profile",
+            contactModeProfileKey: null,
+            contactModeOwnerCommitment: null,
+            contactModeEntryStatus: "not_registered",
+            contactModeEntryVersion: 0,
+            contactModeGlobalContractAddress: null,
+            contactModeGlobalNetworkId: null,
             socials: nextSocials,
             fieldVisibility: input.fieldVisibility,
             encryptedHiddenPayload: nextEncryptedHiddenPayload,
@@ -2931,6 +2964,33 @@ export default {
               input.contactModeSyncStatus === "synced"
                 ? input.contactModeSyncedValue ?? null
                 : existingProfile.contactModeSyncedValue ?? null,
+
+            contactModeArchitecture:
+              input.contactModeArchitecture ??
+              existingProfile.contactModeArchitecture,
+            contactModeProfileKey:
+              input.contactModeProfileKey === undefined
+                ? existingProfile.contactModeProfileKey
+                : input.contactModeProfileKey,
+            contactModeOwnerCommitment:
+              input.contactModeOwnerCommitment === undefined
+                ? existingProfile.contactModeOwnerCommitment
+                : input.contactModeOwnerCommitment,
+            contactModeEntryStatus:
+              input.contactModeEntryStatus ??
+              existingProfile.contactModeEntryStatus,
+            contactModeEntryVersion:
+              input.contactModeEntryVersion ??
+              existingProfile.contactModeEntryVersion,
+            contactModeGlobalContractAddress:
+              input.contactModeGlobalContractAddress === undefined
+                ? existingProfile.contactModeGlobalContractAddress
+                : input.contactModeGlobalContractAddress,
+            contactModeGlobalNetworkId:
+              input.contactModeGlobalNetworkId === undefined
+                ? existingProfile.contactModeGlobalNetworkId
+                : input.contactModeGlobalNetworkId,
+
             updatedAt: now,
           })
           .where(eq(profilesTable.id, existingProfile.id))
