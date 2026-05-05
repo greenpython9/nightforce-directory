@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { Router, type IRouter, type Request, type Response } from "express";
 
 const router: IRouter = Router();
@@ -312,6 +312,10 @@ function getProfileValidationErrors(input: {
 
 function makePublicId(verificationRequestId: string): string {
   return `profile-${verificationRequestId.slice(0, 8)}`;
+}
+
+function createContactModeProfileKey(): string {
+  return randomBytes(32).toString("hex");
 }
 
 function getWalletAddressFromBody(body: JsonRecord): string | null {
@@ -689,6 +693,83 @@ router.put("/nightforce/profiles/:verificationRequestId", (req, res) => {
 
   res.json({
     profile,
+  });
+});
+
+router.post("/nightforce/profiles/:verificationRequestId/contact-mode-entry", (req, res) => {
+  const verificationRequestId = req.params.verificationRequestId;
+  const body = asRecord(req.body);
+  const profile = profilesByVerificationRequestId.get(verificationRequestId);
+
+  if (!profile) {
+    res.status(404).json({
+      error: "Profile not found.",
+    });
+    return;
+  }
+
+  const midnightWalletAddress = getWalletAddressFromBody(body);
+
+  if (!midnightWalletAddress) {
+    res.status(400).json({
+      error: "midnightWalletAddress is required.",
+    });
+    return;
+  }
+
+  const walletBinding = walletBindingsById.get(profile.walletBindingId);
+
+  if (
+    !walletBinding ||
+    walletBinding.isActive !== "true" ||
+    walletBinding.midnightWalletAddress !== midnightWalletAddress
+  ) {
+    res.status(403).json({
+      error: "Connected wallet does not own this approved profile binding.",
+    });
+    return;
+  }
+
+  const rotate = body.rotate === true;
+  const shouldIssueNewProfileKey = rotate || !profile.contactModeProfileKey;
+
+  const nextProfileKey = shouldIssueNewProfileKey
+    ? createContactModeProfileKey()
+    : profile.contactModeProfileKey;
+
+  const nextEntryVersion = shouldIssueNewProfileKey
+    ? profile.contactModeEntryVersion + 1
+    : profile.contactModeEntryVersion;
+
+  profile.contactModeArchitecture = "global";
+  profile.contactModeProfileKey = nextProfileKey;
+  profile.contactModeOwnerCommitment = shouldIssueNewProfileKey
+    ? null
+    : profile.contactModeOwnerCommitment;
+  profile.contactModeEntryStatus = shouldIssueNewProfileKey
+    ? "not_registered"
+    : profile.contactModeEntryStatus;
+  profile.contactModeEntryVersion = nextEntryVersion;
+  profile.contactModeSyncStatus = shouldIssueNewProfileKey
+    ? "not_created"
+    : profile.contactModeSyncStatus;
+  profile.contactModeLastSyncedAt = shouldIssueNewProfileKey
+    ? null
+    : profile.contactModeLastSyncedAt;
+  profile.contactModeSyncError = null;
+  profile.contactModeSyncedValue = shouldIssueNewProfileKey
+    ? null
+    : profile.contactModeSyncedValue;
+  profile.updatedAt = nowIso();
+
+  profilesByVerificationRequestId.set(verificationRequestId, profile);
+
+  res.json({
+    profile,
+    contactModeProfileKey: nextProfileKey,
+    contactModeEntryVersion: nextEntryVersion,
+    issuedNewProfileKey: shouldIssueNewProfileKey,
+    rotated: rotate,
   });
 });
 

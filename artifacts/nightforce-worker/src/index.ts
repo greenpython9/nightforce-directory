@@ -390,6 +390,11 @@ const updateContactModeSyncInputSchema = z
     }
   });
 
+const issueGlobalContactModeEntryInputSchema = z.object({
+  midnightWalletAddress: z.string().trim().min(1),
+  rotate: z.boolean().optional().default(false),
+});
+
 const jsonHeaders = {
   "content-type": "application/json; charset=utf-8",
   "access-control-allow-origin": "*",
@@ -1136,6 +1141,13 @@ function normalizeSocials(value: string[] | undefined): string[] {
 
 function createPublicId(): string {
   return `nf_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
+}
+
+function createContactModeProfileKey(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 function createAvatarObjectKey(contentType: string): string {
@@ -2910,6 +2922,136 @@ export default {
         return json(
           {
             error: "Failed to create or update profile",
+            details: getErrorMessage(error),
+          },
+          500,
+        );
+      }
+    }
+
+
+    if (
+      parts[1] === "nightforce" &&
+      parts[2] === "profiles" &&
+      uuidSchema.safeParse(parts[3]).success &&
+      parts[4] === "contact-mode-entry" &&
+      request.method === "POST"
+    ) {
+      const verificationRequestId = parts[3];
+
+      try {
+        let rawBody: unknown;
+
+        try {
+          rawBody = await request.json();
+        } catch {
+          return json({ error: "Invalid JSON body" }, 400);
+        }
+
+        const input = issueGlobalContactModeEntryInputSchema.parse(rawBody);
+
+        const profiles = await db
+          .select()
+          .from(profilesTable)
+          .where(eq(profilesTable.verificationRequestId, verificationRequestId))
+          .limit(1);
+
+        const existingProfile = profiles[0] ?? null;
+
+        if (!existingProfile) {
+          return json({ error: "Profile not found" }, 404);
+        }
+
+        const walletBindings = await db
+          .select()
+          .from(walletBindingsTable)
+          .where(eq(walletBindingsTable.id, existingProfile.walletBindingId))
+          .limit(1);
+
+        const walletBinding = walletBindings[0] ?? null;
+
+        if (
+          !walletBinding ||
+          walletBinding.isActive !== "true" ||
+          walletBinding.midnightWalletAddress !== input.midnightWalletAddress
+        ) {
+          return json(
+            {
+              error:
+                "Connected wallet does not own this approved profile binding.",
+            },
+            403,
+          );
+        }
+
+        const shouldIssueNewProfileKey =
+          input.rotate || !existingProfile.contactModeProfileKey;
+
+        const nextProfileKey = shouldIssueNewProfileKey
+          ? createContactModeProfileKey()
+          : existingProfile.contactModeProfileKey;
+
+        const nextEntryVersion = shouldIssueNewProfileKey
+          ? existingProfile.contactModeEntryVersion + 1
+          : existingProfile.contactModeEntryVersion;
+
+        const now = new Date().toISOString();
+
+        await db
+          .update(profilesTable)
+          .set({
+            contactModeArchitecture: "global",
+            contactModeProfileKey: nextProfileKey,
+            contactModeOwnerCommitment: shouldIssueNewProfileKey
+              ? null
+              : existingProfile.contactModeOwnerCommitment,
+            contactModeEntryStatus: shouldIssueNewProfileKey
+              ? "not_registered"
+              : existingProfile.contactModeEntryStatus,
+            contactModeEntryVersion: nextEntryVersion,
+            contactModeSyncStatus: shouldIssueNewProfileKey
+              ? "not_created"
+              : existingProfile.contactModeSyncStatus,
+            contactModeLastSyncedAt: shouldIssueNewProfileKey
+              ? null
+              : existingProfile.contactModeLastSyncedAt,
+            contactModeSyncError: null,
+            contactModeSyncedValue: shouldIssueNewProfileKey
+              ? null
+              : existingProfile.contactModeSyncedValue,
+            updatedAt: now,
+          })
+          .where(eq(profilesTable.id, existingProfile.id));
+
+        const updatedProfiles = await db
+          .select()
+          .from(profilesTable)
+          .where(eq(profilesTable.id, existingProfile.id))
+          .limit(1);
+
+        const updatedProfile = updatedProfiles[0] ?? null;
+
+        return json({
+          profile: updatedProfile,
+          contactModeProfileKey: nextProfileKey,
+          contactModeEntryVersion: nextEntryVersion,
+          issuedNewProfileKey: shouldIssueNewProfileKey,
+          rotated: input.rotate,
+        });
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          return json(
+            {
+              error: "Invalid contact-mode entry input",
+              details: error.flatten(),
+            },
+            400,
+          );
+        }
+
+        return json(
+          {
+            error: "Failed to issue contact-mode entry metadata",
             details: getErrorMessage(error),
           },
           500,
