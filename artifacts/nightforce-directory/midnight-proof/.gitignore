@@ -1,4 +1,2 @@
 deployment*.json
-midnight-level-db/
-nightforce-midnight-proof@*
-docker
+!deployment.preprod.public.json

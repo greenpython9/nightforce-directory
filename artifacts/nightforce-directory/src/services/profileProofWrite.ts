@@ -6,7 +6,7 @@ import { indexerPublicDataProvider } from "@midnight-ntwrk/midnight-js-indexer-p
 import { setNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
 import * as ledger from "@midnight-ntwrk/ledger-v8";
 
-import deploymentPreprod from "../../midnight-proof/deployment.preprod.json";
+import deploymentPreprod from "../../midnight-proof/deployment.preprod.public.json";
 import * as ProfileProof from "../../midnight-proof/contracts/managed/profile-proof/contract/index.js";
 
 import {
