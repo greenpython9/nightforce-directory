@@ -2632,7 +2632,100 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
 
       let syncPending = false;
 
-      if (existingContactModeAddress && savedContactMode !== nextMode) {
+      const activeGlobalContactModeAddress =
+        data.profile.contactModeGlobalContractAddress ??
+        globalContactModeContractAddress;
+      const activeGlobalProfileKey =
+        data.profile.contactModeProfileKey ?? contactModeProfileKey;
+      const shouldUseGlobalContactMode =
+        (data.profile.contactModeArchitecture ?? contactModeArchitecture) ===
+          "global" ||
+        Boolean(activeGlobalContactModeAddress);
+
+      if (
+        shouldUseGlobalContactMode &&
+        activeGlobalContactModeAddress &&
+        activeGlobalProfileKey &&
+        savedContactMode !== nextMode
+      ) {
+        try {
+          const updateResult = await updateGlobalContactMode({
+            contractAddress: activeGlobalContactModeAddress,
+            profileKey: activeGlobalProfileKey,
+            nextMode,
+          });
+          const syncedAt = new Date().toISOString();
+          const activeNetworkId = getActiveContactModeNetworkId();
+
+          await updateContactModeSyncMetadata({
+            verificationRequestId,
+            contactModeContractAddress:
+              data.profile.contactModeContractAddress ?? null,
+            contactModeNetworkId: activeNetworkId,
+            contactModeSyncStatus: "synced",
+            contactModeLastSyncedAt: syncedAt,
+            contactModeSyncError: null,
+            contactModeSyncedValue: nextMode,
+
+            contactModeArchitecture: "global",
+            contactModeProfileKey: updateResult.profileKey,
+            contactModeOwnerCommitment: updateResult.ownerCommitment,
+            contactModeEntryStatus: "registered",
+            contactModeEntryVersion:
+              data.profile.contactModeEntryVersion ?? contactModeEntryVersion,
+            contactModeGlobalContractAddress: updateResult.contractAddress,
+            contactModeGlobalNetworkId: activeNetworkId,
+          });
+
+          setContactModeArchitecture("global");
+          setContactModeProfileKey(updateResult.profileKey);
+          setContactModeOwnerCommitment(updateResult.ownerCommitment);
+          setContactModeEntryStatus("registered");
+          setContactModeEntryVersion(
+            data.profile.contactModeEntryVersion ?? contactModeEntryVersion,
+          );
+          setContactModeGlobalContractAddress(updateResult.contractAddress);
+          setContactModeGlobalNetworkId(activeNetworkId);
+          setContactModeNetworkId(activeNetworkId);
+          setSavedContactMode(nextMode);
+        } catch (syncError) {
+          const syncMessage = getReadablePublishError(
+            syncError,
+            "Failed to update global Contact Mode after removing the saved email.",
+          );
+
+          syncPending = true;
+
+          try {
+            await updateContactModeSyncMetadata({
+              verificationRequestId,
+              contactModeContractAddress:
+                data.profile.contactModeContractAddress ?? null,
+              contactModeNetworkId: getActiveContactModeNetworkId(),
+              contactModeSyncStatus: "failed",
+              contactModeLastSyncedAt:
+                data.profile.contactModeLastSyncedAt ?? null,
+              contactModeSyncError: syncMessage,
+              contactModeSyncedValue: null,
+
+              contactModeArchitecture: "global",
+              contactModeProfileKey: activeGlobalProfileKey,
+              contactModeOwnerCommitment:
+                data.profile.contactModeOwnerCommitment ??
+                contactModeOwnerCommitment,
+              contactModeEntryStatus: "failed",
+              contactModeEntryVersion:
+                data.profile.contactModeEntryVersion ?? contactModeEntryVersion,
+              contactModeGlobalContractAddress: activeGlobalContactModeAddress,
+              contactModeGlobalNetworkId: getActiveContactModeNetworkId(),
+            });
+          } catch {
+            // Keep backend email removal success even if sync metadata update also fails.
+          }
+
+          setContactModeEntryStatus("failed");
+        }
+      } else if (existingContactModeAddress && savedContactMode !== nextMode) {
         try {
           const updateResult = await updateContactMode(
             existingContactModeAddress,
