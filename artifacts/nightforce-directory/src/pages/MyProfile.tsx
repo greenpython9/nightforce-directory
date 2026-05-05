@@ -8,10 +8,20 @@ import {
 import { ProfileCard } from "../components/ProfileCard";
 import type { ContactMode, ProfileVisibility, PublicProfile } from "../types";
 import { buildNightforceApiUrl } from "../lib/nightforceApi";
+import {
+  fetchGlobalContactModeConfig,
+  type ContactModeGlobalConfig,
+} from "../services/contactModeGlobalConfig";
 
 const AVATAR_MAX_BYTES = 500 * 1024;
 
 type ContactModeNetworkId = "preprod" | "mainnet";
+type ContactModeArchitecture = "per_profile" | "global";
+type ContactModeEntryStatus =
+  | "not_registered"
+  | "registered"
+  | "failed"
+  | "rotated";
 const AVATAR_ALLOWED_TYPES = new Set([
   "image/jpeg",
   "image/png",
@@ -353,6 +363,15 @@ type ProfileResponse = {
     contactModeLastSyncedAt: string | null;
     contactModeSyncError: string | null;
     contactModeSyncedValue: ContactMode | null;
+
+    contactModeArchitecture?: ContactModeArchitecture;
+    contactModeProfileKey?: string | null;
+    contactModeOwnerCommitment?: string | null;
+    contactModeEntryStatus?: ContactModeEntryStatus;
+    contactModeEntryVersion?: number;
+    contactModeGlobalContractAddress?: string | null;
+    contactModeGlobalNetworkId?: ContactModeNetworkId | null;
+
     socials: string[];
     fieldVisibility: FieldVisibility;
     encryptedHiddenPayload: unknown;
@@ -1138,6 +1157,23 @@ export function MyProfile() {
     useState<string | null>(null);
   const [contactModeNetworkId, setContactModeNetworkId] =
     useState<ContactModeNetworkId | null>(null);
+  const [contactModeArchitecture, setContactModeArchitecture] =
+    useState<ContactModeArchitecture>("per_profile");
+  const [contactModeProfileKey, setContactModeProfileKey] =
+    useState<string | null>(null);
+  const [contactModeOwnerCommitment, setContactModeOwnerCommitment] =
+    useState<string | null>(null);
+  const [contactModeEntryStatus, setContactModeEntryStatus] =
+    useState<ContactModeEntryStatus>("not_registered");
+  const [contactModeEntryVersion, setContactModeEntryVersion] = useState(0);
+  const [contactModeGlobalContractAddress, setContactModeGlobalContractAddress] =
+    useState<string | null>(null);
+  const [contactModeGlobalNetworkId, setContactModeGlobalNetworkId] =
+    useState<ContactModeNetworkId | null>(null);
+  const [globalContactModeConfig, setGlobalContactModeConfig] =
+    useState<ContactModeGlobalConfig | null>(null);
+  const [globalContactModeConfigLoading, setGlobalContactModeConfigLoading] =
+    useState(false);
   const [savedEncryptedHiddenPayload, setSavedEncryptedHiddenPayload] =
     useState<EncryptedHiddenPayload | null>(null);
   const [hasSavedShieldedEmail, setHasSavedShieldedEmail] = useState(false);
@@ -1191,6 +1227,13 @@ export function MyProfile() {
     setLastPublishedFingerprint(null);
     setContactModeContractAddress(null);
     setContactModeNetworkId(null);
+    setContactModeArchitecture("per_profile");
+    setContactModeProfileKey(null);
+    setContactModeOwnerCommitment(null);
+    setContactModeEntryStatus("not_registered");
+    setContactModeEntryVersion(0);
+    setContactModeGlobalContractAddress(null);
+    setContactModeGlobalNetworkId(null);
     setSavedEncryptedHiddenPayload(null);
     setHasSavedShieldedEmail(false);
     setSavedContactMode(null);
@@ -1198,6 +1241,33 @@ export function MyProfile() {
     setContactModeCompareError("");
     setContactModeRepairLoading(false);
     setPublishSettling(false);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    setGlobalContactModeConfigLoading(true);
+
+    fetchGlobalContactModeConfig()
+      .then((config) => {
+        if (active) {
+          setGlobalContactModeConfig(config);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setGlobalContactModeConfig(null);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setGlobalContactModeConfigLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const load = useCallback(async (options?: { preserveSaveMsg?: boolean }) => {
@@ -1292,6 +1362,17 @@ export function MyProfile() {
 
       setContactModeContractAddress(profile.contactModeContractAddress ?? null);
       setContactModeNetworkId(profile.contactModeNetworkId ?? null);
+      setContactModeArchitecture(profile.contactModeArchitecture ?? "per_profile");
+      setContactModeProfileKey(profile.contactModeProfileKey ?? null);
+      setContactModeOwnerCommitment(profile.contactModeOwnerCommitment ?? null);
+      setContactModeEntryStatus(
+        profile.contactModeEntryStatus ?? "not_registered",
+      );
+      setContactModeEntryVersion(profile.contactModeEntryVersion ?? 0);
+      setContactModeGlobalContractAddress(
+        profile.contactModeGlobalContractAddress ?? null,
+      );
+      setContactModeGlobalNetworkId(profile.contactModeGlobalNetworkId ?? null);
 
       setPublicId(profile.publicId ?? "");
       setDisplayName(profile.displayName ?? "");
@@ -1587,6 +1668,28 @@ export function MyProfile() {
     contactModeNetworkMatchesActiveNetwork(contactModeNetworkId)
       ? contactModeContractAddress
       : null;
+
+  const globalContactModeContractAddress =
+    contactModeGlobalContractAddress ??
+    globalContactModeConfig?.contractAddress ??
+    null;
+  const globalContactModeConfigured = Boolean(globalContactModeContractAddress);
+  const globalContactModeNetworkLabel =
+    contactModeGlobalNetworkId ?? globalContactModeConfig?.networkId ?? MIDNIGHT_NETWORK_ID;
+  const globalContactModeEntryLabel =
+    contactModeEntryStatus === "registered"
+      ? "registered"
+      : contactModeEntryStatus === "rotated"
+        ? "rotated"
+        : contactModeEntryStatus === "failed"
+          ? "failed"
+          : "not registered yet";
+  const globalContactModeProfileKeyPreview = contactModeProfileKey
+    ? `${contactModeProfileKey.slice(0, 8)}…${contactModeProfileKey.slice(-8)}`
+    : "not issued yet";
+  const globalContactModeOwnerPreview = contactModeOwnerCommitment
+    ? `${contactModeOwnerCommitment.slice(0, 8)}…${contactModeOwnerCommitment.slice(-8)}`
+    : "not stored yet";
 
   const contactModeOnchainWriteEnabled = isContactModeOnchainWriteEnabled();
 
@@ -2783,7 +2886,35 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
               <div className="flex items-start justify-between gap-3">
                 <span className="text-zinc-500">Contract</span>
                 <span className="text-zinc-500 text-right break-all">
-                  {contactModeContractAddress ?? "Not created yet"}
+                  {contactModeArchitecture === "global" ? (
+                    <span className="space-y-1">
+                      <span className="block">
+                        Global Contract:{" "}
+                        {globalContactModeConfigLoading
+                          ? "checking..."
+                          : globalContactModeConfigured
+                            ? globalContactModeContractAddress
+                            : "not configured"}
+                      </span>
+                      <span className="block">
+                        Contact Mode Entry: {globalContactModeEntryLabel}
+                      </span>
+                      <span className="block">
+                        Entry key: {globalContactModeProfileKeyPreview}
+                      </span>
+                      <span className="block">
+                        Owner commitment: {globalContactModeOwnerPreview}
+                      </span>
+                      <span className="block">
+                        Entry version: {contactModeEntryVersion}
+                      </span>
+                      <span className="block">
+                        Network: {globalContactModeNetworkLabel}
+                      </span>
+                    </span>
+                  ) : (
+                    contactModeContractAddress ?? "Not created yet"
+                  )}
                 </span>
               </div>
             </div>
