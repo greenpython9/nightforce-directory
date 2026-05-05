@@ -36,6 +36,7 @@ minimumReleaseAgeExclude:
 
 packages:
   - artifacts/*
+  - artifacts/nightforce-directory/midnight-contact-mode
   - lib/*
   - lib/integrations/*
   - scripts
