@@ -2749,6 +2749,124 @@ export default {
       parts[0] === "api" &&
       parts[1] === "nightforce" &&
       parts[2] === "profiles" &&
+      request.method === "DELETE"
+    ) {
+      try {
+        const verificationRequestId = uuidSchema.parse(parts[3]);
+        let rawBody: unknown;
+
+        try {
+          rawBody = await request.json();
+        } catch {
+          return json({ error: "Invalid JSON body" }, 400);
+        }
+
+        const input = z
+          .object({
+            walletBindingId: uuidSchema,
+            midnightWalletAddress: z.string().trim().min(1),
+          })
+          .parse(rawBody);
+
+        const [profile] = await db
+          .select()
+          .from(profilesTable)
+          .where(eq(profilesTable.verificationRequestId, verificationRequestId))
+          .limit(1);
+
+        if (!profile) {
+          return json({ error: "Profile not found" }, 404);
+        }
+
+        if (profile.walletBindingId !== input.walletBindingId) {
+          return json(
+            { error: "Wallet binding does not match this profile." },
+            403,
+          );
+        }
+
+        const [walletBinding] = await db
+          .select()
+          .from(walletBindingsTable)
+          .where(eq(walletBindingsTable.id, input.walletBindingId))
+          .limit(1);
+
+        if (!walletBinding || walletBinding.isActive !== "true") {
+          return json({ error: "Active wallet binding was not found." }, 403);
+        }
+
+        if (walletBinding.verificationRequestId !== verificationRequestId) {
+          return json(
+            {
+              error:
+                "Wallet binding does not belong to this verification request.",
+            },
+            403,
+          );
+        }
+
+        if (walletBinding.midnightWalletAddress !== input.midnightWalletAddress) {
+          return json(
+            {
+              error:
+                "Connected wallet does not own this approved profile binding.",
+            },
+            403,
+          );
+        }
+
+        const [verificationRequest] = await db
+          .select()
+          .from(verificationRequestsTable)
+          .where(eq(verificationRequestsTable.id, verificationRequestId))
+          .limit(1);
+
+        await db
+          .delete(profilesTable)
+          .where(eq(profilesTable.id, profile.id));
+
+        await db
+          .delete(walletBindingsTable)
+          .where(eq(walletBindingsTable.id, walletBinding.id));
+
+        await db
+          .delete(verificationRequestsTable)
+          .where(eq(verificationRequestsTable.id, verificationRequestId));
+
+        return json({
+          ok: true,
+          deleted: {
+            profile: true,
+            walletBinding: true,
+            verificationRequest: Boolean(verificationRequest),
+          },
+        });
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          return json(
+            {
+              error: "Invalid profile delete input",
+              details: error.flatten(),
+            },
+            400,
+          );
+        }
+
+        return json(
+          {
+            error: "Failed to delete profile",
+            details: getErrorMessage(error),
+          },
+          500,
+        );
+      }
+    }
+
+    if (
+      parts.length === 4 &&
+      parts[0] === "api" &&
+      parts[1] === "nightforce" &&
+      parts[2] === "profiles" &&
       request.method === "PUT"
     ) {
       try {

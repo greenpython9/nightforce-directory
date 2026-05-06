@@ -767,6 +767,82 @@ router.get("/nightforce/profiles/:verificationRequestId", (req, res) => {
   });
 });
 
+router.delete("/nightforce/profiles/:verificationRequestId", (req, res) => {
+  const verificationRequestId = req.params.verificationRequestId;
+  const body = asRecord(req.body);
+  const walletBindingId = asString(body.walletBindingId);
+  const midnightWalletAddress = getWalletAddressFromBody(body);
+
+  if (!walletBindingId) {
+    res.status(400).json({
+      error: "walletBindingId is required.",
+    });
+    return;
+  }
+
+  if (!midnightWalletAddress) {
+    res.status(400).json({
+      error: "midnightWalletAddress is required.",
+    });
+    return;
+  }
+
+  const profile = profilesByVerificationRequestId.get(verificationRequestId);
+
+  if (!profile) {
+    res.status(404).json({
+      error: "Profile not found.",
+    });
+    return;
+  }
+
+  if (profile.walletBindingId !== walletBindingId) {
+    res.status(403).json({
+      error: "Wallet binding does not match this profile.",
+    });
+    return;
+  }
+
+  const walletBinding = walletBindingsById.get(walletBindingId);
+
+  if (!walletBinding || walletBinding.isActive !== "true") {
+    res.status(403).json({
+      error: "Active wallet binding was not found.",
+    });
+    return;
+  }
+
+  if (walletBinding.verificationRequestId !== verificationRequestId) {
+    res.status(403).json({
+      error: "Wallet binding does not belong to this verification request.",
+    });
+    return;
+  }
+
+  if (walletBinding.midnightWalletAddress !== midnightWalletAddress) {
+    res.status(403).json({
+      error: "Connected wallet does not own this approved profile binding.",
+    });
+    return;
+  }
+
+  const verificationRequest = verificationRequests.get(verificationRequestId);
+
+  profilesByVerificationRequestId.delete(verificationRequestId);
+  walletBindingsById.delete(walletBindingId);
+  walletBindingIdsByWallet.delete(midnightWalletAddress);
+  verificationRequests.delete(verificationRequestId);
+
+  res.json({
+    ok: true,
+    deleted: {
+      profile: true,
+      walletBinding: true,
+      verificationRequest: Boolean(verificationRequest),
+    },
+  });
+});
+
 router.put("/nightforce/profiles/:verificationRequestId", (req, res) => {
   const verificationRequestId = req.params.verificationRequestId;
   const body = asRecord(req.body);

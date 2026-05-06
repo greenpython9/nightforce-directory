@@ -1226,6 +1226,10 @@ export function MyProfile() {
   const [publishing, setPublishing] = useState(false);
   const [publishSettling, setPublishSettling] = useState(false);
   const [removingEmail, setRemovingEmail] = useState(false);
+  const [accountDeleteDialogOpen, setAccountDeleteDialogOpen] = useState(false);
+  const [accountDeleteConfirmation, setAccountDeleteConfirmation] = useState("");
+  const [accountDeleting, setAccountDeleting] = useState(false);
+  const [profileExists, setProfileExists] = useState(false);
   const [lastPublishedFingerprint, setLastPublishedFingerprint] = useState<string | null>(null);
   const [contactModeContractAddress, setContactModeContractAddress] =
     useState<string | null>(null);
@@ -1321,6 +1325,10 @@ export function MyProfile() {
     setContactModeCompareError("");
     setContactModeRepairLoading(false);
     setContactModeEntryPreparing(false);
+    setAccountDeleteDialogOpen(false);
+    setAccountDeleteConfirmation("");
+    setAccountDeleting(false);
+    setProfileExists(false);
     setPublishSettling(false);
   }, []);
 
@@ -1355,6 +1363,7 @@ export function MyProfile() {
     if (!walletId || verificationStatus !== "approved" || connectionMode !== "midnight") {
       setVerificationRequestId(null);
       setWalletBindingId(null);
+      setProfileExists(false);
       return;
     }
 
@@ -1439,6 +1448,7 @@ export function MyProfile() {
 
       const data = profilePayload as ProfileResponse;
       const profile = data.profile;
+      setProfileExists(true);
       const parsedSocials = parseSocials(profile.socials ?? []);
 
       setContactModeContractAddress(profile.contactModeContractAddress ?? null);
@@ -2829,6 +2839,182 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
   };
 
 
+  const deleteAccount = async () => {
+    if (accountDeleting) {
+      return;
+    }
+
+    if (accountDeleteConfirmation.trim() !== "DELETE") {
+      setError("Type DELETE to confirm account deletion.");
+      return;
+    }
+
+    if (!verificationRequestId || !walletBindingId || !walletId) {
+      setError("No approved wallet binding was found for this wallet.");
+      return;
+    }
+
+    if (publishing || publishSettling || removingEmail) {
+      setError("Finish the current profile action before deleting your account.");
+      return;
+    }
+
+    const nextMode: ContactMode = "NO_CONTACT";
+    const modeBeforeDelete =
+      savedContactMode ??
+      deriveContactModeForSync({
+        publicEmail: savedPublicEmail,
+        encryptedHiddenPayload: savedEncryptedHiddenPayload,
+      });
+
+    setError("");
+    setSaveMsg("Preparing account deletion...");
+    setAccountDeleting(true);
+
+    try {
+      if (contactModeOnchainWriteEnabled && modeBeforeDelete !== nextMode) {
+        if (
+          (contactModeArchitecture === "global" || globalContactModeConfigured) &&
+          globalContactModeContractAddress &&
+          contactModeProfileKey &&
+          contactModeEntryStatus === "registered"
+        ) {
+          setSaveMsg("Resetting Midnight Contact Mode to NO_CONTACT...");
+
+          const updateResult = await updateGlobalContactMode({
+            contractAddress: globalContactModeContractAddress,
+            profileKey: contactModeProfileKey,
+            nextMode: nextMode as ContactModeGlobalValue,
+          });
+          const syncedAt = new Date().toISOString();
+          const activeNetworkId = getActiveContactModeNetworkId();
+
+          await updateContactModeSyncMetadata({
+            verificationRequestId,
+            contactModeContractAddress: contactModeContractAddress ?? null,
+            contactModeNetworkId: activeNetworkId,
+            contactModeSyncStatus: "synced",
+            contactModeLastSyncedAt: syncedAt,
+            contactModeSyncError: null,
+            contactModeSyncedValue: nextMode,
+
+            contactModeArchitecture: "global",
+            contactModeProfileKey: updateResult.profileKey,
+            contactModeOwnerCommitment: updateResult.ownerCommitment,
+            contactModeEntryStatus: "registered",
+            contactModeEntryVersion,
+            contactModeGlobalContractAddress: updateResult.contractAddress,
+            contactModeGlobalNetworkId: activeNetworkId,
+          });
+
+          setSavedContactMode(nextMode);
+          setContactModeProfileKey(updateResult.profileKey);
+          setContactModeOwnerCommitment(updateResult.ownerCommitment);
+          setContactModeEntryStatus("registered");
+          setContactModeGlobalContractAddress(updateResult.contractAddress);
+          setContactModeGlobalNetworkId(activeNetworkId);
+          setContactModeNetworkId(activeNetworkId);
+        } else if (usableContactModeContractAddress) {
+          setSaveMsg("Resetting Midnight Contact Mode to NO_CONTACT...");
+
+          const updateResult = await updateContactMode(
+            usableContactModeContractAddress,
+            nextMode,
+          );
+          const syncedAt = new Date().toISOString();
+
+          await updateContactModeSyncMetadata({
+            verificationRequestId,
+            contactModeContractAddress: updateResult.contractAddress,
+            contactModeNetworkId: getActiveContactModeNetworkId(),
+            contactModeSyncStatus: "synced",
+            contactModeLastSyncedAt: syncedAt,
+            contactModeSyncError: null,
+            contactModeSyncedValue: nextMode,
+          });
+
+          setContactModeContractAddress(updateResult.contractAddress);
+          setContactModeNetworkId(getActiveContactModeNetworkId());
+          setSavedContactMode(nextMode);
+        } else {
+          throw new Error(
+            "Contact Mode is not ready to reset. Verify sync and try again before deleting your account.",
+          );
+        }
+      }
+
+      setSaveMsg("Deleting account records...");
+
+      const response = await fetch(
+        buildNightforceApiUrl(`/api/nightforce/profiles/${verificationRequestId}`),
+        {
+          method: "DELETE",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            walletBindingId,
+            midnightWalletAddress: walletId,
+          }),
+        },
+      );
+
+      let payload: unknown = null;
+
+      try {
+        payload = await response.json();
+      } catch {
+        payload = null;
+      }
+
+      const profileAlreadyDeleted =
+        response.status === 404 &&
+        typeof payload === "object" &&
+        payload !== null &&
+        "error" in payload &&
+        typeof payload.error === "string" &&
+        payload.error.toLowerCase().includes("profile not found");
+
+      if (!response.ok && !profileAlreadyDeleted) {
+        const message =
+          typeof payload === "object" &&
+          payload !== null &&
+          "error" in payload &&
+          typeof payload.error === "string"
+            ? payload.error
+            : "Failed to delete account.";
+
+        throw new Error(message);
+      }
+
+      window.localStorage.removeItem(
+        "nightforce:contact-mode-global:local-secret-key:v1",
+      );
+
+      resetFields();
+      setProfileExists(false);
+      setVerificationRequestId(null);
+      setWalletBindingId(null);
+      setAccountDeleteDialogOpen(false);
+      setAccountDeleteConfirmation("");
+      setSaveMsg("Account deleted. Redirecting to verification request...");
+
+      window.setTimeout(() => {
+        window.location.assign("/request-verification");
+      }, 500);
+    } catch (err) {
+      const message = getReadablePublishError(
+        err,
+        "Failed to delete account.",
+      );
+
+      setError(`Account deletion failed: ${message}`);
+      setSaveMsg("");
+    } finally {
+      setAccountDeleting(false);
+    }
+  };
+
   if (!walletId) {
     return (
       <div className="max-w-xl mx-auto py-16 px-4">
@@ -3029,6 +3215,7 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
       }
 
       const data = payload as ProfileResponse;
+      setProfileExists(true);
       const nextSavedEncryptedHiddenPayload = encryptedHiddenPayload ?? null;
       const existingContactModeAddress = getContactModeAddressForActiveNetwork({
         contractAddress: data.profile.contactModeContractAddress ?? null,
@@ -4183,6 +4370,118 @@ const applyProfileVisibility = (nextVisibility: ProfileVisibility) => {
                   <li key={message}>{message}</li>
                 ))}
               </ul>
+            </div>
+          )}
+
+          <div className="rounded-lg border border-red-900/70 bg-red-950/10 p-4">
+            <h2 className="text-sm font-mono font-semibold text-red-200">
+              Danger Zone
+            </h2>
+            <p className="mt-2 text-[11px] font-mono leading-relaxed text-zinc-400">
+              This permanently removes your Nightforce profile, wallet binding, and
+              verification request from our app database. You will need to request
+              verification again if you want to use this wallet on nightforce.cc later.
+            </p>
+            <p className="mt-2 text-[11px] font-mono leading-relaxed text-zinc-400">
+              Before deletion, we will reset your Contact Mode on Midnight to
+              <span className="text-zinc-200"> NO_CONTACT</span> so your profile no
+              longer signals public or private contact availability.
+            </p>
+            <p className="mt-2 text-[11px] font-mono leading-relaxed text-zinc-500">
+              Your email is not stored on-chain. Private email is encrypted in the app
+              database. Midnight only stores a minimal Contact Mode status and an owner
+              commitment used for sync.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setAccountDeleteDialogOpen(true);
+                setAccountDeleteConfirmation("");
+                setError("");
+              }}
+              disabled={
+                !profileExists || accountDeleting || publishing || publishSettling
+              }
+              className="mt-4 rounded-lg border border-red-700 bg-red-950/30 px-4 py-2 text-sm font-mono font-semibold text-red-100 transition hover:border-red-500 hover:bg-red-900/30 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {accountDeleting ? "Deleting..." : "Delete my account"}
+            </button>
+            {!profileExists && (
+              <p className="mt-2 text-[11px] font-mono leading-relaxed text-zinc-500">
+                Create and publish your profile before account deletion is available.
+              </p>
+            )}
+          </div>
+
+          {accountDeleteDialogOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+              <div className="w-full max-w-lg rounded-xl border border-red-900 bg-zinc-950 p-5 shadow-2xl">
+                <div className="text-sm font-mono font-semibold text-red-200">
+                  Delete your Nightforce account?
+                </div>
+                <div className="mt-3 space-y-3 text-[11px] font-mono leading-relaxed text-zinc-400">
+                  <p>
+                    This action permanently removes your profile, wallet binding, and
+                    verification approval from nightforce.cc.
+                  </p>
+                  <p>
+                    Before deleting your app records, we will ask your wallet to reset
+                    your Midnight Contact Mode to
+                    <span className="text-zinc-200"> NO_CONTACT</span>. This prevents
+                    your old profile entry from continuing to signal that contact is
+                    available.
+                  </p>
+                  <p>
+                    Your email is not uploaded on-chain. If you used private contact, the
+                    email was encrypted in the app database. Midnight only stores the
+                    Contact Mode status and an owner commitment, not your email or profile
+                    content.
+                  </p>
+                  <p>
+                    After deletion, this wallet can request verification again from the
+                    beginning.
+                  </p>
+                </div>
+
+                <label className="mt-4 block text-[11px] font-mono text-zinc-500">
+                  Type DELETE to confirm.
+                </label>
+                <input
+                  type="text"
+                  value={accountDeleteConfirmation}
+                  onChange={(event) => setAccountDeleteConfirmation(event.target.value)}
+                  className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm font-mono text-white placeholder:text-zinc-600 focus:border-red-500 focus:outline-none"
+                  placeholder="DELETE"
+                />
+
+                <div className="mt-5 flex flex-wrap items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAccountDeleteDialogOpen(false);
+                      setAccountDeleteConfirmation("");
+                    }}
+                    disabled={accountDeleting}
+                    className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-mono text-zinc-300 transition hover:border-zinc-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void deleteAccount()}
+                    disabled={
+                      !profileExists ||
+                      accountDeleting ||
+                      accountDeleteConfirmation.trim() !== "DELETE"
+                    }
+                    className="rounded-lg border border-red-700 bg-red-950/40 px-4 py-2 text-sm font-mono font-semibold text-red-100 transition hover:border-red-500 hover:bg-red-900/40 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {accountDeleting
+                      ? "Deleting..."
+                      : "Reset Contact Mode and delete account"}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
