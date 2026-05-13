@@ -24,31 +24,58 @@ import { CompiledContract } from "@midnight-ntwrk/compact-js";
 
 (globalThis as any).WebSocket = WebSocket;
 
-export type ContactModeDeployTarget = "local" | "preprod";
+export type ContactModeDeployTarget = "local" | "preprod" | "mainnet";
 
 export const DEPLOY_TARGET =
   ((process.env.MIDNIGHT_CONTACT_MODE_TARGET as string | undefined) ??
     "local") as ContactModeDeployTarget;
 
 export const TARGET_NETWORK_ID =
-  DEPLOY_TARGET === "preprod" ? "preprod" : "undeployed";
+  DEPLOY_TARGET === "mainnet"
+    ? "mainnet"
+    : DEPLOY_TARGET === "preprod"
+      ? "preprod"
+      : "undeployed";
 
 setNetworkId(TARGET_NETWORK_ID);
 
+function requiredEnv(name: string): string {
+  const value = process.env[name]?.trim();
+
+  if (!value) {
+    throw new Error(
+      `${name} is required for guarded mainnet deployment. Do not commit this value.`,
+    );
+  }
+
+  return value;
+}
+
 export const CONFIG =
-  DEPLOY_TARGET === "preprod"
+  DEPLOY_TARGET === "mainnet"
     ? {
-        indexer: "https://indexer.preprod.midnight.network/api/v3/graphql",
-        indexerWS: "wss://indexer.preprod.midnight.network/api/v3/graphql/ws",
-        node: "https://rpc.preprod.midnight.network",
-        proofServer: "http://127.0.0.1:6300",
+        indexer: requiredEnv("MIDNIGHT_MAINNET_INDEXER_HTTP"),
+        indexerWS: requiredEnv("MIDNIGHT_MAINNET_INDEXER_WS"),
+        node: requiredEnv("MIDNIGHT_MAINNET_DEPLOYMENT_RPC_HTTP"),
+        nodeWS: requiredEnv("MIDNIGHT_MAINNET_DEPLOYMENT_RPC_WS"),
+        proofServer:
+          process.env.MIDNIGHT_PROOF_SERVER?.trim() ?? "http://127.0.0.1:6300",
       }
-    : {
-        indexer: "http://127.0.0.1:8088/api/v3/graphql",
-        indexerWS: "ws://127.0.0.1:8088/api/v3/graphql/ws",
-        node: "http://127.0.0.1:9944",
-        proofServer: "http://127.0.0.1:6300",
-      };
+    : DEPLOY_TARGET === "preprod"
+      ? {
+          indexer: "https://indexer.preprod.midnight.network/api/v3/graphql",
+          indexerWS: "wss://indexer.preprod.midnight.network/api/v3/graphql/ws",
+          node: "https://rpc.preprod.midnight.network",
+          nodeWS: "wss://rpc.preprod.midnight.network",
+          proofServer: "http://127.0.0.1:6300",
+        }
+      : {
+          indexer: "http://127.0.0.1:8088/api/v3/graphql",
+          indexerWS: "ws://127.0.0.1:8088/api/v3/graphql/ws",
+          node: "http://127.0.0.1:9944",
+          nodeWS: "ws://127.0.0.1:9944",
+          proofServer: "http://127.0.0.1:6300",
+        };
 
 export const DEPLOYMENT_FILE =
   DEPLOY_TARGET === "preprod"
@@ -127,7 +154,7 @@ export async function createWallet(seed: string) {
       indexerWsUrl: CONFIG.indexerWS,
     },
     provingServerUrl: new URL(CONFIG.proofServer),
-    relayURL: new URL(CONFIG.node.replace(/^http/, "ws")),
+    relayURL: new URL(CONFIG.nodeWS ?? CONFIG.node.replace(/^http/, "ws")),
   };
 
   const shieldedWallet = ShieldedWallet(walletConfig).startWithSecretKeys(

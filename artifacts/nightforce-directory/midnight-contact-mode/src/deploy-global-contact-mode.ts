@@ -155,9 +155,11 @@ async function createGlobalProviders(
 async function main() {
   console.log("\n╔══════════════════════════════════════════════════════════════╗");
   console.log(
-    DEPLOY_TARGET === "preprod"
-      ? "║  Deploy GLOBAL Contact Mode to Midnight Preprod            ║"
-      : "║  Deploy GLOBAL Contact Mode to Midnight Local Network      ║",
+    DEPLOY_TARGET === "mainnet"
+      ? "║  Deploy GLOBAL Contact Mode to Midnight Mainnet            ║"
+      : DEPLOY_TARGET === "preprod"
+        ? "║  Deploy GLOBAL Contact Mode to Midnight Preprod            ║"
+        : "║  Deploy GLOBAL Contact Mode to Midnight Local Network      ║",
   );
   console.log("╚══════════════════════════════════════════════════════════════╝\n");
 
@@ -205,6 +207,9 @@ async function main() {
         if (DEPLOY_TARGET === "preprod") {
           console.log("  Visit the Midnight Preprod faucet in your browser.");
           console.log("  Faucet: https://faucet.preprod.midnight.network/");
+        } else if (DEPLOY_TARGET === "mainnet") {
+          console.log("  Fund this wallet with mainnet NIGHT before deploying.");
+          console.log("  This guarded deployment will use the SE deployment RPC only for deployment.");
         } else {
           console.log("  Fund this wallet using your Midnight local network setup.");
         }
@@ -305,9 +310,11 @@ async function main() {
       };
 
       const publicFile =
-        DEPLOY_TARGET === "preprod"
-          ? "deployment.global.preprod.public.json"
-          : "deployment.global.local.public.json";
+        DEPLOY_TARGET === "mainnet"
+          ? "deployment.global.mainnet.public.json"
+          : DEPLOY_TARGET === "preprod"
+            ? "deployment.global.preprod.public.json"
+            : "deployment.global.local.public.json";
 
       fs.writeFileSync(publicFile, JSON.stringify(publicDeploymentInfo, null, 2));
       console.log(`  Saved public deployment metadata to ${publicFile}\n`);

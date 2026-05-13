@@ -15,7 +15,8 @@
     "start-proof-server": "docker run -p 6300:6300 midnightntwrk/proof-server:8.0.3 -- midnight-proof-server -v",
     "compile:global": "compact compile contracts/contact-mode-global.compact contracts/managed/contact-mode-global",
     "deploy:global:local": "MIDNIGHT_CONTACT_MODE_TARGET=local tsx src/deploy-global-contact-mode.ts",
-    "deploy:global:preprod": "MIDNIGHT_CONTACT_MODE_TARGET=preprod tsx src/deploy-global-contact-mode.ts"
+    "deploy:global:preprod": "MIDNIGHT_CONTACT_MODE_TARGET=preprod tsx src/deploy-global-contact-mode.ts",
+    "deploy:global:mainnet": "MIDNIGHT_CONTACT_MODE_TARGET=mainnet tsx src/deploy-global-contact-mode.ts"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
