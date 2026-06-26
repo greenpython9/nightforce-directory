@@ -4,6 +4,10 @@
   "license": "MIT",
   "scripts": {
     "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
+    "check:midnight-runtime": "node scripts/check-midnight-runtime-singleton.mjs",
+    "dev:directory": "pnpm --filter @workspace/nightforce-directory dev",
+    "dev:worker": "pnpm --filter @workspace/nightforce-worker dev",
+    "db:migrate:local": "pnpm --filter @workspace/nightforce-worker db:migrate:local",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"

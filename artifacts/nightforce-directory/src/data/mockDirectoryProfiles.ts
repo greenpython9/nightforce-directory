@@ -8,6 +8,7 @@ export type MockDirectoryProfileRecord = {
   bio: string | null;
   avatarUrl: string | null;
   websiteUrl: string | null;
+  nightDomain?: string | null;
   publicEmail: string | null;
   contactMode:
     | "NO_CONTACT"
@@ -30,9 +31,15 @@ export const MOCK_DIRECTORY_PROFILES: MockDirectoryProfileRecord[] = [
     bio: "Mock profile for homepage and directory UI testing.",
     avatarUrl: null,
     websiteUrl: null,
+    nightDomain: "12345.night",
     publicEmail: "aisha@example.com",
     contactMode: "PUBLIC_CONTACT_ALLOWED",
-    socials: ["https://t.me/nightforceprivacy", "https://discord.com/users/123456789", "https://x.com/aisharahman", "https://youtube.com/@123"],
+    socials: [
+      "https://t.me/nightforceprivacy",
+      "https://discord.com/users/123456789",
+      "https://x.com/aisharahman",
+      "https://youtube.com/@123",
+    ],
     requestedVisibility: "public",
     publishState: "published",
   },
@@ -48,7 +55,12 @@ export const MOCK_DIRECTORY_PROFILES: MockDirectoryProfileRecord[] = [
     websiteUrl: null,
     publicEmail: null,
     contactMode: "PRIVATE_CONTACT_AVAILABLE",
-    socials: ["https://t.me/nightforceprivacy", "https://discord.com/users/123456789", "https://x.com/aisharahman", "https://youtube.com/@123"],
+    socials: [
+      "https://t.me/nightforceprivacy",
+      "https://discord.com/users/123456789",
+      "https://x.com/aisharahman",
+      "https://youtube.com/@123",
+    ],
     requestedVisibility: "public",
     publishState: "published",
   },
@@ -64,7 +76,12 @@ export const MOCK_DIRECTORY_PROFILES: MockDirectoryProfileRecord[] = [
     websiteUrl: null,
     publicEmail: null,
     contactMode: "NO_CONTACT",
-    socials: ["https://t.me/nightforceprivacy", "https://discord.com/users/123456789", "https://x.com/aisharahman", "https://youtube.com/@123"],
+    socials: [
+      "https://t.me/nightforceprivacy",
+      "https://discord.com/users/123456789",
+      "https://x.com/aisharahman",
+      "https://youtube.com/@123",
+    ],
     requestedVisibility: "public",
     publishState: "published",
   },
@@ -82,7 +99,12 @@ export const MOCK_DIRECTORY_PROFILES: MockDirectoryProfileRecord[] = [
     websiteUrl: null,
     publicEmail: "mei@example.com",
     contactMode: "PUBLIC_CONTACT_ALLOWED",
-    socials: ["https://t.me/nightforceprivacy", "https://discord.com/users/123456789", "https://x.com/aisharahman", "https://youtube.com/@123"],
+    socials: [
+      "https://t.me/nightforceprivacy",
+      "https://discord.com/users/123456789",
+      "https://x.com/aisharahman",
+      "https://youtube.com/@123",
+    ],
     requestedVisibility: "public",
     publishState: "published",
   },

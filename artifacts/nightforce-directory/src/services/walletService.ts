@@ -42,7 +42,10 @@ type MidnightInitialApiLike = {
   connect: (networkId: string) => Promise<MidnightConnectedApiLike>;
 };
 
-type MidnightWalletRegistry = Record<string, MidnightInitialApiLike | undefined>;
+type MidnightWalletRegistry = Record<
+  string,
+  MidnightInitialApiLike | undefined
+>;
 
 type MidnightConnectedApiLike = {
   getConfiguration?: () => Promise<{
@@ -86,7 +89,6 @@ type MidnightConnectedApiLike = {
   ) => Promise<{ tx: string }>;
   submitTransaction?: (tx: string) => Promise<void>;
 };
-
 
 export type MidnightNetworkId = "undeployed" | "preprod" | "mainnet";
 export type NightforceAppMode =
@@ -149,19 +151,22 @@ export const MIDNIGHT_NETWORK_ID = normalizeMidnightNetworkId(
   DEFAULT_MIDNIGHT_NETWORK_ID,
 );
 
+export const MIDNIGHT_PROFILE_FLOW_ENABLED =
+  import.meta.env.VITE_ENABLE_MIDNIGHT_PROFILE_FLOW === "true";
+
 export const PROFILE_PROOF_STATE_URL =
   (import.meta.env.VITE_PROFILE_PROOF_STATE_URL as string | undefined) ??
   getDefaultProfileProofStateUrl(NIGHTFORCE_APP_MODE);
 
 export const MIDNIGHT_WRITE_ENABLED =
-  NIGHTFORCE_APP_MODE === "preprod-write" ||
-  NIGHTFORCE_APP_MODE === "mainnet-write";
+  MIDNIGHT_PROFILE_FLOW_ENABLED &&
+  (NIGHTFORCE_APP_MODE === "preprod-write" ||
+    NIGHTFORCE_APP_MODE === "mainnet-write");
 
 export const PROFILE_PROOF_WRITE_ENABLED =
-  NIGHTFORCE_APP_MODE === "preprod-write";
+  MIDNIGHT_PROFILE_FLOW_ENABLED && NIGHTFORCE_APP_MODE === "preprod-write";
 
 export const MIDNIGHT_CONNECT_ENABLED = MIDNIGHT_WRITE_ENABLED;
-
 
 export interface ProfileProofState {
   contractAddress: string;
@@ -191,7 +196,6 @@ export async function getProfileProofState(): Promise<ProfileProofState> {
 
   return payload as ProfileProofState;
 }
-
 
 // ============================================================
 // MOCK WALLET IMPLEMENTATION
@@ -265,7 +269,9 @@ export function getWalletAdapter(): WalletAdapter {
 let connectedMidnightApi: MidnightConnectedApiLike | null = null;
 let connectedMidnightProviderId: string | null = null;
 
-function isMidnightInitialApiLike(value: unknown): value is MidnightInitialApiLike {
+function isMidnightInitialApiLike(
+  value: unknown,
+): value is MidnightInitialApiLike {
   return (
     typeof value === "object" &&
     value !== null &&
@@ -279,9 +285,9 @@ function getMidnightRegistry(): MidnightWalletRegistry {
     return {};
   }
 
-  const injectedMidnightWallets =
-    ((window as unknown as { midnight?: Record<string, unknown> }).midnight ??
-      {}) as Record<string, unknown>;
+  const injectedMidnightWallets = ((
+    window as unknown as { midnight?: Record<string, unknown> }
+  ).midnight ?? {}) as Record<string, unknown>;
 
   const registry: MidnightWalletRegistry = {};
   const seenProviders = new Set<MidnightInitialApiLike>();
@@ -289,7 +295,9 @@ function getMidnightRegistry(): MidnightWalletRegistry {
   const seenAliasKeys = new Set<string>();
   const entries: Array<[string, MidnightInitialApiLike]> = [];
 
-  for (const [providerId, provider] of Object.entries(injectedMidnightWallets)) {
+  for (const [providerId, provider] of Object.entries(
+    injectedMidnightWallets,
+  )) {
     if (isMidnightInitialApiLike(provider)) {
       entries.push([providerId, provider]);
     }
@@ -394,15 +402,21 @@ async function buildMidnightWalletSnapshot(
   provider: MidnightInitialApiLike,
   connectedApi: MidnightConnectedApiLike,
 ): Promise<MidnightWalletSnapshot> {
-  const [configuration, connectionStatus, shieldedAddresses, unshieldedAddress, dustAddress, dustBalance] =
-    await Promise.all([
-      connectedApi.getConfiguration?.() ?? Promise.resolve(undefined),
-      connectedApi.getConnectionStatus?.() ?? Promise.resolve(undefined),
-      connectedApi.getShieldedAddresses?.() ?? Promise.resolve(undefined),
-      connectedApi.getUnshieldedAddress?.() ?? Promise.resolve(undefined),
-      connectedApi.getDustAddress?.() ?? Promise.resolve(undefined),
-      connectedApi.getDustBalance?.() ?? Promise.resolve(undefined),
-    ]);
+  const [
+    configuration,
+    connectionStatus,
+    shieldedAddresses,
+    unshieldedAddress,
+    dustAddress,
+    dustBalance,
+  ] = await Promise.all([
+    connectedApi.getConfiguration?.() ?? Promise.resolve(undefined),
+    connectedApi.getConnectionStatus?.() ?? Promise.resolve(undefined),
+    connectedApi.getShieldedAddresses?.() ?? Promise.resolve(undefined),
+    connectedApi.getUnshieldedAddress?.() ?? Promise.resolve(undefined),
+    connectedApi.getDustAddress?.() ?? Promise.resolve(undefined),
+    connectedApi.getDustBalance?.() ?? Promise.resolve(undefined),
+  ]);
 
   return {
     providerId,

@@ -1,0 +1,10 @@
+# Optional local owner-admin configuration.
+# Never commit real passwords or session secrets.
+# ADMIN_OWNER_EMAIL=owner@example.com
+# ADMIN_OWNER_PASSWORD=replace-with-a-local-development-password
+# ADMIN_SESSION_SECRET=replace-with-a-long-random-local-secret
+
+# Optional global Contact Mode contract configuration.
+# These are not required to start the public directory API locally.
+# CONTACT_MODE_GLOBAL_PREPROD_CONTRACT_ADDRESS=
+# CONTACT_MODE_GLOBAL_MAINNET_CONTRACT_ADDRESS=

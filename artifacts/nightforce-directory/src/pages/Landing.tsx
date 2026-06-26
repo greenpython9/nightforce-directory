@@ -147,7 +147,6 @@ const fallbackMidnightUpdates: MidnightUpdate[] = [
   },
 ];
 
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -182,7 +181,6 @@ function getMidnightUpdatesFromPayload(payload: unknown): MidnightUpdate[] {
 
   return parsed.posts.filter(isValidMidnightUpdate).slice(0, 12);
 }
-
 
 function getStatValue(loading: boolean, value: number): string {
   if (loading) return "…";
@@ -241,7 +239,7 @@ export function Landing() {
       } catch {
         if (!cancelled) {
           setDirectoryError("");
-          setProfiles([]);
+          setProfiles(import.meta.env.DEV ? MOCK_DIRECTORY_PROFILES : []);
         }
       } finally {
         if (!cancelled) {
@@ -594,9 +592,7 @@ export function Landing() {
                         </div>
 
                         <div className="mt-5 flex items-center justify-between text-[11px] font-mono">
-                          <span className="text-zinc-500">
-                            {item.source}
-                          </span>
+                          <span className="text-zinc-500">{item.source}</span>
                           <span className="text-zinc-400 group-hover:text-white">
                             Read post →
                           </span>
@@ -668,7 +664,6 @@ export function Landing() {
             </div>
           </section>
         </main>
-
       </div>
     </div>
   );

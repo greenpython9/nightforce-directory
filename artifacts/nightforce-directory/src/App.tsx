@@ -7,6 +7,7 @@ import { SEO } from "./components/SEO";
 import { Landing } from "./pages/Landing";
 import { WalletAccess } from "./pages/WalletAccess";
 import { Directory } from "./pages/Directory";
+import { MidnamesTest } from "./pages/MidnamesTest";
 import { RequestVerification } from "./pages/RequestVerification";
 import { AdminReview } from "./pages/AdminReview";
 import { MyProfile } from "./pages/MyProfile";
@@ -196,7 +197,8 @@ const ROUTE_SEO_METADATA: Record<string, RouteSEO> = {
     canonicalPath: "/directory",
   },
   "/about": {
-    title: "About nightforce.cc | Community-Built Nightforce Ambassador Directory",
+    title:
+      "About nightforce.cc | Community-Built Nightforce Ambassador Directory",
     description:
       "Learn how nightforce.cc helps people discover verified Nightforce ambassador profiles while keeping profile visibility and contact choices clear.",
     canonicalPath: "/about",
@@ -371,6 +373,9 @@ function AppRoutes() {
       <Route path="/" component={Landing} />
       <Route path="/wallet" component={WalletAccess} />
       <Route path="/directory" component={Directory} />
+      {import.meta.env.DEV && (
+        <Route path="/dev/midnames-test" component={MidnamesTest} />
+      )}
       <Route path="/about" component={About} />
       <Route path="/contact" component={Contact} />
       <Route path="/faq" component={Faq} />

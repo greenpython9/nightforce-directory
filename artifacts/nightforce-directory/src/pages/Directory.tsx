@@ -16,7 +16,10 @@ type DirectoryProfileRecord = {
   websiteUrl: string | null;
   nightDomain?: string | null;
   publicEmail: string | null;
-  contactMode: "NO_CONTACT" | "PRIVATE_CONTACT_AVAILABLE" | "PUBLIC_CONTACT_ALLOWED";
+  contactMode:
+    | "NO_CONTACT"
+    | "PRIVATE_CONTACT_AVAILABLE"
+    | "PUBLIC_CONTACT_ALLOWED";
   socials: string[];
   requestedVisibility: "public" | "hidden";
   publishState: "draft" | "published" | "inactive";
@@ -114,8 +117,9 @@ function getContactSearchLabel(value: PublicProfile["contactMode"]): string {
 
 export function Directory() {
   const [search, setSearch] = useState(getInitialSearch);
-  const [contactFilter, setContactFilter] =
-    useState<ContactFilter>(getInitialContactFilter);
+  const [contactFilter, setContactFilter] = useState<ContactFilter>(
+    getInitialContactFilter,
+  );
   const [regionFilter, setRegionFilter] = useState(getInitialRegionFilter);
   const [countryFilter, setCountryFilter] = useState(
     () => getInitialUrlParams().get("country") ?? "",
@@ -178,7 +182,11 @@ export function Directory() {
       } catch {
         if (!cancelled) {
           setError("");
-          setAllProfiles([]);
+          setAllProfiles(
+            import.meta.env.DEV
+              ? MOCK_DIRECTORY_PROFILES.map(toPublicProfile)
+              : [],
+          );
         }
       } finally {
         if (!cancelled) {
@@ -214,7 +222,9 @@ export function Directory() {
   const countries = useMemo(
     () =>
       Array.from(
-        new Set(allProfiles.map((p) => p.country).filter((c): c is string => !!c)),
+        new Set(
+          allProfiles.map((p) => p.country).filter((c): c is string => !!c),
+        ),
       ).sort(),
     [allProfiles],
   );
@@ -283,7 +293,14 @@ export function Directory() {
 
         return true;
       }),
-    [allProfiles, search, contactFilter, regionFilter, countryFilter, roleFilter],
+    [
+      allProfiles,
+      search,
+      contactFilter,
+      regionFilter,
+      countryFilter,
+      roleFilter,
+    ],
   );
 
   const hasActiveFilters = Boolean(
@@ -317,9 +334,7 @@ export function Directory() {
     <div className="mx-auto max-w-5xl px-3 py-6 sm:px-4 sm:py-8">
       <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-xl font-mono font-bold text-white">
-            Directory
-          </h1>
+          <h1 className="text-xl font-mono font-bold text-white">Directory</h1>
           <p className="mt-2 text-xs font-mono leading-6 text-zinc-500">
             {directorySummary}
           </p>
@@ -350,7 +365,9 @@ export function Directory() {
 
           <div className="text-xs font-mono text-zinc-500">
             Showing{" "}
-            <span className="font-semibold text-zinc-300">{filtered.length}</span>{" "}
+            <span className="font-semibold text-zinc-300">
+              {filtered.length}
+            </span>{" "}
             of{" "}
             <span className="font-semibold text-zinc-300">
               {allProfiles.length}
