@@ -1,72 +1,106 @@
 {
-  "updatedAt": "2026-04-27T00:00:00.000Z",
+  "updatedAt": "2026-06-26T04:41:39.539Z",
   "source": "https://midnight.network/blog",
   "posts": [
     {
       "author": "Midnight",
       "source": "Official Blog",
-      "date": "Mar 31, 2026",
-      "title": "State of the Network - March 2026",
-      "excerpt": "The Midnight network is officially live. This update covers the genesis block, federated node operators, ecosystem progress, and developer resources.",
-      "href": "https://midnight.network/blog/state-of-the-network-march-2026",
+      "date": "Jun 23, 2026",
+      "title": "State of the Network - June 2026 | Midnight blog",
+      "excerpt": "June sees continued momentum in the developer ecosystem, independently verified by the Electric Capital developer report. This edition of State of the Network reviews all the programs and pathways in the Midnight ecosystem along with the release of Midnight Expert, new tutorials and partnership announcement.",
+      "href": "https://midnight.network/blog/state-of-the-network-june-2026",
       "tag": "Network Updates",
-      "visual": "pulse",
-      "imageUrl": "https://midnight.network/_next/image?q=75&url=https%3A%2F%2Fcdn.sanity.io%2Fimages%2F330xhmya%2Fproduction%2F74d7348c5da8570d4657d5e55bb965d9d1eea723-2160x2160.jpg&w=1080"
+      "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/2b56441341ee199eeb01498378a37570b6ade351-1920x1080.png"
     },
     {
       "author": "Midnight",
       "source": "Official Blog",
-      "date": "Mar 29, 2026",
-      "title": "Midnight network is live",
-      "excerpt": "The launch initiates the genesis block, establishing state continuity and permanence for Midnight's programmable privacy network.",
-      "href": "https://midnight.network/blog/midnight-network-is-live",
-      "tag": "Mainnet",
-      "visual": "launch",
-      "imageUrl": "https://midnight.network/_next/image?q=75&url=https%3A%2F%2Fcdn.sanity.io%2Fimages%2F330xhmya%2Fproduction%2F74d7348c5da8570d4657d5e55bb965d9d1eea723-2160x2160.jpg&w=1080"
+      "date": "Jun 22, 2026",
+      "title": "What it takes to build docs worth reading",
+      "excerpt": "From 476 to 1,900+ commits: See how the Midnight Developer Relations team treated documentation like a product and completely transformed the developer hub.",
+      "href": "https://midnight.network/blog/building-great-docs",
+      "tag": "Blog",
+      "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/2e8c332a5459443031fa839a50c310a8a2307f9a-3840x2160.png"
     },
     {
       "author": "Midnight",
       "source": "Official Blog",
-      "date": "Mar 25, 2026",
-      "title": "Monument tokenises retail deposits with Midnight",
-      "excerpt": "Monument Bank is set to become the first UK bank to tokenise retail customer deposits on a public blockchain through Midnight.",
-      "href": "https://midnight.network/blog/monument-becomes-the-first-bank-to-securely-tokenise-retail-deposits-midnight-partnership",
-      "tag": "Ecosystem Partners",
-      "visual": "bank",
-      "imageUrl": "https://midnight.network/_next/image?q=75&url=https%3A%2F%2Fcdn.sanity.io%2Fimages%2F330xhmya%2Fproduction%2Ff154e064e6629cca4eca0391fc8211f81c716a25-2160x2160.jpg&w=1080"
-    },
-    {
-      "author": "Midnight",
-      "source": "Official Blog",
-      "date": "Mar 09, 2026",
-      "title": "Getting mainnet ready: A developer’s guide",
-      "excerpt": "A practical guide for developers preparing DApps for Midnight mainnet, including Preprod migration, Academy resources, and DUST generation.",
-      "href": "https://midnight.network/blog/getting-mainnet-ready-a-developer-s-guide",
-      "tag": "Developers",
-      "visual": "docs",
-      "imageUrl": "https://midnight.network/_next/image?q=75&url=https%3A%2F%2Fcdn.sanity.io%2Fimages%2F330xhmya%2Fproduction%2F3e14cf1840214c160c00a9c6def387c64a1d9fc7-2160x2160.jpg&w=640"
-    },
-    {
-      "author": "Midnight",
-      "source": "Official Blog",
-      "date": "Jun 25, 2025",
-      "title": "The tokenomics powering Midnight network",
-      "excerpt": "An overview of NIGHT, DUST, resource generation, ecosystem incentives, and the dual-component tokenomics behind Midnight.",
-      "href": "https://midnight.network/blog/the-tokenomics-powering-midnight-network",
-      "tag": "Tokenomics",
-      "visual": "token",
-      "imageUrl": "https://midnight.network/_next/image?q=75&url=https%3A%2F%2Fcdn.sanity.io%2Fimages%2F330xhmya%2Fproduction%2F9b4964213c3da33ed550efb144d47de900ec4284-1080x1080.png&w=640"
-    },
-    {
-      "author": "Midnight",
-      "source": "Official Blog",
-      "date": "Dec 04, 2025",
-      "title": "Guide to the NIGHT token launch and Redemption",
-      "excerpt": "A guide covering NIGHT launch phases, redemption, thawing schedules, and how the token distribution roadmap unfolds.",
-      "href": "https://midnight.network/blog/guide-to-the-night-token-launch-and-redemption",
+      "date": "Jun 18, 2026",
+      "title": "Electric Capital report highlights growing momentum across the Midnight ecosystem | Midnight blog",
+      "excerpt": "The Electric Capital report documents rising developer activity on Midnight. New AI tools, mainnet primitives, and partner sprints continue to drive ecosystem growth.",
+      "href": "https://midnight.network/blog/electric-capital-report",
       "tag": "NIGHT",
-      "visual": "directory",
-      "imageUrl": "https://midnight.network/_next/image?q=75&url=https%3A%2F%2Fcdn.sanity.io%2Fimages%2F330xhmya%2Fproduction%2F890c1515269142d8ef0df2449eabe586db3e5863-2250x2250.png&w=640"
+      "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/d5d729082d0abb41e9093a59a01aedc36e83eb8b-3840x2160.png"
+    },
+    {
+      "author": "Midnight",
+      "source": "Official Blog",
+      "date": "Jun 16, 2026",
+      "title": "Turnkey partners with Midnight Foundation to simplify embedded wallet integration",
+      "excerpt": "Turnkey is bringing its flexible APIs and SDKs to the Midnight network, empowering developers to build seamless, user-friendly wallets for DApps.",
+      "href": "https://midnight.network/blog/turnkey-partners-with-midnight-foundation",
+      "tag": "Ecosystem Partners",
+      "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/7c5294ecd9956b0ccdc1e2ffebab2c52651a58fa-3840x2160.jpg"
+    },
+    {
+      "author": "Midnight",
+      "source": "Official Blog",
+      "date": "Jun 10, 2026",
+      "title": "Blog | How the Nightforce drives global momentum for Midnight",
+      "excerpt": "The Nightforce ambassador program drives the global expansion of the Midnight ecosystem. Learn how dedicated volunteers share their knowledge about programmable privacy, organize international meetups, and represent the network at major industry events.",
+      "href": "https://midnight.network/blog/nightforce-drives-global-momentum",
+      "tag": "NIGHT",
+      "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/21672a2cda29e7f6fde513bbced3d82f212e9610-3840x2160.png"
+    },
+    {
+      "author": "Midnight",
+      "source": "Official Blog",
+      "date": "Jun 04, 2026",
+      "title": "Supercharging the Midnight ecosystem with the Night Sky accelerator",
+      "excerpt": "The Midnight Foundation is launching the Night Sky Accelerator, a 10-week program starting July 2026 to help early-stage teams integrate zero-knowledge privacy features and scale commercial applications.",
+      "href": "https://midnight.network/blog/night-sky-accelerator",
+      "tag": "NIGHT",
+      "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/37588cfebef69435aa4f2f456fbbf39c13e8be78-3840x2160.jpg"
+    },
+    {
+      "author": "Midnight",
+      "source": "Official Blog",
+      "date": "Jun 03, 2026",
+      "title": "Hilo hackathon winners keep privacy on track across four categories",
+      "excerpt": "Builders solved real-world problems using the Midnight network during the Hilo Hackathon. Teams developed privacy-preserving applications for healthcare, finance, AI, and identity over a two-week period. These winning projects show how zero-knowledge technology secures sensitive data across a range of verticals.",
+      "href": "https://midnight.network/blog/hilo-hackathon-winners-keep-privacy-on-track-across-four-categories",
+      "tag": "Blog",
+      "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/89d1d75afdbd878abb194961e2d8cea4df167d5f-3840x2160.png"
+    },
+    {
+      "author": "Midnight",
+      "source": "Official Blog",
+      "date": "May 26, 2026",
+      "title": "Understanding the multiple pathways to generating DUST",
+      "excerpt": "The Midnight network uses a dual-component model where the NIGHT token generates the DUST resource. This guide explains how UTXO-based architecture enables flexible fee sponsorship and community-funded decentralized applications while users maintain custody of their assets.",
+      "href": "https://midnight.network/blog/understanding-the-multiple-pathways-to-generating-dust",
+      "tag": "Developers",
+      "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/9f81837838c9340b36fbf68719f99bb2ffbe9c0a-3840x2160.jpg"
+    },
+    {
+      "author": "Midnight",
+      "source": "Official Blog",
+      "date": "May 21, 2026",
+      "title": "State of the Network - May 2026",
+      "excerpt": "The Midnight ecosystem takes Consensus Miami by storm. Read about the upcoming applications, integrations, and tools bringing programmable privacy to the real world.",
+      "href": "https://midnight.network/blog/state-of-the-network-may-2026",
+      "tag": "Network Updates",
+      "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/3f7de1d5bde75554f7c5e0f09c6e52990a2f2d34-1920x1080.png"
+    },
+    {
+      "author": "Midnight",
+      "source": "Official Blog",
+      "date": "May 20, 2026",
+      "title": "Blog | Midnight at Consensus Miami: Smart compliance and the trillion dollar opportunity",
+      "excerpt": "The Midnight network is live, and demonstrations at Consensus Miami show how developers and institutions are demonstrating the capabilities of the world’s first fourth-generation blockchain. Tools like the Midnight Passport and the collateral warehouse addressing the accessibility gaps, privacy shortcomings and trillion dollar financial opportunities. As AI agents increase personal data risks, programmable privacy ensures users maintain control, proving that the future of compliance is programmable.",
+      "href": "https://midnight.network/blog/midnight-at-consensus-miami-smart-compliance-and-the-trillion-dollar-opportunity",
+      "tag": "NIGHT",
+      "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/3df587d4989a1e2df710c6d5b1e636e52b1b3ab5-3840x2160.jpg"
     }
   ]
 }
