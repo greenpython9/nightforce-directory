@@ -1,7 +1,17 @@
 {
-  "updatedAt": "2026-06-28T04:53:38.279Z",
+  "updatedAt": "2026-06-28T14:17:29.403Z",
   "source": "https://midnight.network/blog",
   "posts": [
+    {
+      "author": "Midnight",
+      "source": "Official Blog",
+      "date": "Jun 28, 2026",
+      "title": "Glacier Drop Redemptions Temporarily Suspended | Midnight blog",
+      "excerpt": "Glacier Drop Redemptions Temporarily Suspended",
+      "href": "https://midnight.network/blog/glacier-drop-redemption-temporarily-suspended",
+      "tag": "NIGHT",
+      "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/5cf74785fd2da369860e8a03bf01023393b08750-1200x630.png"
+    },
     {
       "author": "Midnight",
       "source": "Official Blog",
@@ -91,16 +101,6 @@
       "href": "https://midnight.network/blog/state-of-the-network-may-2026",
       "tag": "Network Updates",
       "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/3f7de1d5bde75554f7c5e0f09c6e52990a2f2d34-1920x1080.png"
-    },
-    {
-      "author": "Midnight",
-      "source": "Official Blog",
-      "date": "May 20, 2026",
-      "title": "Blog | Midnight at Consensus Miami: Smart compliance and the trillion dollar opportunity",
-      "excerpt": "The Midnight network is live, and demonstrations at Consensus Miami show how developers and institutions are demonstrating the capabilities of the world’s first fourth-generation blockchain. Tools like the Midnight Passport and the collateral warehouse addressing the accessibility gaps, privacy shortcomings and trillion dollar financial opportunities. As AI agents increase personal data risks, programmable privacy ensures users maintain control, proving that the future of compliance is programmable.",
-      "href": "https://midnight.network/blog/midnight-at-consensus-miami-smart-compliance-and-the-trillion-dollar-opportunity",
-      "tag": "NIGHT",
-      "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/3df587d4989a1e2df710c6d5b1e636e52b1b3ab5-3840x2160.jpg"
     }
   ]
 }
