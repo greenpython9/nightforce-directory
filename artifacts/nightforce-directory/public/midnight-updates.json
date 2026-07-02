@@ -1,7 +1,17 @@
 {
-  "updatedAt": "2026-07-01T15:13:14.806Z",
+  "updatedAt": "2026-07-02T04:32:27.471Z",
   "source": "https://midnight.network/blog",
   "posts": [
+    {
+      "author": "Midnight",
+      "source": "Official Blog",
+      "date": "Jul 01, 2026",
+      "title": "Midnight Foundation engages proactively with regulators on stablecoin policy",
+      "excerpt": "To support its mission of advancing privacy-enhancing financial technology, the Midnight Foundation submitted a public consultation response to inform future policy on stablecoins and privacy in financial transactions.",
+      "href": "https://midnight.network/blog/midnight-foundation-engages-proactively-stablecoin-policy",
+      "tag": "NIGHT",
+      "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/1157d3418d4323a1fe29f796b8e5cae96d57823e-3840x2160.png"
+    },
     {
       "author": "Midnight",
       "source": "Official Blog",
@@ -91,16 +101,6 @@
       "href": "https://midnight.network/blog/understanding-the-multiple-pathways-to-generating-dust",
       "tag": "Developers",
       "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/9f81837838c9340b36fbf68719f99bb2ffbe9c0a-3840x2160.jpg"
-    },
-    {
-      "author": "Midnight",
-      "source": "Official Blog",
-      "date": "May 21, 2026",
-      "title": "State of the Network - May 2026",
-      "excerpt": "The Midnight ecosystem takes Consensus Miami by storm. Read about the upcoming applications, integrations, and tools bringing programmable privacy to the real world.",
-      "href": "https://midnight.network/blog/state-of-the-network-may-2026",
-      "tag": "Network Updates",
-      "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/3f7de1d5bde75554f7c5e0f09c6e52990a2f2d34-1920x1080.png"
     }
   ]
 }
