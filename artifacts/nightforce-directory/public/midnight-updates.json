@@ -1,7 +1,17 @@
 {
-  "updatedAt": "2026-07-03T04:10:56.605Z",
+  "updatedAt": "2026-07-03T14:33:17.258Z",
   "source": "https://midnight.network/blog",
   "posts": [
+    {
+      "author": "Midnight",
+      "source": "Official Blog",
+      "date": "Jul 02, 2026",
+      "title": "Meet the partners building out rational privacy across the ecosystem",
+      "excerpt": "Learn from the discussions in the podcast series recorded live at Consensus Miami to discover how rational privacy secures retail onboarding, DeFi, RWA tokenization and more.",
+      "href": "https://midnight.network/blog/meet-partners-building-out-rational-privacy",
+      "tag": "Ecosystem Partners",
+      "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/3df587d4989a1e2df710c6d5b1e636e52b1b3ab5-3840x2160.jpg"
+    },
     {
       "author": "Midnight",
       "source": "Official Blog",
@@ -91,16 +101,6 @@
       "href": "https://midnight.network/blog/hilo-hackathon-winners-keep-privacy-on-track-across-four-categories",
       "tag": "Blog",
       "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/89d1d75afdbd878abb194961e2d8cea4df167d5f-3840x2160.png"
-    },
-    {
-      "author": "Midnight",
-      "source": "Official Blog",
-      "date": "May 26, 2026",
-      "title": "Understanding the multiple pathways to generating DUST",
-      "excerpt": "The Midnight network uses a dual-component model where the NIGHT token generates the DUST resource. This guide explains how UTXO-based architecture enables flexible fee sponsorship and community-funded decentralized applications while users maintain custody of their assets.",
-      "href": "https://midnight.network/blog/understanding-the-multiple-pathways-to-generating-dust",
-      "tag": "Developers",
-      "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/9f81837838c9340b36fbf68719f99bb2ffbe9c0a-3840x2160.jpg"
     }
   ]
 }
