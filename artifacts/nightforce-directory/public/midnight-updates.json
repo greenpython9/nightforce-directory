@@ -1,7 +1,17 @@
 {
-  "updatedAt": "2026-07-09T15:35:29.624Z",
+  "updatedAt": "2026-07-10T04:16:59.041Z",
   "source": "https://midnight.network/blog",
   "posts": [
+    {
+      "author": "Midnight",
+      "source": "Official Blog",
+      "date": "Jul 09, 2026",
+      "title": "Glacier Drop Redemptions Update",
+      "excerpt": "Glacier Drop redemptions will resume today at 17:00 UTC.",
+      "href": "https://midnight.network/blog/glacier-drop-redemptions-update",
+      "tag": "Blog",
+      "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/5e4a5616f3d1df5df780f35b7ec13810ead81d01-1080x567.webp"
+    },
     {
       "author": "Midnight",
       "source": "Official Blog",
@@ -91,16 +101,6 @@
       "href": "https://midnight.network/blog/night-sky-accelerator",
       "tag": "NIGHT",
       "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/37588cfebef69435aa4f2f456fbbf39c13e8be78-3840x2160.jpg"
-    },
-    {
-      "author": "Midnight",
-      "source": "Official Blog",
-      "date": "Jun 03, 2026",
-      "title": "Hilo hackathon winners keep privacy on track across four categories",
-      "excerpt": "Builders solved real-world problems using the Midnight network during the Hilo Hackathon. Teams developed privacy-preserving applications for healthcare, finance, AI, and identity over a two-week period. These winning projects show how zero-knowledge technology secures sensitive data across a range of verticals.",
-      "href": "https://midnight.network/blog/hilo-hackathon-winners-keep-privacy-on-track-across-four-categories",
-      "tag": "Blog",
-      "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/89d1d75afdbd878abb194961e2d8cea4df167d5f-3840x2160.png"
     }
   ]
 }
