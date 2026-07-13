@@ -1,13 +1,23 @@
 {
-  "updatedAt": "2026-07-13T04:02:41.247Z",
+  "updatedAt": "2026-07-13T15:13:18.706Z",
   "source": "https://midnight.network/blog",
   "posts": [
     {
       "author": "Midnight",
       "source": "Official Blog",
+      "date": "Jul 13, 2026",
+      "title": "Deploy customized agents into Midnight City V2",
+      "excerpt": "Explore the newly redesigned Midnight City V2 simulation. Deploy highly customized AI agents and see how they interact across the virtual world.",
+      "href": "https://midnight.network/blog/deploy-agents-into-midnight-city-v2",
+      "tag": "NIGHT",
+      "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/227e7b738b93c9ea2f28fabb9ae5f5551c04ddc7-1920x1080.png"
+    },
+    {
+      "author": "Midnight",
+      "source": "Official Blog",
       "date": "Jul 09, 2026",
       "title": "Glacier Drop Redemptions Update",
-      "excerpt": "Glacier Drop redemptions will resume today at 17:00 UTC.",
+      "excerpt": "Midnight is a ground-breaking new data protection blockchain that will empower regulation-friendly apps that safeguard sensitive commercial and personal data.",
       "href": "https://midnight.network/blog/glacier-drop-redemptions-update",
       "tag": "Blog",
       "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/5e4a5616f3d1df5df780f35b7ec13810ead81d01-1080x567.webp"
@@ -91,16 +101,6 @@
       "href": "https://midnight.network/blog/nightforce-drives-global-momentum",
       "tag": "NIGHT",
       "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/21672a2cda29e7f6fde513bbced3d82f212e9610-3840x2160.png"
-    },
-    {
-      "author": "Midnight",
-      "source": "Official Blog",
-      "date": "Jun 04, 2026",
-      "title": "Supercharging the Midnight ecosystem with the Night Sky accelerator",
-      "excerpt": "The Midnight Foundation is launching the Night Sky Accelerator, a 10-week program starting July 2026 to help early-stage teams integrate zero-knowledge privacy features and scale commercial applications.",
-      "href": "https://midnight.network/blog/night-sky-accelerator",
-      "tag": "NIGHT",
-      "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/37588cfebef69435aa4f2f456fbbf39c13e8be78-3840x2160.jpg"
     }
   ]
 }
