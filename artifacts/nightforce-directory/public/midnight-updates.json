@@ -1,7 +1,17 @@
 {
-  "updatedAt": "2026-07-17T03:40:39.753Z",
+  "updatedAt": "2026-07-17T14:05:00.684Z",
   "source": "https://midnight.network/blog",
   "posts": [
+    {
+      "author": "Midnight",
+      "source": "Official Blog",
+      "date": "Jul 16, 2026",
+      "title": "The rise of Nightforce leaders across the Midnight network | Blog",
+      "excerpt": "Over 2,000 recruits fuel global growth in the Midnight network. Discover what it takes to become a Nightforce leader and apply to join a cohort today.",
+      "href": "https://midnight.network/blog/the-rise-of-nightforce-leaders",
+      "tag": "NIGHT",
+      "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/c2cba03784b9fc5cba18375511dd6372fbf91fae-3840x2160.png"
+    },
     {
       "author": "Midnight",
       "source": "Official Blog",
@@ -91,16 +101,6 @@
       "href": "https://midnight.network/blog/turnkey-partners-with-midnight-foundation",
       "tag": "Ecosystem Partners",
       "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/7c5294ecd9956b0ccdc1e2ffebab2c52651a58fa-3840x2160.jpg"
-    },
-    {
-      "author": "Midnight",
-      "source": "Official Blog",
-      "date": "Jun 10, 2026",
-      "title": "Blog | How the Nightforce drives global momentum for Midnight",
-      "excerpt": "The Nightforce ambassador program drives the global expansion of the Midnight ecosystem. Learn how dedicated volunteers share their knowledge about programmable privacy, organize international meetups, and represent the network at major industry events.",
-      "href": "https://midnight.network/blog/nightforce-drives-global-momentum",
-      "tag": "NIGHT",
-      "imageUrl": "https://cdn.sanity.io/images/330xhmya/production/21672a2cda29e7f6fde513bbced3d82f212e9610-3840x2160.png"
     }
   ]
 }
